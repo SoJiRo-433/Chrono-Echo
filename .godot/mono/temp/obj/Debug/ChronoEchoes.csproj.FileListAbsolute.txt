@@ -1,0 +1,17 @@
+C:\Users\HP\Downloads\ChronoEchoes\ChronoEchoes\.godot\mono\temp\bin\Debug\ChronoEchoes.deps.json
+C:\Users\HP\Downloads\ChronoEchoes\ChronoEchoes\.godot\mono\temp\bin\Debug\ChronoEchoes.runtimeconfig.json
+C:\Users\HP\Downloads\ChronoEchoes\ChronoEchoes\.godot\mono\temp\bin\Debug\ChronoEchoes.dll
+C:\Users\HP\Downloads\ChronoEchoes\ChronoEchoes\.godot\mono\temp\bin\Debug\ChronoEchoes.pdb
+C:\Users\HP\Downloads\ChronoEchoes\ChronoEchoes\.godot\mono\temp\bin\Debug\GodotSharp.dll
+C:\Users\HP\Downloads\ChronoEchoes\ChronoEchoes\.godot\mono\temp\bin\Debug\GodotSharpEditor.dll
+C:\Users\HP\Downloads\ChronoEchoes\ChronoEchoes\.godot\mono\temp\obj\Debug\ChronoEchoes.csproj.AssemblyReference.cache
+C:\Users\HP\Downloads\ChronoEchoes\ChronoEchoes\.godot\mono\temp\obj\Debug\ChronoEchoes.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\HP\Downloads\ChronoEchoes\ChronoEchoes\.godot\mono\temp\obj\Debug\ChronoEchoes.AssemblyInfoInputs.cache
+C:\Users\HP\Downloads\ChronoEchoes\ChronoEchoes\.godot\mono\temp\obj\Debug\ChronoEchoes.AssemblyInfo.cs
+C:\Users\HP\Downloads\ChronoEchoes\ChronoEchoes\.godot\mono\temp\obj\Debug\ChronoEchoes.csproj.CoreCompileInputs.cache
+C:\Users\HP\Downloads\ChronoEchoes\ChronoEchoes\.godot\mono\temp\obj\Debug\ChronoEc.D488EEF4.Up2Date
+C:\Users\HP\Downloads\ChronoEchoes\ChronoEchoes\.godot\mono\temp\obj\Debug\ChronoEchoes.dll
+C:\Users\HP\Downloads\ChronoEchoes\ChronoEchoes\.godot\mono\temp\obj\Debug\refint\ChronoEchoes.dll
+C:\Users\HP\Downloads\ChronoEchoes\ChronoEchoes\.godot\mono\temp\obj\Debug\ChronoEchoes.pdb
+C:\Users\HP\Downloads\ChronoEchoes\ChronoEchoes\.godot\mono\temp\obj\Debug\ChronoEchoes.genruntimeconfig.cache
+C:\Users\HP\Downloads\ChronoEchoes\ChronoEchoes\.godot\mono\temp\obj\Debug\ref\ChronoEchoes.dll

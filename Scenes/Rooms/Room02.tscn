@@ -1,0 +1,77 @@
+[gd_scene load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://Scripts/Rooms/Room.cs" id="1_room"]
+[ext_resource type="Script" path="res://Scripts/Dialogue/DialogueManager.cs" id="2_dlg"]
+[ext_resource type="Script" path="res://Scripts/Puzzles/Obstacle.cs" id="3_obs"]
+[ext_resource type="Script" path="res://Scripts/Puzzles/Door.cs" id="4_door"]
+[ext_resource type="Script" path="res://Scripts/Puzzles/Switch.cs" id="5_sw"]
+[ext_resource type="PackedScene" path="res://Scenes/Enemy.tscn" id="6_enemy"]
+[ext_resource type="PackedScene" path="res://Scenes/Player.tscn" id="7_player"]
+
+[node name="Room02" type="Node2D"]
+script = ExtResource("1_room")
+RoomSize = Vector2(1152, 648)
+PlayerStartPosition = Vector2(80, 324)
+ExitPosition = Vector2(980, 274)
+ExitSize = Vector2(120, 100)
+MaxEchoes = 3
+LevelNumber = 2
+NextLevelPath = ""
+IntroDialogueId = "room02_intro"
+ClearDialogueId = "room02_clear"
+CompletionFlag = "room02_complete"
+
+[node name="DialogueManager" type="Node" parent="."]
+script = ExtResource("2_dlg")
+
+[node name="DividerUpper" type="Node2D" parent="."]
+position = Vector2(420, 0)
+script = ExtResource("3_obs")
+Size = Vector2(32, 240)
+
+[node name="DividerLower" type="Node2D" parent="."]
+position = Vector2(420, 408)
+script = ExtResource("3_obs")
+Size = Vector2(32, 240)
+
+[node name="DoorA" type="Node2D" parent="."]
+position = Vector2(420, 240)
+script = ExtResource("4_door")
+Size = Vector2(32, 168)
+OpenedFlag = "room02_door_a_opened"
+
+[node name="Divider2Upper" type="Node2D" parent="."]
+position = Vector2(800, 0)
+script = ExtResource("3_obs")
+Size = Vector2(32, 240)
+
+[node name="Divider2Lower" type="Node2D" parent="."]
+position = Vector2(800, 408)
+script = ExtResource("3_obs")
+Size = Vector2(32, 240)
+
+[node name="DoorB" type="Node2D" parent="."]
+position = Vector2(800, 240)
+script = ExtResource("4_door")
+Size = Vector2(32, 168)
+OpenedFlag = "room02_door_b_opened"
+
+[node name="PlateA" type="Node2D" parent="."]
+position = Vector2(200, 520)
+script = ExtResource("5_sw")
+LinkedDoorPath = NodePath("../DoorA")
+IsPressurePlate = true
+PlateRadius = 28.0
+
+[node name="PlateB" type="Node2D" parent="."]
+position = Vector2(620, 120)
+script = ExtResource("5_sw")
+LinkedDoorPath = NodePath("../DoorB")
+IsPressurePlate = true
+PlateRadius = 28.0
+
+[node name="Enemy" parent="." instance=ExtResource("6_enemy")]
+position = Vector2(620, 520)
+
+[node name="Player" parent="." instance=ExtResource("7_player")]
+position = Vector2(80, 324)

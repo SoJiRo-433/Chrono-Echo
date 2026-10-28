@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "dgSpecHash": "LO5/obgQboA=",
+  "success": true,
+  "projectFilePath": "C:\\Users\\HP\\Downloads\\ChronoEchoes\\ChronoEchoes\\ChronoEchoes.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\HP\\.nuget\\packages\\godot.sourcegenerators\\4.7.2\\godot.sourcegenerators.4.7.2.nupkg.sha512",
+    "C:\\Users\\HP\\.nuget\\packages\\godotsharp\\4.7.2\\godotsharp.4.7.2.nupkg.sha512",
+    "C:\\Users\\HP\\.nuget\\packages\\godotsharpeditor\\4.7.2\\godotsharpeditor.4.7.2.nupkg.sha512"
+  ],
+  "logs": []
+}

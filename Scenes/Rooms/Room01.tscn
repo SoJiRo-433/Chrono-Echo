@@ -1,0 +1,181 @@
+[gd_scene load_steps=11 format=3]
+
+[ext_resource type="Script" path="res://Scripts/Rooms/Room.cs" id="1_room"]
+[ext_resource type="Script" path="res://Scripts/Dialogue/DialogueManager.cs" id="2_dlg"]
+[ext_resource type="Script" path="res://Scripts/Puzzles/Obstacle.cs" id="3_obs"]
+[ext_resource type="Script" path="res://Scripts/Puzzles/Door.cs" id="4_door"]
+[ext_resource type="Script" path="res://Scripts/Puzzles/Switch.cs" id="5_sw"]
+[ext_resource type="PackedScene" path="res://Scenes/Enemy.tscn" id="6_enemy"]
+[ext_resource type="PackedScene" path="res://Scenes/Player.tscn" id="7_player"]
+[ext_resource type="Script" path="res://Scripts/Rooms/FloorMarker.cs" id="8_marker"]
+[ext_resource type="Script" path="res://Scripts/Puzzles/Inspectable.cs" id="9_inspect"]
+[ext_resource type="Script" path="res://Scripts/Puzzles/Pendant.cs" id="10_pendant"]
+
+[node name="Room01" type="Node2D"]
+script = ExtResource("1_room")
+RoomSize = Vector2(1152, 648)
+PlayerStartPosition = Vector2(118, 306)
+ExitPosition = Vector2(1054, 260)
+ExitSize = Vector2(79, 110)
+MaxEchoes = 3
+LevelNumber = 1
+NextLevelPath = "res://Scenes/Rooms/Room02.tscn"
+
+[node name="DialogueManager" type="Node" parent="."]
+script = ExtResource("2_dlg")
+
+[node name="DividerUpper" type="Node2D" parent="."]
+position = Vector2(1008, 0)
+script = ExtResource("3_obs")
+Size = Vector2(32, 156)
+
+[node name="SecurityDoor" type="Node2D" parent="."]
+position = Vector2(1008, 156)
+script = ExtResource("4_door")
+Size = Vector2(32, 75)
+OpenedFlag = "room01_door_opened"
+
+[node name="DividerLower" type="Node2D" parent="."]
+position = Vector2(1008, 231)
+script = ExtResource("3_obs")
+Size = Vector2(32, 417)
+
+[node name="PressurePlate" type="Node2D" parent="."]
+position = Vector2(978, 554)
+script = ExtResource("5_sw")
+LinkedDoorPath = NodePath("../SecurityDoor")
+IsPressurePlate = true
+PlateRadius = 30.0
+
+[node name="SpawnMarker" type="Node2D" parent="."]
+position = Vector2(38, 272)
+script = ExtResource("8_marker")
+Size = Vector2(159, 67)
+Caption = "START / WAKE-UP (Scene 1)"
+Fill = Color(0.2, 0.6, 0.9, 0.1)
+Outline = Color(0.35, 0.7, 0.95, 0.6)
+
+[node name="GlassMarker" type="Node2D" parent="."]
+position = Vector2(53, 41)
+script = ExtResource("8_marker")
+Size = Vector2(144, 32)
+Caption = "BROKEN GLASS"
+Fill = Color(0.75, 0.85, 0.9, 0.08)
+Outline = Color(0.6, 0.75, 0.85, 0.4)
+
+[node name="RubbleMarker" type="Node2D" parent="."]
+position = Vector2(925, 41)
+script = ExtResource("8_marker")
+Size = Vector2(106, 29)
+Caption = "RUBBLE"
+Fill = Color(0.7, 0.68, 0.62, 0.1)
+Outline = Color(0.65, 0.62, 0.55, 0.45)
+
+[node name="PanelMarker" type="Node2D" parent="."]
+position = Vector2(53, 567)
+script = ExtResource("8_marker")
+Size = Vector2(159, 32)
+Caption = "FALLEN PANEL"
+Fill = Color(0.7, 0.68, 0.62, 0.1)
+Outline = Color(0.65, 0.62, 0.55, 0.45)
+
+[node name="DebrisMarker" type="Node2D" parent="."]
+position = Vector2(1016, 588)
+script = ExtResource("8_marker")
+Size = Vector2(91, 29)
+Caption = "DEBRIS"
+Fill = Color(0.7, 0.68, 0.62, 0.1)
+Outline = Color(0.65, 0.62, 0.55, 0.45)
+
+[node name="PhotoMarker" type="Node2D" parent="."]
+position = Vector2(459, 168)
+script = ExtResource("8_marker")
+Size = Vector2(189, 92)
+Caption = "FINAL PAGE: BURNT PHOTO (Aionia + Felix)"
+Fill = Color(0.9, 0.8, 0.6, 0.12)
+Outline = Color(0.85, 0.75, 0.55, 0.6)
+VisibleFlag = "saw_burnt_photo"
+
+[node name="AnomalyMarker" type="Node2D" parent="."]
+position = Vector2(788, 255)
+script = ExtResource("8_marker")
+Size = Vector2(220, 67)
+Caption = "SPATIAL ANOMALY - Echo spawns here"
+Fill = Color(0.55, 0.45, 0.85, 0.1)
+Outline = Color(0.6, 0.5, 0.9, 0.6)
+
+[node name="EchoZoneMarker" type="Node2D" parent="."]
+position = Vector2(758, 411)
+script = ExtResource("8_marker")
+Size = Vector2(235, 49)
+Caption = "ECHO RECORDING ZONE - press R"
+Fill = Color(0.4, 0.8, 0.45, 0.1)
+Outline = Color(0.45, 0.85, 0.5, 0.6)
+
+[node name="ReportLog" type="Node2D" parent="."]
+position = Vector2(242, 52)
+script = ExtResource("9_inspect")
+Size = Vector2(227, 95)
+Caption = "REPORT LOG / PAPER STACK (E)"
+Fill = Color(0.62, 0.55, 0.45, 0.9)
+Outline = Color(0.85, 0.78, 0.65, 1)
+FirstDialogueId = "report_log"
+RepeatDialogueId = "report_log_again"
+FlagToSet = "read_report_log"
+Solid = true
+
+[node name="Drawers" type="Node2D" parent="."]
+position = Vector2(273, 168)
+script = ExtResource("9_inspect")
+Size = Vector2(182, 64)
+Caption = "DRAWERS (E)"
+Fill = Color(0.55, 0.5, 0.42, 0.9)
+Outline = Color(0.8, 0.74, 0.62, 1)
+FirstDialogueId = "drawers"
+FlagToSet = "checked_drawers"
+Solid = true
+
+[node name="TimeMachine" type="Node2D" parent="."]
+position = Vector2(546, 40)
+script = ExtResource("9_inspect")
+Size = Vector2(235, 106)
+Caption = "DESTROYED TIME MACHINE (E)"
+Fill = Color(0.5, 0.55, 0.58, 0.9)
+Outline = Color(0.75, 0.8, 0.85, 1)
+FirstDialogueId = "time_machine"
+FlagToSet = "checked_machine"
+Solid = true
+
+[node name="Cabinet" type="Node2D" parent="."]
+position = Vector2(553, 469)
+script = ExtResource("9_inspect")
+Size = Vector2(182, 81)
+Caption = "BROKEN CABINET (E)"
+Fill = Color(0.55, 0.5, 0.44, 0.9)
+Outline = Color(0.8, 0.74, 0.65, 1)
+FirstDialogueId = "cabinet"
+FlagToSet = "checked_cabinet"
+Solid = true
+
+[node name="BrokenMachinery" type="Node2D" parent="."]
+position = Vector2(197, 474)
+script = ExtResource("9_inspect")
+Size = Vector2(190, 58)
+Caption = "BROKEN MACHINERY (E)"
+Fill = Color(0.48, 0.52, 0.55, 0.9)
+Outline = Color(0.72, 0.78, 0.82, 1)
+FirstDialogueId = "broken_machinery"
+FlagToSet = "checked_machinery"
+
+[node name="Pendant" type="Node2D" parent="."]
+position = Vector2(614, 287)
+script = ExtResource("10_pendant")
+DialogueId = "pendant_flash"
+FlagToSet = "touched_pendant"
+ItemName = "pendant"
+
+[node name="Enemy" parent="." instance=ExtResource("6_enemy")]
+position = Vector2(760, 545)
+
+[node name="Player" parent="." instance=ExtResource("7_player")]
+position = Vector2(118, 306)
