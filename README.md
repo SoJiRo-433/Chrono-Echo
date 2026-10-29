@@ -1,8 +1,6 @@
-# Chrono Echoes - Back End (Godot 4 .NET / C#)
+﻿# Chrono Echoes - Back End (Godot 4 .NET / C#)
 
-Compiles clean (`dotnet build`, 0 warnings, 0 errors), but it has not been run inside the Godot
-editor yet. If you hit a runtime error, paste it back and it can be fixed quickly.
-
+Compiles clean (`dotnet build`, 0 warnings, 0 errors).
 ## Story (one-minute version)
 **Aionia Avgerinos** is a brilliant, nonchalant student of chronology at the **Aetherion Institute**.
 With her partner **Felix Lasarewitch** she leads **Project Hyperion**, a machine built to traverse
@@ -77,7 +75,7 @@ All visuals are drawn in code (`_Draw`), so every scene is just a node with a sc
   which is what makes it the last level.
 
 ## 3. The demo loop (what happens in Room01)
-Controls: **WASD/Arrows** move, **E** interact, **J** attack, **T** record/stop a capture window, **R** project the Echo, **Enter/Space** dialogue, **1/2** choices, **F3** hide the debug HUD.
+Controls: **WASD/Arrows** move, **E** interact, **J** attack, **T** record/stop a capture window, **R** project the Echo, **Enter/Space** dialogue, **1/2** choices, **F3** hide the debug HUD, **F11** toggle full screen.
 1. Aionia wakes at the west side of the room, inside the blue "START / WAKE-UP" marker. The short
    intro plays (game paused), then gameplay starts.
 2. Walk to the **report log** and press **E**. Turn the pages with **1**; the final page reveals the
@@ -116,7 +114,7 @@ Controls: **WASD/Arrows** move, **E** interact, **J** attack, **T** record/stop 
 | Interfaces | `IDamageable`, `IInteractable` (Switch, Door), `IUpdatable` (Entity, Switch) |
 | Encapsulation | Private fields only; `[Export]` properties clamp values (e.g. `MaxHealth >= 1`); Echo's frames and the recorder are private |
 | Composition | `Room` HAS-A lists of entities/obstacles/switches/doors/echoes; `Player` HAS-A `PlayerInput` + `EchoRecorder`; `Enemy` HAS-A `EnemyAI` |
-| Singleton | `GameStateManager.Instance`, registered as Autoload |
+| Singleton | `GameStateManager.Instance` (narrative/player state) and `DisplayManager.Instance` (window, e.g. F11 full screen), both registered as Autoloads |
 | Signals | `HealthChanged`, `Died`, `PlayerDied`, `ActivationChanged`, `DoorStateChanged`, `LoopStarted`, `FlagChanged`, dialogue signals... |
 | Level progression | `Room.NextLevelPath` (per-room, set in the Inspector) + `GameStateManager.GoToNextLevel()` |
 
