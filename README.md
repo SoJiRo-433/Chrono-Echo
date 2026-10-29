@@ -39,6 +39,8 @@ the ending branches - is in [DESIGN.md](DESIGN.md).
 [autoload]
 
 GameStateManager="*res://Scripts/Core/GameStateManager.cs"
+DisplayManager="*res://Scripts/Core/DisplayManager.cs"
+PauseMenu="*res://Scripts/Menu/PauseMenu.cs"
 
 [dotnet]
 
@@ -46,10 +48,10 @@ project/assembly_name="ChronoEchoes"
 ```
    (Or: Project Settings > Globals > Autoload > add `Scripts/Core/GameStateManager.cs`,
    name `GameStateManager`, Enable.)
-4. Build once (hammer icon, top right), then press F5. Main scene: `Scenes/Rooms/Room01.tscn`.
+4. Build once (hammer icon, top right), then press F5. Main scene: `main_menu.tscn`. The menu provides Start/Continue, New Game, Load Game, and Quit.
 
 ## 2. Scene setup (already provided as .tscn; to rebuild by hand)
-All visuals are drawn in code (`_Draw`), so every scene is just a node with a script.
+Gameplay visuals are drawn in code (`_Draw`); the main menu uses the supplied video, title image, and font assets.
 - **Echo.tscn**: root `Node2D`, script `Echo.cs`.
 - **Player.tscn**: root `Node2D`, script `Player.cs`; set `Echo Scene` = `Echo.tscn`.
 - **Enemy.tscn**: root `Node2D`, script `Enemy.cs` (Max Health 2, Move Speed 70, Invincibility Duration 0.3).
@@ -75,7 +77,7 @@ All visuals are drawn in code (`_Draw`), so every scene is just a node with a sc
   which is what makes it the last level.
 
 ## 3. The demo loop (what happens in Room01)
-Controls: **WASD/Arrows** move, **E** interact, **J** attack, **T** record/stop a capture window, **R** project the Echo, **Enter/Space** dialogue, **1/2** choices, **F3** hide the debug HUD, **F11** toggle full screen.
+Controls: **WASD/Arrows** move, **E** interact, **J** attack, **T** record/stop a capture window, **R** project the Echo, **Enter/Space** dialogue, **1/2** choices, **F3** hide the debug HUD, **F11** toggle full screen, **Esc** open the pause menu.
 1. Aionia wakes at the west side of the room, inside the blue "START / WAKE-UP" marker. The short
    intro plays (game paused), then gameplay starts.
 2. Walk to the **report log** and press **E**. Turn the pages with **1**; the final page reveals the

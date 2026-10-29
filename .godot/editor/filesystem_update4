@@ -10,4 +10,8 @@ res://Scripts/Puzzles/Door.cs
 res://Scripts/Puzzles/Obstacle.cs
 res://Scripts/Dialogue/DialogueManager.cs
 res://Scripts/Rooms/Room.cs
+res://Scripts/Core/DisplayManager.cs
 res://Scripts/Core/GameStateManager.cs
+res://MainMenu.cs
+res://Scripts/Menu/PauseMenu.cs
+res://Scripts/Menu/SlotPicker.cs

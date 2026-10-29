@@ -1,0 +1,101 @@
+[gd_scene format=3 uid="uid://dei7x5m4vq7cx"]
+
+[ext_resource type="Script" uid="uid://cy2jdspgn0hqh" path="res://MainMenu.cs" id="1_7vrkn"]
+[ext_resource type="Texture2D" uid="uid://cm0tab01i4al0" path="res://Assets/TItle.png" id="2_fu7sn"]
+[ext_resource type="VideoStream" uid="uid://cm2j4kghnkcx5" path="res://Assets/main.ogv" id="3_jix8l"]
+[ext_resource type="FontFile" uid="uid://csnef6qiwqioo" path="res://Assets/Fonts/NotoSerifJP-VariableFont_wght.ttf" id="4_jix8l"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_lfxu0"]
+bg_color = Color(0.6, 0.6, 0.6, 0)
+
+[node name="Main Menu" type="Control" unique_id=440361451]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_7vrkn")
+
+[node name="menuAnimation" type="VideoStreamPlayer" parent="." unique_id=1220428401]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -235.0
+offset_top = 26.0
+offset_right = 3.0
+offset_bottom = 154.0
+grow_horizontal = 2
+grow_vertical = 2
+stream = ExtResource("3_jix8l")
+speed_scale = 1.3
+autoplay = true
+expand = true
+loop = true
+
+[node name="lblTitle" type="TextureRect" parent="." unique_id=1041081359]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.068
+anchor_right = 0.068
+offset_left = -24.336006
+offset_top = 43.0
+offset_right = 516.664
+offset_bottom = 291.0
+texture = ExtResource("2_fu7sn")
+expand_mode = 1
+
+[node name="grpMenu" type="VBoxContainer" parent="." unique_id=225125845]
+propagate_maximum_size = false
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -476.0
+offset_top = -37.0
+offset_right = -95.0
+offset_bottom = 290.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 17
+
+[node name="btnStart" type="Button" parent="grpMenu" unique_id=2026475702]
+layout_mode = 2
+size_flags_stretch_ratio = 0.0
+theme_override_fonts/font = ExtResource("4_jix8l")
+theme_override_font_sizes/font_size = 32
+theme_override_styles/normal = SubResource("StyleBoxFlat_lfxu0")
+text = "Start"
+
+[node name="btnLoadGame" type="Button" parent="grpMenu" unique_id=719272317]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("4_jix8l")
+theme_override_font_sizes/font_size = 32
+theme_override_styles/normal = SubResource("StyleBoxFlat_lfxu0")
+text = "Load Game"
+
+[node name="btnNewGame" type="Button" parent="grpMenu" unique_id=83934131]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("4_jix8l")
+theme_override_font_sizes/font_size = 32
+theme_override_styles/normal = SubResource("StyleBoxFlat_lfxu0")
+text = "New Game"
+
+[node name="CGs" type="Button" parent="grpMenu" unique_id=620230720]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("4_jix8l")
+theme_override_font_sizes/font_size = 32
+theme_override_styles/normal = SubResource("StyleBoxFlat_lfxu0")
+text = "CGs
+"
+
+[node name="Quit" type="Button" parent="grpMenu" unique_id=1802146162]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("4_jix8l")
+theme_override_font_sizes/font_size = 32
+theme_override_styles/normal = SubResource("StyleBoxFlat_lfxu0")
+text = "Quit
+"

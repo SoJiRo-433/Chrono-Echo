@@ -354,7 +354,7 @@ public partial class Room : Node2D
             Size = new Vector2(1124f, 22f),
             MouseFilter = Control.MouseFilterEnum.Ignore
         };
-        _controlsLabel.Text = "WASD move   ·   T record/stop   ·   E interact   ·   J attack   ·   R project echo   ·   Enter dialogue   ·   1/2 choose   ·   F3 hide HUD";
+        _controlsLabel.Text = "WASD move   ·   T record/stop   ·   E interact   ·   J attack   ·   R project echo   ·   Enter dialogue   ·   1/2 choose   ·   F3 hide HUD   ·   F11 fullscreen";
         _controlsLabel.AddThemeFontSizeOverride("font_size", 12);
         _controlsLabel.AddThemeColorOverride("font_color", new Color(0.62f, 0.66f, 0.72f));
         _controlsLabel.AddThemeColorOverride("font_outline_color", new Color(0f, 0f, 0f, 0.8f));
