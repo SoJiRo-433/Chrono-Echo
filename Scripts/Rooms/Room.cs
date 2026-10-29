@@ -2,17 +2,6 @@ using System.Collections.Generic;
 using System.Text;
 using Godot;
 
-/// <summary>
-/// A playable room. The CONTAINER that ties every system together.
-///
-/// OOP roles:
-///  - COMPOSITION: a Room HAS-A list of entities, obstacles, switches, doors (and echoes).
-///    It discovers them from its child nodes in _Ready().
-///  - Owns the shared LOOP CLOCK that keeps the recording and every Echo in sync.
-///  - Answers questions for others: IsBlocked(), FindNearestInteractable().
-///
-/// The Room node must sit at position (0,0): all coordinates are room coordinates.
-/// </summary>
 public partial class Room : Node2D
 {
     #region Signals
@@ -65,13 +54,8 @@ public partial class Room : Node2D
     [Export] public string CompletionFlag { get => _completionFlag; set => _completionFlag = value ?? ""; }
     [Export] public bool ShowDebugHud { get => _showDebugHud; set => _showDebugHud = value; }
 
-    /// <summary>1-based level number, shown on the HUD and reported to the GameStateManager.</summary>
     [Export] public int LevelNumber { get => _levelNumber; set => _levelNumber = Mathf.Max(1, value); }
 
-    /// <summary>
-    /// Scene loaded once this level is finished (the player reached the exit). Leave it
-    /// empty on the last level: the room then simply stays completed.
-    /// </summary>
     [Export] public string NextLevelPath { get => _nextLevelPath; set => _nextLevelPath = value ?? ""; }
 
     public IReadOnlyList<Entity> Entities => _entities;
@@ -82,18 +66,14 @@ public partial class Room : Node2D
     public IReadOnlyList<Inspectable> Inspectables => _inspectables;
     public Player Player { get; private set; }
 
-    /// <summary>The room's DialogueManager, so scenery can start a conversation by id.</summary>
     public DialogueManager Dialogue => _dialogue;
 
-    /// <summary>Seconds since the room started running - the shared clock the recorder and every Echo read.</summary>
     public float LoopClock => _loopClock;
     public int LoopNumber => _loopNumber;
     public bool IsComplete => _isComplete;
 
-    /// <summary>True when this room has no NextLevelPath, i.e. nothing follows it.</summary>
     public bool IsFinalLevel => string.IsNullOrEmpty(_nextLevelPath);
 
-    /// <summary>Length of one physics tick in seconds (1/60).</summary>
     public float StepSeconds => 1f / Engine.PhysicsTicksPerSecond;
 
     public Rect2 ExitBounds => new Rect2(_exitPosition, _exitSize);
@@ -119,7 +99,6 @@ public partial class Room : Node2D
         if (_introDialogueId != "") _dialogue?.StartDialogue(_introDialogueId);
     }
 
-    /// <summary>Sorts the child nodes into the Room's typed lists.</summary>
     private void RegisterChildren()
     {
         foreach (Node child in GetChildren())
@@ -161,7 +140,6 @@ public partial class Room : Node2D
         RefreshBanner();
     }
 
-    /// <summary>F3 hides the overlay, so a screenshot is not covered in debug text.</summary>
     public override void _UnhandledInput(InputEvent @event)
     {
         if (_hudPanel == null) return;
@@ -183,10 +161,6 @@ public partial class Room : Node2D
     #endregion
 
     #region Time loop control
-    /// <summary>
-    /// Rewinds the clock and resets puzzles and enemies - a completely fresh run. Only the
-    /// game-over restart (Player.RestartRun) calls this now; projecting an Echo never does.
-    /// </summary>
     public void StartNewLoop()
     {
         _loopNumber++;
@@ -200,10 +174,6 @@ public partial class Room : Node2D
         EmitSignal(SignalName.LoopStarted, _loopNumber);
     }
 
-    /// <summary>
-    /// Adds a new Echo and starts its replay from the CURRENT moment (projection in place).
-    /// If there are too many, the oldest one is removed.
-    /// </summary>
     public void AddEcho(Echo echo)
     {
         if (_echoes.Count >= _maxEchoes)
@@ -239,7 +209,6 @@ public partial class Room : Node2D
     #endregion
 
     #region Queries used by entities and puzzles
-    /// <summary>True if 'bounds' leaves the room or touches an obstacle or a CLOSED door.</summary>
     public bool IsBlocked(Rect2 bounds)
     {
         if (!new Rect2(Vector2.Zero, _roomSize).Encloses(bounds)) return true;
@@ -257,7 +226,6 @@ public partial class Room : Node2D
         return false;
     }
 
-    /// <summary>Nearest switch/door within 'radius' of 'from', or null.</summary>
     public IInteractable FindNearestInteractable(Vector2 from, float radius)
     {
         IInteractable best = null;
@@ -272,10 +240,6 @@ public partial class Room : Node2D
     #endregion
 
     #region Completion
-    /// <summary>
-    /// The player reached the exit. In Room01 that means the pressure plate was touched and
-    /// the door it opens was walked through; the room then hands over to the next level.
-    /// </summary>
     private void CompleteRoom()
     {
         _isComplete = true;
@@ -290,18 +254,11 @@ public partial class Room : Node2D
         if (!dialogueStarted) BeginLevelTransition();
     }
 
-    /// <summary>
-    /// The closing dialogue finished: leave the level. Deferred on purpose, the same way
-    /// Player.Die() defers its respawn - this signal arrives from inside the DialogueManager's
-    /// own EndDialogue(), so changing the scene right here would free the DialogueManager
-    /// while it is still part way through its call stack.
-    /// </summary>
     private void OnDialogueEnded(string dialogueId)
     {
         if (_isComplete) Callable.From(BeginLevelTransition).CallDeferred();
     }
 
-    /// <summary>Loads the next level, if there is one. Safe to call more than once.</summary>
     private void BeginLevelTransition()
     {
         if (_transitionStarted || IsFinalLevel) return;
@@ -313,7 +270,6 @@ public partial class Room : Node2D
     #endregion
 
     #region Debug HUD (placeholder UI)
-    /// <summary>Compact overlay: one status panel, a centred banner, and a controls footer.</summary>
     private void BuildDebugHud()
     {
         CanvasLayer layer = new CanvasLayer { Layer = 5 };
@@ -366,7 +322,6 @@ public partial class Room : Node2D
         AddChild(layer);
     }
 
-    /// <summary>Keeps the banner to the one thing that matters right now, or hides it.</summary>
     private void RefreshBanner()
     {
         string text = "";
@@ -377,7 +332,6 @@ public partial class Room : Node2D
         _bannerLabel.Visible = text != "" && _hudPanel.Visible;
     }
 
-    /// <summary>Five short lines. The flag list is trimmed, so it can never cover the screen.</summary>
     private string BuildHudText()
     {
         if (Player == null) return "";
@@ -396,7 +350,6 @@ public partial class Room : Node2D
         return sb.ToString();
     }
 
-    /// <summary>What the capture window is doing right now, in as few words as possible.</summary>
     private string DescribeCapture()
     {
         if (Player.IsRecording) return "Capture ON - T to stop";
@@ -421,7 +374,6 @@ public partial class Room : Node2D
     private int UnlockedFragmentCount => _dialogue != null ? _dialogue.UnlockedFragments.Count : 0;
     private int TotalFragmentCount => _dialogue != null ? _dialogue.FragmentCount : 0;
 
-    /// <summary>Every story flag that is currently true.</summary>
     private List<string> ActiveFlags()
     {
         var flags = new List<string>();
@@ -432,10 +384,6 @@ public partial class Room : Node2D
         return flags;
     }
 
-    /// <summary>
-    /// Joins as many entries as fit in 'budget' characters, then reports how many were left
-    /// out ("a, b +7"). Keeps the flag line to one line however much story is unlocked.
-    /// </summary>
     private static string ShortenList(List<string> items, int budget)
     {
         if (items.Count == 0) return "-";

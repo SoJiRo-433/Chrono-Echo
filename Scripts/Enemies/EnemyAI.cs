@@ -1,6 +1,5 @@
 using Godot;
 
-/// <summary>The four states of the enemy brain.</summary>
 public enum EnemyState
 {
     Patrol,
@@ -9,19 +8,6 @@ public enum EnemyState
     Dead
 }
 
-/// <summary>
-/// The enemy's "brain": a simple finite STATE MACHINE.
-///
-///   Patrol --(player within DetectionRange)--> Chase
-///   Chase  --(player within AttackRange)----> Attack
-///   Chase  --(player too far away)----------> Patrol
-///   Attack --(player moved out of range)----> Chase
-///   any    --(owner dies)-------------------> Dead
-///
-/// OOP role: COMPOSITION - an Enemy HAS-A EnemyAI. Keeping the decision logic in its own
-/// class keeps Enemy.cs short and makes the state machine easy to explain and test.
-/// It is a plain C# class (not a Node) and has no randomness, so it is deterministic.
-/// </summary>
 public sealed class EnemyAI
 {
     #region Private state
@@ -46,7 +32,6 @@ public sealed class EnemyAI
         _goingToB = true;
     }
 
-    /// <summary>Taking damage alerts a patrolling enemy.</summary>
     public void Alert()
     {
         if (_state == EnemyState.Patrol) _state = EnemyState.Chase;
@@ -92,7 +77,6 @@ public sealed class EnemyAI
         }
     }
 
-    /// <summary>Walks back and forth between two points at half speed.</summary>
     private void DoPatrol(float delta)
     {
         Vector2 goal = _goingToB ? _owner.PatrolPointB : _owner.PatrolPointA;

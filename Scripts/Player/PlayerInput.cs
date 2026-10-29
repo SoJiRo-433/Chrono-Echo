@@ -1,20 +1,8 @@
 using Godot;
 
-/// <summary>
-/// Translates raw keyboard state into ONE PlayerAction per physics tick.
-///
-/// OOP role: ENCAPSULATION / separation of concerns. Player never touches the Godot Input
-/// API directly - it asks this class "what is the player doing right now?". The same
-/// PlayerAction enum is what the recorder stores and the Echo replays.
-///
-/// Input actions are registered in code so the project works without editing the
-/// Input Map by hand. Controls: WASD/Arrows move, E interact, J attack, T records a
-/// capture window, R projects the captured window as an Echo.
-/// </summary>
 public sealed class PlayerInput
 {
     #region Input map registration
-    /// <summary>Safe to call many times: an action is only created once.</summary>
     public static void RegisterInputActions()
     {
         AddKeyAction("move_up", Key.W, Key.Up);
@@ -37,10 +25,6 @@ public sealed class PlayerInput
     #endregion
 
     #region Reading input
-    /// <summary>
-    /// One-shot actions (Interact, Attack) win over movement, because they must never be
-    /// missed. Movement is 4-directional: only one direction per tick (simple + replayable).
-    /// </summary>
     public PlayerAction ReadAction()
     {
         if (Input.IsActionJustPressed("interact")) return PlayerAction.Interact;
@@ -52,18 +36,12 @@ public sealed class PlayerInput
         return PlayerAction.Idle;
     }
 
-    /// <summary>
-    /// True on the tick the player presses R. R projects the captured window as an Echo in
-    /// place (and still starts a fresh run after a game over).
-    /// </summary>
     public bool IsProjectEchoPressed() => Input.IsActionJustPressed("project_echo");
 
-    /// <summary>True on the tick the player presses the capture key (T).</summary>
     public bool IsCaptureTogglePressed() => Input.IsActionJustPressed("toggle_capture");
     #endregion
 
     #region Helpers
-    /// <summary>Unit direction for a movement action (zero for non-movement actions).</summary>
     public static Vector2 DirectionOf(PlayerAction action)
     {
         switch (action)

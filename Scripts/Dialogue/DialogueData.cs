@@ -1,9 +1,5 @@
 using System.Collections.Generic;
 
-/// <summary>
-/// One selectable answer in a dialogue. Immutable (get-only properties).
-/// Choosing it can jump to another node and/or set a story flag in the GameStateManager.
-/// </summary>
 public sealed class DialogueChoice
 {
     public string Text { get; }
@@ -22,17 +18,12 @@ public sealed class DialogueChoice
         RequiredFlag = requiredFlag;
     }
 
-    /// <summary>Hidden unless its RequiredFlag (if any) is set.</summary>
     public bool IsAvailable()
     {
         return string.IsNullOrEmpty(RequiredFlag) || GameStateManager.Instance?.GetFlag(RequiredFlag) == true;
     }
 }
 
-/// <summary>
-/// One "screen" of dialogue: a speaker, several lines of text and then EITHER choices
-/// OR a single next-node reference (or nothing = end). Uses a fluent builder style.
-/// </summary>
 public sealed class DialogueNode
 {
     private readonly List<string> _lines = new();
@@ -56,10 +47,6 @@ public sealed class DialogueNode
     public DialogueNode SetNext(string nextNodeId) { NextNodeId = nextNodeId; return this; }
 }
 
-/// <summary>
-/// A whole conversation = a dictionary of nodes + the id of the first one.
-/// Deliberately tiny: no editor, no scripting language, just objects.
-/// </summary>
 public sealed class DialogueData
 {
     private readonly Dictionary<string, DialogueNode> _nodes = new();
@@ -69,7 +56,6 @@ public sealed class DialogueData
 
     public DialogueData(string id) { Id = id; }
 
-    /// <summary>The first node added becomes the start node.</summary>
     public DialogueData AddNode(DialogueNode node)
     {
         if (_nodes.Count == 0) StartNodeId = node.Id;
@@ -83,10 +69,6 @@ public sealed class DialogueData
     }
 }
 
-/// <summary>
-/// A memory the protagonist regains. It unlocks automatically when its RequiredFlag
-/// becomes true in the GameStateManager (see DialogueManager.CheckMemoryFragments).
-/// </summary>
 public sealed class MemoryFragment
 {
     public string Id { get; }

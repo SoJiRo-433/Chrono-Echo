@@ -1,20 +1,6 @@
 using System.Linq;
 using Godot;
 
-/// <summary>
-/// ABSTRACT BASE CLASS for everything that lives in a Room and has health:
-/// Player, Enemy and Echo all inherit from it.
-///
-/// OOP roles demonstrated here:
-///  - INHERITANCE:   Player / Enemy / Echo reuse health, damage, movement, drawing.
-///  - POLYMORPHISM:  Update(), TakeDamage(), Die(), Attack() and Interact() are virtual
-///                   and overridden by subclasses.
-///  - ENCAPSULATION: every field is private. Outside code only sees properties/methods.
-///  - INTERFACES:    implements IDamageable and IUpdatable.
-///
-/// NOTE: all positions use the node's local Position, so the Room node must stay at (0,0).
-/// Collision is a simple rectangle check done by the Room (no physics-engine setup needed).
-/// </summary>
 public abstract partial class Entity : Node2D, IDamageable, IUpdatable
 {
     #region Signals (decoupling)
@@ -50,20 +36,16 @@ public abstract partial class Entity : Node2D, IDamageable, IUpdatable
     public float BodyRadius => 14f;
     public float InteractRadius => 56f;
 
-    /// <summary>Logical position. Setting it also moves the Godot node.</summary>
     public Vector2 WorldPosition
     {
         get => _position;
         set { _position = value; Position = value; }
     }
 
-    /// <summary>Direction the entity last moved in (only used for drawing a little pointer).</summary>
     public Vector2 FacingDirection { get; protected set; } = Vector2.Down;
 
-    /// <summary>Axis-aligned collision box of this entity.</summary>
     public Rect2 Bounds => BoundsAt(_position);
 
-    /// <summary>Each subclass chooses its placeholder colour (abstract = must override).</summary>
     protected abstract Color BodyColor { get; }
     #endregion
 
@@ -76,7 +58,6 @@ public abstract partial class Entity : Node2D, IDamageable, IUpdatable
         QueueRedraw();
     }
 
-    /// <summary>Godot calls this at a fixed rate (60 Hz). We just forward to Update().</summary>
     public override void _PhysicsProcess(double delta)
     {
         // Dialogue (and other overlays) pause gameplay through the singleton.
@@ -84,7 +65,6 @@ public abstract partial class Entity : Node2D, IDamageable, IUpdatable
         Update((float)delta);
     }
 
-    /// <summary>Placeholder visuals: a coloured circle, a facing line and an attack ring.</summary>
     public override void _Draw()
     {
         DrawCircle(Vector2.Zero, BodyRadius, BodyColor);
@@ -95,7 +75,6 @@ public abstract partial class Entity : Node2D, IDamageable, IUpdatable
     #endregion
 
     #region Virtual behaviour (polymorphism)
-    /// <summary>Per-tick logic. Subclasses override and call base.Update(delta) first.</summary>
     public virtual void Update(float delta)
     {
         if (_invincibilityTimer > 0f) _invincibilityTimer = Mathf.Max(0f, _invincibilityTimer - delta);
@@ -107,10 +86,6 @@ public abstract partial class Entity : Node2D, IDamageable, IUpdatable
         QueueRedraw();
     }
 
-    /// <summary>
-    /// Damage calculation: ignored while dead or invincible, otherwise subtract health,
-    /// start the invincibility-frames cooldown, and die at 0.
-    /// </summary>
     public virtual void TakeDamage(int amount)
     {
         if (!_isAlive || amount <= 0 || IsInvincible) return;
@@ -122,7 +97,6 @@ public abstract partial class Entity : Node2D, IDamageable, IUpdatable
         if (_health == 0) Die();
     }
 
-    /// <summary>Marks the entity dead and announces it. Subclasses extend this.</summary>
     public virtual void Die()
     {
         _isAlive = false;
@@ -130,25 +104,16 @@ public abstract partial class Entity : Node2D, IDamageable, IUpdatable
         QueueRedraw();
     }
 
-    /// <summary>Called by the Room when the entity is added to it.</summary>
     public virtual void EnterRoom(Room room)
     {
         _room = room;
     }
 
-    /// <summary>
-    /// Default Interact: use the nearest IInteractable in reach. Player and Echo both
-    /// get this behaviour; Enemy overrides it to do nothing.
-    /// </summary>
     public virtual void Interact()
     {
         TryInteractWithNearby();
     }
 
-    /// <summary>
-    /// Default Attack: hit every hostile, living entity inside AttackRange.
-    /// Who counts as "hostile" is decided by the subclass (see IsHostileTo).
-    /// </summary>
     public virtual void Attack()
     {
         _attackFlashTimer = 0.12f;
@@ -163,12 +128,10 @@ public abstract partial class Entity : Node2D, IDamageable, IUpdatable
         }
     }
 
-    /// <summary>Team logic. Default: nobody is hostile. Overridden by Player/Echo/Enemy.</summary>
     protected virtual bool IsHostileTo(Entity other) => false;
     #endregion
 
     #region Protected helpers for subclasses
-    /// <summary>Finds the nearest IInteractable in reach and uses it. Returns true if one was used.</summary>
     protected bool TryInteractWithNearby()
     {
         if (_room == null) return false;
@@ -178,7 +141,6 @@ public abstract partial class Entity : Node2D, IDamageable, IUpdatable
         return true;
     }
 
-    /// <summary>Brings the entity back to life with full health (optionally with spawn protection).</summary>
     protected void Revive(float protectionSeconds = 0f)
     {
         _isAlive = true;
@@ -189,7 +151,6 @@ public abstract partial class Entity : Node2D, IDamageable, IUpdatable
         QueueRedraw();
     }
 
-    /// <summary>Heals, never above MaxHealth.</summary>
     public void Heal(int amount)
     {
         if (!_isAlive || amount <= 0) return;
@@ -197,10 +158,6 @@ public abstract partial class Entity : Node2D, IDamageable, IUpdatable
         EmitSignal(SignalName.HealthChanged, _health, _maxHealth);
     }
 
-    /// <summary>
-    /// Moves by 'offset' if the Room allows it. If the full move is blocked we try to
-    /// slide along X only, then Y only. Returns true if the entity actually moved.
-    /// </summary>
     protected bool TryMove(Vector2 offset)
     {
         if (offset == Vector2.Zero) return false;
@@ -225,10 +182,6 @@ public abstract partial class Entity : Node2D, IDamageable, IUpdatable
         return new Rect2(center - new Vector2(r, r), new Vector2(r * 2f, r * 2f));
     }
 
-    /// <summary>
-    /// Free to stand at 'point'? Escape hatch: if we are ALREADY stuck inside something
-    /// (e.g. a door closed on us) we allow moving so we can never be trapped forever.
-    /// </summary>
     private bool CanOccupy(Vector2 point)
     {
         if (!_room.IsBlocked(BoundsAt(point))) return true;

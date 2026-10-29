@@ -1,13 +1,5 @@
 using Godot;
 
-/// <summary>
-/// A labelled patch of floor. Purely visual: it never blocks movement and cannot be
-/// interacted with. Used to lay the room out like the blueprint - the wake-up spot, the
-/// spatial anomaly, the Echo recording zone, and the piles of debris.
-///
-/// OOP role: the simplest Room part after Obstacle - data plus one drawing method. The Room
-/// does not even need to know about it, because it neither collides nor reacts to input.
-/// </summary>
 public partial class FloorMarker : Node2D
 {
     #region Private state
@@ -24,13 +16,8 @@ public partial class FloorMarker : Node2D
     [Export] public Color Fill { get => _fill; set { _fill = value; QueueRedraw(); } }
     [Export] public Color Outline { get => _outline; set { _outline = value; QueueRedraw(); } }
 
-    /// <summary>
-    /// When set, the marker only becomes visible once this GameStateManager flag is true.
-    /// That is how the burnt photo "appears on the final page" of the report log.
-    /// </summary>
     [Export] public string VisibleFlag { get => _visibleFlag; set => _visibleFlag = value ?? ""; }
 
-    /// <summary>Rectangle in room coordinates (used only for documentation/debugging).</summary>
     public Rect2 Bounds => new Rect2(Position, _size);
     #endregion
 
@@ -58,7 +45,6 @@ public partial class FloorMarker : Node2D
         if (_visibleFlag != "") RefreshVisibility();
     }
 
-    /// <summary>Hidden until its flag is set; visible straight away when it has no flag.</summary>
     private void RefreshVisibility()
     {
         bool unlocked = _visibleFlag == "" || (GameStateManager.Instance?.GetFlag(_visibleFlag) ?? false);

@@ -3,10 +3,8 @@ using System;
 
 public enum SlotPickerMode { Load, Save }
 
-/// <summary>A 3-slot overlay used for both Load Game and Save Game. Built entirely in code.</summary>
 public partial class SlotPicker : Control
 {
-    /// <summary>Raised when a slot was successfully chosen to load.</summary>
     public event Action Chosen;
 
     private SlotPickerMode _mode = SlotPickerMode.Load;

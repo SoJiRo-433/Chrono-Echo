@@ -1,14 +1,5 @@
 using Godot;
 
-/// <summary>
-/// A door that blocks movement while closed. Implements IInteractable.
-///
-/// Normally a Switch opens it (OnSwitchChanged is wired to the Switch's signal).
-/// With RequiresSwitch = false the player can also open/close it by hand with E.
-///
-/// OOP roles: INTERFACE implementation (IInteractable), ENCAPSULATION (private _isOpen,
-/// state changes only through Open()/Close()), SIGNALS (DoorStateChanged).
-/// </summary>
 public partial class Door : Node2D, IInteractable
 {
     #region Signals
@@ -26,13 +17,11 @@ public partial class Door : Node2D, IInteractable
     [Export] public Vector2 Size { get => _size; set { _size = value; QueueRedraw(); } }
     [Export] public bool RequiresSwitch { get => _requiresSwitch; set => _requiresSwitch = value; }
 
-    /// <summary>Optional story flag set (once) the first time this door opens.</summary>
     [Export] public string OpenedFlag { get => _openedFlag; set => _openedFlag = value ?? ""; }
 
     public bool IsOpen => _isOpen;
     public Rect2 Bounds => new Rect2(Position, _size);
 
-    /// <summary>Measured to the door's edge, so it can be used while standing against it.</summary>
     public float DistanceTo(Vector2 from) => Bounds.DistanceToPoint(from);
     #endregion
 
@@ -54,7 +43,6 @@ public partial class Door : Node2D, IInteractable
         EmitSignal(SignalName.DoorStateChanged, false);
     }
 
-    /// <summary>Connected to Switch.ActivationChanged: active = open, inactive = closed.</summary>
     public void OnSwitchChanged(bool isActivated)
     {
         if (isActivated) Open(); else Close();

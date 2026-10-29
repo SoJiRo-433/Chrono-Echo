@@ -1,7 +1,6 @@
 using Godot;
 using System;
 
-/// <summary>Shared font/theme plus quick popup dialogs.</summary>
 public static class UiHelper
 {
     private const string FontPath = "res://Assets/Fonts/NotoSerifJP-VariableFont_wght.ttf";
@@ -17,7 +16,6 @@ public static class UiHelper
         return _theme;
     }
 
-    /// <summary>Yes/Cancel popup. onConfirm runs only if the player confirms.</summary>
     public static void Confirm(Node parent, string title, string message, Action onConfirm,
                                string okText = "Yes", string cancelText = "Cancel")
     {
@@ -35,7 +33,6 @@ public static class UiHelper
         Show(parent, dialog);
     }
 
-    /// <summary>Simple message popup with an OK button.</summary>
     public static void Notify(Node parent, string title, string message)
     {
         var dialog = new AcceptDialog

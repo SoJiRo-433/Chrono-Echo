@@ -1,18 +1,6 @@
 using System.Collections.Generic;
 using Godot;
 
-/// <summary>
-/// Plays DialogueData: shows lines one by one, presents choices, applies each choice's
-/// outcome to the GameStateManager flags, and unlocks memory fragments when their flags
-/// are set. Pauses gameplay while a conversation is active.
-///
-/// OOP roles: ENCAPSULATION (all state private; public API = StartDialogue/Advance/
-/// SelectChoice), SIGNALS (a real UI can listen to LineChanged / ChoicesPresented...),
-/// loose coupling to the story through GameStateManager flags only.
-///
-/// A tiny placeholder overlay is built in code so the system is testable without any
-/// UI scenes. Controls: Enter/Space = next line, 1/2/3 = choose.
-/// </summary>
 public partial class DialogueManager : Node
 {
 	#region Signals
@@ -48,7 +36,6 @@ public partial class DialogueManager : Node
 	public bool IsActive => _isActive;
 	public IReadOnlyList<MemoryFragment> UnlockedFragments => _unlockedFragments;
 
-	/// <summary>How many memory fragments exist in total, so the HUD can show "2/4".</summary>
 	public int FragmentCount => _fragments.Count;
 	#endregion
 
@@ -94,13 +81,10 @@ public partial class DialogueManager : Node
 	#endregion
 
 	#region Public API
-	/// <summary>Adds a conversation so it can be started by id.</summary>
 	public void RegisterDialogue(DialogueData data) { _library[data.Id] = data; }
 
-	/// <summary>Adds a memory fragment that unlocks when its flag becomes true.</summary>
 	public void RegisterFragment(MemoryFragment fragment) { _fragments.Add(fragment); }
 
-	/// <summary>Starts a conversation. Returns false if one is already running or the id is unknown.</summary>
 	public bool StartDialogue(string dialogueId)
 	{
 		if (_isActive || !_library.TryGetValue(dialogueId, out DialogueData data)) return false;
@@ -113,7 +97,6 @@ public partial class DialogueManager : Node
 		return true;
 	}
 
-	/// <summary>Next line, or next node / end when the lines run out. Ignored while a choice is pending.</summary>
 	public void Advance()
 	{
 		if (!_isActive || _awaitingChoice) return;
@@ -129,7 +112,6 @@ public partial class DialogueManager : Node
 		else EndDialogue();
 	}
 
-	/// <summary>Picks a visible choice (0-based), applies its flag outcome and follows its link.</summary>
 	public void SelectChoice(int index)
 	{
 		if (!_isActive || !_awaitingChoice || index < 0 || index >= _visibleChoices.Count) return;
@@ -204,7 +186,6 @@ public partial class DialogueManager : Node
 		_unlockedFragments.Clear();
 	}
 
-	/// <summary>Unlocks every fragment whose required flag is set and that is not unlocked yet.</summary>
 	private void CheckMemoryFragments()
 	{
 		GameStateManager state = GameStateManager.Instance;

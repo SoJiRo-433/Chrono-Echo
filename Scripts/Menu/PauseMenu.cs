@@ -1,9 +1,5 @@
 using Godot;
 
-/// <summary>
-/// Esc menu (Resume / Save Game / Load Game / Quit). Registered as an autoload so it works in
-/// every scene. It ignores Esc on the main menu (scene in group "main_menu").
-/// </summary>
 public partial class PauseMenu : CanvasLayer
 {
     // Where "Quit" sends the player. Adjust if main_menu.tscn lives in another folder.

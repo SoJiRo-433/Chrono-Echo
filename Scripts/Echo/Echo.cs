@@ -1,37 +1,6 @@
 using System.Collections.Generic;
 using Godot;
 
-/// <summary>
-/// A ghost that replays one previous loop. INHERITS Entity.
-///
-/// OOP roles:
-///  - INHERITANCE:   Echo : Entity.
-///  - POLYMORPHISM:  overrides Update(), TakeDamage(), Die(), Interact(); IsHostileTo().
-///  - ENCAPSULATION: the recorded frames are private; the Echo cannot be edited from outside.
-///
-/// HOW THE PROJECTION WORKS (and why it is deterministic)
-///  1. The Room owns ONE shared clock (Room.LoopClock) that advances in fixed 1/60 s physics
-///     steps. The recording was made against that same clock, and the replay reads that same
-///     clock, so "time" means exactly the same thing in both.
-///  2. An Echo is PROJECTED IN PLACE: the player presses R and it is added to the room right
-///     then, replaying its window FORWARD from that moment. Nothing else about the run
-///     changes - the clock is not rewound, puzzles and enemies keep their state, and the
-///     player is not moved. (The old design reset the whole run to place an Echo; that is
-///     what this rework removed.)
-///  3. To do that the Echo remembers WHEN it was projected (_replayStartClock) and expresses
-///     the current clock in its own recording timeline (see Update). The window's first frame
-///     therefore fires the instant the Echo appears, and the rest keep their original spacing.
-///     Anchoring at 0 - the old "reset the loop" case - is just _replayStartClock == 0.
-///  4. Each tick the Echo fires every frame whose Timestamp has been reached. A frame snaps
-///     the Echo to the recorded position and, if the action is Interact or Attack, re-performs
-///     it (only world-affecting actions are replayed - movement is NOT simulated again).
-///  5. Between two frames, the Echo's position is linearly interpolated. Because the recorder
-///     stored a frame at every change of direction, a straight line between two frames is
-///     exactly the path the player walked.
-///  No randomness, no real-time clock, no live input: same frames in = same Echo out.
-///  Several Echoes can exist at once - each has its own frame list and its own projection
-///  moment, and they all read the same clock, so they stay in sync ("stacked" echoes).
-/// </summary>
 public partial class Echo : Entity
 {
     #region Private state
@@ -39,7 +8,6 @@ public partial class Echo : Entity
     private int _nextFrameIndex;
     private bool _isReplaying;
 
-    /// <summary>Value of Room.LoopClock at the moment this Echo was projected.</summary>
     private float _replayStartClock;
     #endregion
 
@@ -50,18 +18,11 @@ public partial class Echo : Entity
     #endregion
 
     #region Setup
-    /// <summary>Gives the Echo its recording. Called once, before it is added to the Room.</summary>
     public void Initialize(IReadOnlyList<ActionFrame> frames)
     {
         _frames = new List<ActionFrame>(frames);   // private copy
     }
 
-    /// <summary>
-    /// Begins the replay from the CURRENT moment. The Room calls this right after the Echo is
-    /// added, which is what "projected in place" means: frame 0 fires now, the rest follow with
-    /// their original spacing. (The old design rewound the clock to 0 first, so this anchoring
-    /// used to be a no-op - a projection start of 0 - which is exactly the special case here.)
-    /// </summary>
     public void StartReplay()
     {
         _nextFrameIndex = 0;
@@ -117,7 +78,6 @@ public partial class Echo : Entity
         if (heading != Vector2.Zero) FacingDirection = heading.Normalized();
     }
 
-    /// <summary>Only world-affecting actions are re-performed.</summary>
     private void Perform(PlayerAction action)
     {
         switch (action)
@@ -130,12 +90,10 @@ public partial class Echo : Entity
     #endregion
 
     #region Polymorphic overrides
-    /// <summary>Echoes are memories: they cannot be hurt.</summary>
     public override void TakeDamage(int amount) { }
 
     public override void Die() { }
 
-    /// <summary>Same world effect as the player's Interact, but without any player-only side effects.</summary>
     public override void Interact()
     {
         TryInteractWithNearby();

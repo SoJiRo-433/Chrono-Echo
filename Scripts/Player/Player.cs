@@ -1,29 +1,6 @@
 using System.Collections.Generic;
 using Godot;
 
-/// <summary>
-/// The player character. INHERITS Entity (health, damage, movement, drawing).
-///
-/// OOP roles:
-///  - INHERITANCE:   Player : Entity.
-///  - POLYMORPHISM:  overrides Update(), TakeDamage(), Die(), Interact(); IsHostileTo().
-///  - ENCAPSULATION: lives, inventory, recorder and input are private; exposed via properties.
-///  - COMPOSITION:   Player HAS-A PlayerInput and HAS-A EchoRecorder.
-///
-/// ECHO LIFECYCLE
-///   BeginTimeLoop()  -> the Room's shared clock is already running when the level loads.
-///                       Capture does NOT start by itself: the player presses the capture key,
-///                       so they choose which stretch of their actions the Echo will repeat.
-///   StartCapture() / StopCapture() -> open and close that window (T). Closing it appends an
-///                       Idle frame, so the Echo stops replaying exactly where you stopped.
-///   ProjectEcho()    -> pressing R projects the captured window as an Echo RIGHT HERE, NOW.
-///                       The ghost appears at the window's first recorded position and replays
-///                       it forward from this moment. Nothing else changes - no rewound clock,
-///                       no teleported player, no reset puzzles or enemies. Projecting an Echo
-///                       is a tool you deploy, NOT a loop restart (that is this rework).
-///   Die() -> Respawn() -> costs a life; whatever window you had is projected as an Echo and
-///                       you wake again at the start. There is no world reset either.
-/// </summary>
 public partial class Player : Entity
 {
     #region Signals
@@ -47,7 +24,6 @@ public partial class Player : Entity
     #region Public properties
     [Export] public int StartingLives { get => _startingLives; set => _startingLives = Mathf.Max(1, value); }
 
-    /// <summary>Scene used to spawn Echoes. If left empty, a plain Echo node is created in code.</summary>
     [Export] public PackedScene EchoScene { get; set; }
 
     public int Lives => _lives;
@@ -55,7 +31,6 @@ public partial class Player : Entity
     public bool IsRecording => _recorder.IsRecording;
     public IReadOnlyList<string> Inventory => _inventory;
 
-    /// <summary>How many frames the current - or already frozen - capture window holds.</summary>
     public int CapturedFrameCount => _recorder.FrameCount;
 
     protected override Color BodyColor => new Color(0.25f, 0.55f, 1f);
@@ -77,7 +52,6 @@ public partial class Player : Entity
         SyncLivesToState();
     }
 
-    /// <summary>The Room calls this once the player is inside it: place at start and open the loop.</summary>
     public override void EnterRoom(Room room)
     {
         base.EnterRoom(room);
@@ -118,10 +92,6 @@ public partial class Player : Entity
         if (_input.IsProjectEchoPressed()) ProjectEcho();
     }
 
-    /// <summary>
-    /// Performs one action. Returns the action that REALLY happened: a move that was blocked
-    /// by a wall is reported as Idle, so the recording matches reality.
-    /// </summary>
     private PlayerAction ExecuteAction(PlayerAction action, float delta)
     {
         switch (action)
@@ -153,7 +123,6 @@ public partial class Player : Entity
         base.TakeDamage(amount);
     }
 
-    /// <summary>Death: announce it, then resolve it AFTER the current tick (see ResolveDeath).</summary>
     public override void Die()
     {
         base.Die();   // IsAlive = false, Died signal
@@ -181,12 +150,6 @@ public partial class Player : Entity
         Respawn();
     }
 
-    /// <summary>
-    /// Respawn after death: costs one life. Whatever capture window you had is projected as an
-    /// Echo, and with lives left you wake again at the room's start with full health. There is
-    /// no world reset - puzzles, enemies and the clock all keep running; with none left it is
-    /// game over.
-    /// </summary>
     public void Respawn()
     {
         _lives--;
@@ -206,7 +169,6 @@ public partial class Player : Entity
         if (CurrentRoom != null) ReturnToStart(CurrentRoom);   // full health + back to the start
     }
 
-    /// <summary>Full restart after game over: fresh lives, no echoes, flags cleared.</summary>
     public void RestartRun()
     {
         Room room = CurrentRoom;
@@ -226,44 +188,28 @@ public partial class Player : Entity
     #endregion
 
     #region Time loop
-    /// <summary>
-    /// Opens a new loop. Capture no longer starts on its own: the player presses the capture
-    /// key, so the Echo replays the window they chose instead of the whole loop.
-    /// </summary>
     public void BeginTimeLoop()
     {
         EmitSignal(SignalName.LoopStarted);
     }
 
-    /// <summary>Opens a fresh capture window at the player's current position.</summary>
     public void StartCapture()
     {
         _recorder.StartRecording();   // pressing the key again starts a new window
     }
 
-    /// <summary>Closes the window where the player is standing right now.</summary>
     public void StopCapture()
     {
         if (!_recorder.IsRecording) return;
         _recorder.StopRecording(CurrentRoom != null ? CurrentRoom.LoopClock : 0f, WorldPosition);
     }
 
-    /// <summary>The capture key: the first press opens a window, the next one closes it.</summary>
     public void ToggleCapture()
     {
         if (_recorder.IsRecording) StopCapture();
         else StartCapture();
     }
 
-    /// <summary>
-    /// Projects the captured window as an Echo right now, WITHOUT restarting the room.
-    ///
-    /// An open window is closed at the player's current position. The Echo is then handed to the
-    /// Room, which anchors its replay to the current clock (see Room.AddEcho / Echo.StartReplay),
-    /// so the ghost appears at the window's first recorded position and plays forward from here.
-    /// The window is spent once projected: R with nothing captured does nothing, and pressing R
-    /// twice never spawns duplicate Echoes.
-    /// </summary>
     public void ProjectEcho()
     {
         Room room = CurrentRoom;
@@ -280,10 +226,6 @@ public partial class Player : Entity
         room.AddEcho(echo);                        // AddEcho anchors the replay and starts it now
     }
 
-    /// <summary>
-    /// Mirrors the current lives into the singleton so that the next level (which builds a
-    /// new Player node) starts with the same number of lives.
-    /// </summary>
     private void SyncLivesToState()
     {
         if (GameStateManager.Instance != null) GameStateManager.Instance.CarriedLives = _lives;

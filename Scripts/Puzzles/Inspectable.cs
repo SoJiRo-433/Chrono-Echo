@@ -1,17 +1,5 @@
 using Godot;
 
-/// <summary>
-/// Scenery the player can examine with E: the report log, the destroyed time machine, the
-/// broken cabinet, the pile of broken machinery.
-///
-/// OOP roles:
-///  - INTERFACE implementation (IInteractable), so Entity.Interact() reaches it through
-///    Room.FindNearestInteractable without knowing what concrete thing it is.
-///  - ENCAPSULATION: whether it has been examined yet is private; outside code reads
-///    HasBeenExamined.
-///  - DECOUPLING: it does not hold any story text. It only knows WHICH registered dialogue
-///    to start and WHICH flag to set - the words live in the DialogueManager.
-/// </summary>
 public partial class Inspectable : Node2D, IInteractable
 {
     #region Private state
@@ -32,22 +20,17 @@ public partial class Inspectable : Node2D, IInteractable
     [Export] public Color Fill { get => _fill; set { _fill = value; QueueRedraw(); } }
     [Export] public Color Outline { get => _outline; set { _outline = value; QueueRedraw(); } }
 
-    /// <summary>Conversation started the first time the player examines this object.</summary>
     [Export] public string FirstDialogueId { get => _firstDialogueId; set => _firstDialogueId = value ?? ""; }
 
-    /// <summary>Conversation started on later examinations. Empty = play the first one again.</summary>
     [Export] public string RepeatDialogueId { get => _repeatDialogueId; set => _repeatDialogueId = value ?? ""; }
 
-    /// <summary>Story flag set the first time this object is examined (empty = sets nothing).</summary>
     [Export] public string FlagToSet { get => _flagToSet; set => _flagToSet = value ?? ""; }
 
-    /// <summary>Solid objects block movement, exactly like an Obstacle.</summary>
     [Export] public bool Solid { get => _solid; set => _solid = value; }
 
     public bool HasBeenExamined => _examined;
     public Rect2 Bounds => new Rect2(Position, _size);
 
-    /// <summary>Measured to the nearest edge, so a big desk is usable from right beside it.</summary>
     public float DistanceTo(Vector2 from) => Bounds.DistanceToPoint(from);
     #endregion
 

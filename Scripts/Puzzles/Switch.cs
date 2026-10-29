@@ -1,18 +1,5 @@
 using Godot;
 
-/// <summary>
-/// A puzzle switch that controls a linked Door. Implements IInteractable AND IUpdatable.
-///
-/// Two modes (set IsPressurePlate in the Inspector):
-///  - Lever (default): the player/Echo presses E nearby to activate it. StaysOn=true means
-///    it latches on until it is reset (which now only happens on a full restart).
-///  - Pressure plate: active ONLY while a living Player or Echo stands on it. This is the
-///    classic time-loop trick: an Echo that finished its replay standing on the plate keeps
-///    the door open while the live player walks through.
-///
-/// Decoupling: the Switch never calls the Door directly while running - it emits
-/// ActivationChanged and the Door listens (wired once in _Ready).
-/// </summary>
 public partial class Switch : Node2D, IInteractable, IUpdatable
 {
     #region Signals
@@ -29,7 +16,6 @@ public partial class Switch : Node2D, IInteractable, IUpdatable
     #endregion
 
     #region Public properties
-    /// <summary>Path (set in the Inspector) to the Door this switch controls.</summary>
     [Export] public NodePath LinkedDoorPath { get; set; } = new NodePath();
     [Export] public bool IsPressurePlate { get => _isPressurePlate; set { _isPressurePlate = value; QueueRedraw(); } }
     [Export] public bool StaysOn { get => _staysOn; set => _staysOn = value; }
@@ -38,7 +24,6 @@ public partial class Switch : Node2D, IInteractable, IUpdatable
     public bool IsActivated => _isActivated;
     public Door LinkedDoor => _linkedDoor;
 
-    /// <summary>A switch is a small circle, so its own position is the interaction point.</summary>
     public float DistanceTo(Vector2 from) => from.DistanceTo(Position);
     #endregion
 
@@ -56,7 +41,6 @@ public partial class Switch : Node2D, IInteractable, IUpdatable
         Update((float)delta);
     }
 
-    /// <summary>Connects this switch to a door (also usable from code).</summary>
     public void LinkDoor(Door door)
     {
         if (_linkedDoor != null) ActivationChanged -= _linkedDoor.OnSwitchChanged;
@@ -93,7 +77,6 @@ public partial class Switch : Node2D, IInteractable, IUpdatable
     #endregion
 
     #region State
-    /// <summary>The only place the state changes - so the signal is never forgotten.</summary>
     private void SetActivated(bool value)
     {
         if (_isActivated == value) return;
@@ -102,7 +85,6 @@ public partial class Switch : Node2D, IInteractable, IUpdatable
         EmitSignal(SignalName.ActivationChanged, _isActivated);
     }
 
-    /// <summary>Called by the Room on a full restart (after a game over).</summary>
     public void ResetState()
     {
         SetActivated(false);

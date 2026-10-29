@@ -2,10 +2,6 @@ using Godot;
 using System;
 using GDict = Godot.Collections.Dictionary;
 
-/// <summary>
-/// Handles the 3 save slots, "Continue", and starting/loading games.
-/// Static class, so it needs no autoload.
-/// </summary>
 public static class SaveManager
 {
     public const int SlotCount = 3;
@@ -15,13 +11,10 @@ public static class SaveManager
 
     private const string MetaPath = "user://save_meta.json";
 
-    /// <summary>Your friend assigns this so saves include his game data (items, flags, etc.).</summary>
     public static Func<GDict> CaptureState;
 
-    /// <summary>Raised after the scene for a brand-new game has loaded. Reset game data here.</summary>
     public static event Action NewGameStarted;
 
-    /// <summary>Raised after a save is loaded and its scene is ready. Receives the saved data.</summary>
     public static event Action<GDict> GameLoaded;
 
     public static int CurrentSlot { get; private set; } = -1;
@@ -84,7 +77,6 @@ public static class SaveManager
 
     // ---- Actions ----
 
-    /// <summary>Starts a fresh game. Overwrites the current game's slot (or uses an empty one).</summary>
     public static async void NewGame(SceneTree tree)
     {
         int slot = HasGame ? LastSlot : FirstEmptySlot();
@@ -107,7 +99,6 @@ public static class SaveManager
         NewGameStarted?.Invoke();
     }
 
-    /// <summary>Saves the current scene (and CaptureState data) into a slot.</summary>
     public static bool Save(SceneTree tree, int slot)
     {
         var state = CaptureState?.Invoke() ?? new GDict();
@@ -128,7 +119,6 @@ public static class SaveManager
         return true;
     }
 
-    /// <summary>Loads a slot: switches to its scene, then raises GameLoaded.</summary>
     public static async void LoadSlot(SceneTree tree, int slot)
     {
         var data = ReadSlot(slot);
