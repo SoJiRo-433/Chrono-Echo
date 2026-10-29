@@ -107,47 +107,7 @@ Controls: **WASD/Arrows** move, **E** interact, **J** attack, **T** record/stop 
    - With both Echoes holding their plates, walk through to the exit.
    Room02 has no `NextLevelPath`, so finishing it shows "ALL LEVELS CLEAR" and stays put.
 
-## 4. Testing checklist (QA)
-**Recording / Echo**
-- [ ] Capture is OFF when the room loads; the HUD reads `Capture off - press T to record`.
-- [ ] T opens a window (`Capture ON - T to stop`); T again freezes it and the HUD shows the frame count and `R to project`.
-- [ ] If T was never pressed, pressing R projects no Echo.
-- [ ] After R: Echoes 1/3 and an Echo appears at the window's first recorded position - while the loop counter, your position, the enemy and the puzzles are all UNCHANGED (nothing resets).
-- [ ] The Echo replays the captured window at the same speed as the recorded run, then stands still at the final position.
-- [ ] A window recorded earlier is rebased on projection: the Echo appears at its first recorded position the instant R is pressed and plays forward from there.
-- [ ] Recording while already standing on the plate gives an Echo that is on the plate the moment it is projected.
-- [ ] Pressing E near the lever (plate mode OFF) inside a window -> the Echo activates it when its replay reaches that frame.
-- [ ] Project 4 windows: only 3 echoes exist (oldest removed). Each echo replays from its own projection moment.
-- [ ] Repeat the identical run twice: Echoes behave identically (deterministic).
-**Puzzles**
-- [ ] Door is solid when closed (player cannot pass), passable when open.
-- [ ] Plate is green only while Player or Echo stands on it; door closes when nobody does.
-- [ ] Obstacles and room edges block movement; entities slide along walls.
-- [ ] The door closes again by itself when nobody holds the plate (there is no loop reset any more).
-**Combat / health**
-- [ ] Enemy colour: dark red patrol -> orange chase -> bright red attack.
-- [ ] Enemy hit by J (needs 2 hits, ~0.3 s apart); it disappears when dead and returns next loop.
-- [ ] Player loses 1 HP per enemy hit, blinks during i-frames, cannot be hit again during them.
-- [ ] Dying costs 1 life, projects your captured window as an Echo, and wakes you back at the start with full HP (the room is not reset).
-- [ ] Lives 0 -> "GAME OVER"; R restarts with 3 lives, no echoes, flags cleared.
-- [ ] Echo cannot be damaged by the enemy.
-**Levels**
-- [ ] Reaching the exit in Room01 plays the closing dialogue, and only then loads Room02.
-- [ ] Lives carry over: finish Room01 with 1 life left -> Room02 starts with 1 life.
-- [ ] Flags and memory fragments survive the level change (the HUD's Flags line still names `touched_pendant`).
-- [ ] Room02 has no next level: completing it shows "ALL LEVELS CLEAR" and does not change scene.
-**Narrative / interactables**
-- [ ] Gameplay is frozen during dialogue and resumes after.
-- [ ] The report log opens with **E**, the pages turn with **1**, and the final page sets `saw_burnt_photo` (HUD flags) and makes the photo marker appear.
-- [ ] The time machine, drawers, cabinet and broken machinery each play their own line and set their own flag the first time.
-- [ ] Re-examining the report log plays the short "already read" line instead of the pages.
-- [ ] Picking up the pendant adds `pendant` to her inventory, sets `touched_pendant`, unlocks Fragment I, and removes the pendant from the floor.
-- [ ] Reaching the exit sets `room01_complete`, plays closing dialogue once, unlocks Fragment II.
-- [ ] "Ask the pendant who you are" appears only if `touched_pendant` is set.
-**Architecture**
-- [ ] Output panel shows no errors; only one GameStateManager exists (Remote tree).
-
-## 5. Summary - how it fits together
+## 4. Summary - how it fits together
 **OOP map (for your defense)**
 | Concept | Where |
 |---|---|
