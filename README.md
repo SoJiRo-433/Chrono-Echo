@@ -77,7 +77,7 @@ All visuals are drawn in code (`_Draw`), so every scene is just a node with a sc
   which is what makes it the last level.
 
 ## 3. The demo loop (what happens in Room01)
-Controls: **WASD/Arrows** move, **E** interact, **J** attack, **T** capture, **R** reset loop, **Enter/Space** dialogue, **1/2** choices, **F3** hide the debug HUD.
+Controls: **WASD/Arrows** move, **E** interact, **J** attack, **T** record/stop a capture window, **R** project the Echo, **Enter/Space** dialogue, **1/2** choices, **F3** hide the debug HUD.
 1. Aionia wakes at the west side of the room, inside the blue "START / WAKE-UP" marker. The short
    intro plays (game paused), then gameplay starts.
 2. Walk to the **report log** and press **E**. Turn the pages with **1**; the final page reveals the
@@ -86,42 +86,49 @@ Controls: **WASD/Arrows** move, **E** interact, **J** attack, **T** capture, **R
    and the pile of broken machinery each have their own line and their own flag.
 4. Walk to the glowing **pendant** in the middle of the room and press **E**. It goes into her
    inventory, sets `touched_pendant` (which unlocks Fragment I) and plays the memory flash with Felix.
-5. **Loop 1:** capture is OFF. Press **T** where you want the Echo to start, walk south-east to the
-   red pressure switch and stand on it, then press **T** again to close the window.
-6. Press **R** (or let the enemy kill you; that costs a life). An **Echo** (cyan ghost) is spawned from the window you captured.
-7. **Loop 2:** the world resets. The Echo replays your captured window and stays on the switch. The switch turns green, the **security door** in the east divider opens.
-8. Walk through the open door (fight the enemy with J if needed) into the green exit zone -> **ROOM CLEAR**, closing dialogue, memory fragment II.
-9. To test the Interact path instead: set `Is Pressure Plate` OFF on the switch, press **E** next to it in loop 1, then **R**; the Echo repeats the Interact.
-10. **Level 2 (Room02).** Reaching the exit sets `room01_complete`, the closing dialogue plays, and
-   the game loads `Room02.tscn`. Your lives carry over, and the flags/memory fragments you earned
-   are kept. Room02 has two plates and two doors in a row, so one Echo is no longer enough:
-   - Loop 1: walk onto `PlateA`, press **R**. The Echo now holds plate A, so `DoorA` stays open.
-   - Loop 2: walk through `DoorA` to `PlateB`, stand on it, press **R**. A second Echo now holds plate B.
-   - Loop 3: Echo 1 holds A and Echo 2 holds B, so both doors are open - walk through to the exit.
+5. Capture starts OFF. Press **T** where you want the Echo to start recording, walk south-east to
+   the red pressure switch and stand on it, then press **T** again to close the window.
+6. Press **R**. An **Echo** (cyan ghost) is projected **in place**: it appears at the first position
+   you recorded and replays the window forward from this moment - it walks back to the switch and
+   stays there. Nothing else changes: no clock rewind, no puzzle or enemy reset, and you are not moved.
+7. The switch turns green under the Echo's weight, so the **security door** in the east divider opens.
+   Walk through it while your past self holds the plate.
+8. Fight the enemy with **J** if needed, then step into the green exit zone -> **ROOM CLEAR**,
+   closing dialogue, memory fragment II.
+9. To test the Interact path instead: set `Is Pressure Plate` OFF on the switch, press **E** next to
+   it while the window is open, then **R**; the Echo repeats the Interact and latches the lever.
+10. Dying works the same way: it costs a life, projects whatever window you had as an Echo, and wakes
+    you back at the start with full health. It no longer resets the room.
+11. **Level 2 (Room02).** Reaching the exit sets `room01_complete`, the closing dialogue plays, and
+    the game loads `Room02.tscn`. Your lives carry over, and the flags/memory fragments you earned
+    are kept. Room02 has two plates and two doors in a row, so one Echo is no longer enough:
+   - Stand on `PlateA`, record a short window with **T**...**T**, then project it with **R**. The Echo holds plate A, so `DoorA` opens.
+   - Walk through `DoorA` to `PlateB`, record a short window on it and project it with **R**. A second Echo now holds plate B, so `DoorB` opens too.
+   - With both Echoes holding their plates, walk through to the exit.
    Room02 has no `NextLevelPath`, so finishing it shows "ALL LEVELS CLEAR" and stays put.
 
 ## 4. Testing checklist (QA)
 **Recording / Echo**
-- [ ] Capture is OFF when a loop starts; the HUD reads `Capture off - press T`; Loop #1.
-- [ ] T opens a window (`Capture ON`); T again freezes it and the HUD shows the frame count.
-- [ ] A loop where T was never pressed spawns no Echo when you press R.
-- [ ] After R: Loop # increments, Echoes 1/3, player returns to start, enemy and puzzles reset.
+- [ ] Capture is OFF when the room loads; the HUD reads `Capture off - press T to record`.
+- [ ] T opens a window (`Capture ON - T to stop`); T again freezes it and the HUD shows the frame count and `R to project`.
+- [ ] If T was never pressed, pressing R projects no Echo.
+- [ ] After R: Echoes 1/3 and an Echo appears at the window's first recorded position - while the loop counter, your position, the enemy and the puzzles are all UNCHANGED (nothing resets).
 - [ ] The Echo replays the captured window at the same speed as the recorded run, then stands still at the final position.
-- [ ] An Echo captured mid-loop waits at its anchor position until the window's first timestamp arrives, then replays (no index error).
-- [ ] Capturing only the final second while standing on the plate gives an Echo that is already there when the loop restarts.
-- [ ] Pressing E near the lever (plate mode OFF) inside a window -> the Echo activates it at the same moment in loop 2.
-- [ ] Do 4 resets: only 3 echoes exist (oldest removed). Two echoes replay in sync.
+- [ ] A window recorded earlier is rebased on projection: the Echo appears at its first recorded position the instant R is pressed and plays forward from there.
+- [ ] Recording while already standing on the plate gives an Echo that is on the plate the moment it is projected.
+- [ ] Pressing E near the lever (plate mode OFF) inside a window -> the Echo activates it when its replay reaches that frame.
+- [ ] Project 4 windows: only 3 echoes exist (oldest removed). Each echo replays from its own projection moment.
 - [ ] Repeat the identical run twice: Echoes behave identically (deterministic).
 **Puzzles**
 - [ ] Door is solid when closed (player cannot pass), passable when open.
 - [ ] Plate is green only while Player or Echo stands on it; door closes when nobody does.
 - [ ] Obstacles and room edges block movement; entities slide along walls.
-- [ ] Each loop reset closes the door and deactivates the switch.
+- [ ] The door closes again by itself when nobody holds the plate (there is no loop reset any more).
 **Combat / health**
 - [ ] Enemy colour: dark red patrol -> orange chase -> bright red attack.
 - [ ] Enemy hit by J (needs 2 hits, ~0.3 s apart); it disappears when dead and returns next loop.
 - [ ] Player loses 1 HP per enemy hit, blinks during i-frames, cannot be hit again during them.
-- [ ] Dying costs 1 life, spawns an Echo of the failed run, restores HP and position.
+- [ ] Dying costs 1 life, projects your captured window as an Echo, and wakes you back at the start with full HP (the room is not reset).
 - [ ] Lives 0 -> "GAME OVER"; R restarts with 3 lives, no echoes, flags cleared.
 - [ ] Echo cannot be damaged by the enemy.
 **Levels**
@@ -156,27 +163,34 @@ Controls: **WASD/Arrows** move, **E** interact, **J** attack, **T** capture, **R
 **Echo system.** `PlayerInput` produces one `PlayerAction` per physics tick. `Player` executes
 it and passes it to `EchoRecorder.Tick`, which stores an `ActionFrame` only when the action
 changes (or on Interact/Attack) - tens of frames instead of ~1,800 for a 30 s loop.
-`Player.ResetTimeLoop(room)` closes the capture window, creates an `Echo` from the frames, and
-calls `Room.StartNewLoop()`, which resets puzzles/enemies and rewinds every Echo. The Room owns a
+`Player.ProjectEcho()` closes the capture window, creates an `Echo` from the frames, and hands it
+to `Room.AddEcho()`, which calls `Echo.StartReplay()`. That anchors the replay to the *current*
+clock value, so the Echo is projected **in place**: it appears at the window's first recorded
+position and replays forward from this moment. Nothing about the run is reset - the clock keeps
+running, puzzles and enemies keep their state, and the player is not moved. The Room owns a
 single `LoopClock` (fixed 1/60 s steps) that both the recording and all replays read, so they
 stay in sync. The Echo snaps to each frame's position, re-performs only Interact/Attack, and
 interpolates in between. No randomness or live input is involved, so it is deterministic.
 A finished Echo stays where it ended, so it can hold a pressure plate.
 
-**Capture windows.** Capture does not start by itself. The player presses **T** to open a window
-at their current position, and **T** again to close it, so the Echo replays exactly the stretch
-they chose instead of the whole loop. A second press after closing starts a *new* window and
-discards the old frames. Because a window can open after the loop began, its first frame carries a
-non-zero timestamp: until that timestamp arrives the Echo waits at its anchor position, since it
-has no earlier frame to glide from - `Echo.Update` has an explicit branch for that case. Ending
-the loop with **R** closes an open window; closing one that is already frozen returns the same
-frames without appending a second Idle frame.
+**Capture windows & projection.** Capture does not start by itself. The player presses **T** to
+open a window at their current position and **T** again to close it, so the Echo replays exactly
+the stretch they chose instead of a whole loop. A second press after closing starts a *new* window
+and discards the old frames. Because a window can open after the room began, its first frame
+carries a non-zero timestamp; when the window is projected the Echo *rebases* it, so frame 0 fires
+the instant **R** is pressed and the rest keep their original spacing - `Echo.Update` expresses the
+shared clock in the recording's own timeline (`LoopClock - _replayStartClock + frames[0].Timestamp`).
+Projecting closes an open window and *consumes* it, so pressing **R** twice never spawns duplicates
+(closing a window that is already frozen still returns the same frames without a second Idle frame).
 
-An Echo holds whatever it is standing on from the moment the loop starts, even before its own
-window begins - it is already at its anchor position, so `Switch` counts it. That is deliberate,
-not an oversight: opening a window while standing on a plate is a legitimate solution, and the
-puzzle is meant to be about *when* you capture rather than about walking the whole route first.
-Blocking it would mean teaching `Switch` to ask whether an Echo's window has started yet.
+An Echo is placed at its first frame's position the moment it is projected, so `Switch` counts it
+right away: recording while standing on a plate (record, walk off, press **R**) is a legitimate
+and intended solution. The puzzle is about *when* you capture, not about replaying a full loop.
+
+The old design reset the whole run to place an Echo - clock to 0, puzzles and enemies reset, the
+player teleported back to the start. This rework removed that: an Echo is projected where it was
+recorded and the run simply keeps going. The only thing that still resets the world is the
+game-over restart (`Player.RestartRun`, which calls `Room.StartNewLoop`).
 
 **Level progression.** Each Room declares its own `LevelNumber` and `NextLevelPath` in the
 Inspector, so a level describes itself instead of being listed in one central place. When the

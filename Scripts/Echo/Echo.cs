@@ -9,23 +9,28 @@ using Godot;
 ///  - POLYMORPHISM:  overrides Update(), TakeDamage(), Die(), Interact(); IsHostileTo().
 ///  - ENCAPSULATION: the recorded frames are private; the Echo cannot be edited from outside.
 ///
-/// HOW THE REPLAY WORKS (and why it is deterministic)
-///  1. The Room owns ONE shared loop clock (Room.LoopClock) that advances in fixed 1/60 s
-///     physics steps. The recording was made against that same clock, and the replay reads
-///     that same clock, so "time" means exactly the same thing in both.
-///  2. Each tick the Echo fires every frame whose Timestamp has been reached. A frame
-///     snaps the Echo to the recorded position and, if the action is Interact or Attack,
-///     re-performs it (only world-affecting actions are replayed - movement is NOT
-///     simulated again).
-///  3. Between two frames, the Echo's position is linearly interpolated. Because the
-///     recorder stored a frame at every change of direction, a straight line between two
-///     frames is exactly the path the player walked.
-///  4. A capture window can start AFTER the loop began, because the player chooses the
-///     moment. Until the window's first timestamp arrives the Echo waits at its anchor
-///     position - the spot it was captured - since it has no earlier frame to glide from.
+/// HOW THE PROJECTION WORKS (and why it is deterministic)
+///  1. The Room owns ONE shared clock (Room.LoopClock) that advances in fixed 1/60 s physics
+///     steps. The recording was made against that same clock, and the replay reads that same
+///     clock, so "time" means exactly the same thing in both.
+///  2. An Echo is PROJECTED IN PLACE: the player presses R and it is added to the room right
+///     then, replaying its window FORWARD from that moment. Nothing else about the run
+///     changes - the clock is not rewound, puzzles and enemies keep their state, and the
+///     player is not moved. (The old design reset the whole run to place an Echo; that is
+///     what this rework removed.)
+///  3. To do that the Echo remembers WHEN it was projected (_replayStartClock) and expresses
+///     the current clock in its own recording timeline (see Update). The window's first frame
+///     therefore fires the instant the Echo appears, and the rest keep their original spacing.
+///     Anchoring at 0 - the old "reset the loop" case - is just _replayStartClock == 0.
+///  4. Each tick the Echo fires every frame whose Timestamp has been reached. A frame snaps
+///     the Echo to the recorded position and, if the action is Interact or Attack, re-performs
+///     it (only world-affecting actions are replayed - movement is NOT simulated again).
+///  5. Between two frames, the Echo's position is linearly interpolated. Because the recorder
+///     stored a frame at every change of direction, a straight line between two frames is
+///     exactly the path the player walked.
 ///  No randomness, no real-time clock, no live input: same frames in = same Echo out.
-///  Several Echoes can exist at once - each has its own frame list and they all read the
-///  same clock, so they stay in sync ("stacked" echoes).
+///  Several Echoes can exist at once - each has its own frame list and its own projection
+///  moment, and they all read the same clock, so they stay in sync ("stacked" echoes).
 /// </summary>
 public partial class Echo : Entity
 {
@@ -33,6 +38,9 @@ public partial class Echo : Entity
     private List<ActionFrame> _frames = new();
     private int _nextFrameIndex;
     private bool _isReplaying;
+
+    /// <summary>Value of Room.LoopClock at the moment this Echo was projected.</summary>
+    private float _replayStartClock;
     #endregion
 
     #region Public properties
@@ -48,10 +56,16 @@ public partial class Echo : Entity
         _frames = new List<ActionFrame>(frames);   // private copy
     }
 
-    /// <summary>Rewinds to t=0. The Room calls this at the start of every loop.</summary>
+    /// <summary>
+    /// Begins the replay from the CURRENT moment. The Room calls this right after the Echo is
+    /// added, which is what "projected in place" means: frame 0 fires now, the rest follow with
+    /// their original spacing. (The old design rewound the clock to 0 first, so this anchoring
+    /// used to be a no-op - a projection start of 0 - which is exactly the special case here.)
+    /// </summary>
     public void StartReplay()
     {
         _nextFrameIndex = 0;
+        _replayStartClock = CurrentRoom != null ? CurrentRoom.LoopClock : 0f;
         _isReplaying = _frames.Count > 0;
         if (_isReplaying) WorldPosition = _frames[0].Position;
     }
@@ -63,8 +77,9 @@ public partial class Echo : Entity
         base.Update(delta);
         if (!_isReplaying || CurrentRoom == null) return;
 
-        float now = CurrentRoom.LoopClock;
-        if (now < 0f) return;   // the loop was just reset; wait for tick 0
+        // Express "now" in the recording's own timeline: the window's first frame fires the
+        // moment this Echo was projected, and every later frame keeps its original spacing.
+        float now = CurrentRoom.LoopClock - _replayStartClock + _frames[0].Timestamp;
 
         // 1) Fire every frame that is due (usually zero or one per tick).
         while (_nextFrameIndex < _frames.Count && _frames[_nextFrameIndex].Timestamp <= now)
@@ -82,8 +97,9 @@ public partial class Echo : Entity
             return;
         }
 
-        // 3) Nothing has fired yet, because the window opens later than this moment: hold at
-        //    the anchor position. There is no "previous" frame to glide from.
+        // 3) Nothing has fired yet: hold at the anchor position. With a fresh projection this
+        //    is momentary (frame 0 fires on the first tick), but the branch keeps the Echo safe
+        //    if it is ever added with the clock deliberately behind its projection start.
         if (_nextFrameIndex == 0)
         {
             WorldPosition = _frames[0].Position;

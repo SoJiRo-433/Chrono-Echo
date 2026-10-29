@@ -85,7 +85,7 @@ public partial class Room : Node2D
     /// <summary>The room's DialogueManager, so scenery can start a conversation by id.</summary>
     public DialogueManager Dialogue => _dialogue;
 
-    /// <summary>Seconds since this loop started. Negative for one tick right after a reset.</summary>
+    /// <summary>Seconds since the room started running - the shared clock the recorder and every Echo read.</summary>
     public float LoopClock => _loopClock;
     public int LoopNumber => _loopNumber;
     public bool IsComplete => _isComplete;
@@ -109,7 +109,7 @@ public partial class Room : Node2D
         GameStateManager.Instance?.RegisterRoom(this);
         GameStateManager.Instance?.RegisterLevel(_levelNumber);
 
-        foreach (Entity entity in _entities.ToArray()) entity.EnterRoom(this);   // Player starts recording here
+        foreach (Entity entity in _entities.ToArray()) entity.EnterRoom(this);   // Player is placed at the start
 
         _dialogue = GetNodeOrNull<DialogueManager>("DialogueManager");
         if (_dialogue != null) _dialogue.DialogueEnded += OnDialogueEnded;       // level hand-over waits for it
@@ -184,8 +184,8 @@ public partial class Room : Node2D
 
     #region Time loop control
     /// <summary>
-    /// Starts a new loop: rewinds the clock, resets puzzles and enemies, and makes every
-    /// Echo replay from the beginning. Called by Player.ResetTimeLoop().
+    /// Rewinds the clock and resets puzzles and enemies - a completely fresh run. Only the
+    /// game-over restart (Player.RestartRun) calls this now; projecting an Echo never does.
     /// </summary>
     public void StartNewLoop()
     {
@@ -200,7 +200,10 @@ public partial class Room : Node2D
         EmitSignal(SignalName.LoopStarted, _loopNumber);
     }
 
-    /// <summary>Adds a new Echo. If there are too many, the oldest one is removed.</summary>
+    /// <summary>
+    /// Adds a new Echo and starts its replay from the CURRENT moment (projection in place).
+    /// If there are too many, the oldest one is removed.
+    /// </summary>
     public void AddEcho(Echo echo)
     {
         if (_echoes.Count >= _maxEchoes)
@@ -213,6 +216,7 @@ public partial class Room : Node2D
 
         AddChild(echo);
         echo.EnterRoom(this);
+        echo.StartReplay();     // anchor the window to the clock; it replays forward from here
         _echoes.Add(echo);
         _entities.Add(echo);
     }
@@ -350,7 +354,7 @@ public partial class Room : Node2D
             Size = new Vector2(1124f, 22f),
             MouseFilter = Control.MouseFilterEnum.Ignore
         };
-        _controlsLabel.Text = "WASD move   ·   T capture   ·   E interact   ·   J attack   ·   R reset loop   ·   Enter dialogue   ·   1/2 choose   ·   F3 hide HUD";
+        _controlsLabel.Text = "WASD move   ·   T record/stop   ·   E interact   ·   J attack   ·   R project echo   ·   Enter dialogue   ·   1/2 choose   ·   F3 hide HUD";
         _controlsLabel.AddThemeFontSizeOverride("font_size", 12);
         _controlsLabel.AddThemeColorOverride("font_color", new Color(0.62f, 0.66f, 0.72f));
         _controlsLabel.AddThemeColorOverride("font_outline_color", new Color(0f, 0f, 0f, 0.8f));
@@ -395,9 +399,9 @@ public partial class Room : Node2D
     /// <summary>What the capture window is doing right now, in as few words as possible.</summary>
     private string DescribeCapture()
     {
-        if (Player.IsRecording) return "Capture ON";
-        if (Player.CapturedFrameCount > 0) return "Capture held, " + Player.CapturedFrameCount + " frames";
-        return "Capture off - press T";
+        if (Player.IsRecording) return "Capture ON - T to stop";
+        if (Player.CapturedFrameCount > 0) return "Captured " + Player.CapturedFrameCount + " frames - R to project";
+        return "Capture off - press T to record";
     }
 
     private int CountActiveSwitches()

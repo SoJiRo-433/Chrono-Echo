@@ -1,0 +1,13 @@
+res://Scripts/Puzzles/Pendant.cs
+res://Scripts/Puzzles/Inspectable.cs
+res://Scripts/Rooms/FloorMarker.cs
+res://Scripts/Core/Entity.cs
+res://Scripts/Echo/Echo.cs
+res://Scripts/Player/Player.cs
+res://Scripts/Enemies/Enemy.cs
+res://Scripts/Puzzles/Switch.cs
+res://Scripts/Puzzles/Door.cs
+res://Scripts/Puzzles/Obstacle.cs
+res://Scripts/Dialogue/DialogueManager.cs
+res://Scripts/Rooms/Room.cs
+res://Scripts/Core/GameStateManager.cs

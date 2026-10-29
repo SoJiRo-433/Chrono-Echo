@@ -10,16 +10,19 @@ using Godot;
 ///  - ENCAPSULATION: lives, inventory, recorder and input are private; exposed via properties.
 ///  - COMPOSITION:   Player HAS-A PlayerInput and HAS-A EchoRecorder.
 ///
-/// TIME-LOOP LIFECYCLE
-///   BeginTimeLoop()  -> a new loop opens. Capture does NOT start by itself: the player
-///                       presses the capture key, so they choose when the Echo starts.
-///   StartCapture() / StopCapture() -> open and close that window. Closing it appends an
+/// ECHO LIFECYCLE
+///   BeginTimeLoop()  -> the Room's shared clock is already running when the level loads.
+///                       Capture does NOT start by itself: the player presses the capture key,
+///                       so they choose which stretch of their actions the Echo will repeat.
+///   StartCapture() / StopCapture() -> open and close that window (T). Closing it appends an
 ///                       Idle frame, so the Echo stops replaying exactly where you stopped.
-///   ResetTimeLoop()  -> recorder stops, an Echo is spawned from the captured window, the
-///                       Room restarts (puzzles reset, echoes replay from t=0), player
-///                       returns to the start and BeginTimeLoop() runs again.
-///   Die() -> Respawn() -> costs a life, then runs ResetTimeLoop() (the failed attempt
-///                       becomes an Echo too).
+///   ProjectEcho()    -> pressing R projects the captured window as an Echo RIGHT HERE, NOW.
+///                       The ghost appears at the window's first recorded position and replays
+///                       it forward from this moment. Nothing else changes - no rewound clock,
+///                       no teleported player, no reset puzzles or enemies. Projecting an Echo
+///                       is a tool you deploy, NOT a loop restart (that is this rework).
+///   Die() -> Respawn() -> costs a life; whatever window you had is projected as an Echo and
+///                       you wake again at the start. There is no world reset either.
 /// </summary>
 public partial class Player : Entity
 {
@@ -74,7 +77,7 @@ public partial class Player : Entity
         SyncLivesToState();
     }
 
-    /// <summary>The Room calls this once the player is inside it: place at start and start recording.</summary>
+    /// <summary>The Room calls this once the player is inside it: place at start and open the loop.</summary>
     public override void EnterRoom(Room room)
     {
         base.EnterRoom(room);
@@ -90,7 +93,7 @@ public partial class Player : Entity
 
         if (_isGameOver)
         {
-            if (_input.IsResetPressed()) RestartRun();   // after game over, R starts a new run
+            if (_input.IsProjectEchoPressed()) RestartRun();   // after game over, R starts a new run
             return;
         }
         if (!IsAlive || CurrentRoom == null) return;
@@ -110,7 +113,9 @@ public partial class Player : Entity
         if (_recorder.IsRecording)
             _recorder.Tick(CurrentRoom.LoopClock, effective, positionBeforeMove);
 
-        if (_input.IsResetPressed()) ResetTimeLoop(CurrentRoom);
+        // R projects the captured window as an Echo, in place. The run keeps going: no clock
+        // rewind, no puzzle/enemy reset, and the player is not moved.
+        if (_input.IsProjectEchoPressed()) ProjectEcho();
     }
 
     /// <summary>
@@ -177,8 +182,10 @@ public partial class Player : Entity
     }
 
     /// <summary>
-    /// Respawn after death: costs one life. With lives left, the failed attempt becomes an
-    /// Echo and the player restarts at the room's start; with none left it is game over.
+    /// Respawn after death: costs one life. Whatever capture window you had is projected as an
+    /// Echo, and with lives left you wake again at the room's start with full health. There is
+    /// no world reset - puzzles, enemies and the clock all keep running; with none left it is
+    /// game over.
     /// </summary>
     public void Respawn()
     {
@@ -195,7 +202,8 @@ public partial class Player : Entity
             return;
         }
 
-        ResetTimeLoop(CurrentRoom);   // restores position + health as part of the reset
+        ProjectEcho();                              // the failed attempt leaves an Echo behind
+        if (CurrentRoom != null) ReturnToStart(CurrentRoom);   // full health + back to the start
     }
 
     /// <summary>Full restart after game over: fresh lives, no echoes, flags cleared.</summary>
@@ -248,28 +256,28 @@ public partial class Player : Entity
     }
 
     /// <summary>
-    /// Ends the current loop: stop recording -> spawn an Echo that replays it -> restart the
-    /// room -> put the player back at the start -> begin recording a new loop.
+    /// Projects the captured window as an Echo right now, WITHOUT restarting the room.
+    ///
+    /// An open window is closed at the player's current position. The Echo is then handed to the
+    /// Room, which anchors its replay to the current clock (see Room.AddEcho / Echo.StartReplay),
+    /// so the ghost appears at the window's first recorded position and plays forward from here.
+    /// The window is spent once projected: R with nothing captured does nothing, and pressing R
+    /// twice never spawns duplicate Echoes.
     /// </summary>
-    public void ResetTimeLoop(Room room)
+    public void ProjectEcho()
     {
+        Room room = CurrentRoom;
         if (room == null) return;
 
-        // The loop ends one tick after the last recorded tick.
-        float endTime = room.LoopClock + room.StepSeconds;
-        IReadOnlyList<ActionFrame> frames = _recorder.StopRecording(endTime, WorldPosition);
+        IReadOnlyList<ActionFrame> frames = _recorder.StopRecording(room.LoopClock, WorldPosition);
+        _recorder.Clear();                        // the window is consumed once it is projected
         EmitSignal(SignalName.LoopEnded, frames.Count);
 
-        if (frames.Count > 0)
-        {
-            Echo echo = EchoScene != null ? EchoScene.Instantiate<Echo>() : new Echo();
-            echo.Initialize(frames);
-            room.AddEcho(echo);
-        }
+        if (frames.Count == 0) return;
 
-        room.StartNewLoop();     // puzzles reset, enemies reset, ALL echoes restart at t=0
-        ReturnToStart(room);
-        BeginTimeLoop();
+        Echo echo = EchoScene != null ? EchoScene.Instantiate<Echo>() : new Echo();
+        echo.Initialize(frames);
+        room.AddEcho(echo);                        // AddEcho anchors the replay and starts it now
     }
 
     /// <summary>

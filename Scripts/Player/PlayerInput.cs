@@ -8,8 +8,8 @@ using Godot;
 /// PlayerAction enum is what the recorder stores and the Echo replays.
 ///
 /// Input actions are registered in code so the project works without editing the
-/// Input Map by hand. Controls: WASD/Arrows move, E interact, J attack, T capture,
-/// R reset loop.
+/// Input Map by hand. Controls: WASD/Arrows move, E interact, J attack, T records a
+/// capture window, R projects the captured window as an Echo.
 /// </summary>
 public sealed class PlayerInput
 {
@@ -24,7 +24,7 @@ public sealed class PlayerInput
         AddKeyAction("interact", Key.E);
         AddKeyAction("attack", Key.J);
         AddKeyAction("toggle_capture", Key.T);
-        AddKeyAction("reset_loop", Key.R);
+        AddKeyAction("project_echo", Key.R);
     }
 
     private static void AddKeyAction(string action, params Key[] keys)
@@ -52,7 +52,11 @@ public sealed class PlayerInput
         return PlayerAction.Idle;
     }
 
-    public bool IsResetPressed() => Input.IsActionJustPressed("reset_loop");
+    /// <summary>
+    /// True on the tick the player presses R. R projects the captured window as an Echo in
+    /// place (and still starts a fresh run after a game over).
+    /// </summary>
+    public bool IsProjectEchoPressed() => Input.IsActionJustPressed("project_echo");
 
     /// <summary>True on the tick the player presses the capture key (T).</summary>
     public bool IsCaptureTogglePressed() => Input.IsActionJustPressed("toggle_capture");

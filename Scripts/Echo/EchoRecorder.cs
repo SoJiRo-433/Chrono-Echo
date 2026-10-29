@@ -66,7 +66,7 @@ public sealed class EchoRecorder
     ///
     /// Safe to call once the window is already closed: the frozen frames come back unchanged
     /// and no second Idle frame is added. That is what lets the player close the window with
-    /// the capture key and still have R end the loop without disturbing it.
+    /// the capture key and still project it with R without disturbing it.
     /// </summary>
     public IReadOnlyList<ActionFrame> StopRecording(float endTimestamp, Vector2 endPosition)
     {
@@ -76,6 +76,17 @@ public sealed class EchoRecorder
             _frames.Add(new ActionFrame(endTimestamp, endPosition, PlayerAction.Idle));
         }
         return new List<ActionFrame>(_frames);
+    }
+
+    /// <summary>
+    /// Throws away the frozen frames and re-arms the recorder. The Player calls this once a
+    /// window has been projected as an Echo, so the same window can never be projected twice.
+    /// </summary>
+    public void Clear()
+    {
+        _frames.Clear();
+        _hasLastAction = false;
+        _isRecording = false;
     }
     #endregion
 }

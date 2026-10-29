@@ -287,7 +287,7 @@ public partial class DialogueManager : Node
 			.AddNode(new DialogueNode("wake", "Narrator")
 				.AddLine("The space around you looks like it has been abandoned. You find scattered papers, broken machines, and broken glasses.")
 				.AddLine("You should look around and find out what happened.")
-				.AddLine("(Move with WASD, examine things with E. T opens a capture window for your Echo; R ends the loop.)")));
+				.AddLine("(Move with WASD, examine things with E. T records a short window of your actions; R projects it as an Echo.)")));
 
 		// --- Scene 2-3: the report log, page by page, ending on the burnt photo ---
 		RegisterDialogue(new DialogueData("report_log")
@@ -349,7 +349,7 @@ public partial class DialogueManager : Node
 				.AddLine("Who is that person who gave me this?")
 				.SetNext("hint"))
 			.AddNode(new DialogueNode("hint", "Narrator")
-				.AddLine("(Hint: press T to open a capture window, walk onto the pressure switch, then press R. Your Echo replays exactly that window.)")));
+				.AddLine("(Hint: press T to record a short window - walk onto the pressure switch and hold it - then press T again to stop and R to project your Echo. It repeats exactly that window.)")));
 
 		// --- Scene 6-7: the Echo is what gets you through the security door ---
 		RegisterDialogue(new DialogueData("room01_clear")
@@ -365,7 +365,7 @@ public partial class DialogueManager : Node
 		RegisterDialogue(new DialogueData("room02_intro")
 			.AddNode(new DialogueNode("start", "Pendant")
 				.AddLine("Deeper into the Aetherion Institute. Two doors this time, and the far one is the way out.")
-				.AddLine("(Hint: one Echo can only hold one plate. Capture on the first plate with T, press R, then capture on the second plate and press R again.)")));
+				.AddLine("(Hint: one Echo can only hold one plate. Record yourself standing on the first plate with T, project it with R, then do the same on the second plate.)")));
 
 		RegisterDialogue(new DialogueData("room02_clear")
 			.AddNode(new DialogueNode("start", "Pendant")

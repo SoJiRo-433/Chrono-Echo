@@ -219,13 +219,15 @@ rooms in this repo.
    introduces the Echo ability.
 6. **First Echo Tutorial** - the pendant reacts to a spatial anomaly and casts a translucent, glowing
    blue "Echo" of Aionia that repeats her recent movements step-for-step. On-screen instructions
-   teach the core mechanic: press **R** to record a short action window, move around, then stop
-   recording so the Echo loops those exact movements. Dialogue: "Wha... It copies my movements?" /
+   teach the core mechanic: press **T** to record a short action window, move around, then press
+   **T** again to stop - and **R** to project the Echo, which repeats those exact movements from
+   that moment on. Dialogue: "Wha... It copies my movements?" /
    "I need to test this out." / "Hah... Amazing" / "I can use this to get out of here."
 7. **Tutorial Puzzle (the Pressure Switch)** - the exit is blocked by a heavy security door powered
    down by the blackout, alongside a floor pressure switch that needs continuous weight to keep the
    circuit open. Aionia cannot be in two places at once: record her stepping onto and holding the
-   switch, and once the recording stops the Echo stands on it while the live Aionia walks through.
+   switch, then project the Echo - it walks back to the switch and holds it while the live Aionia
+   walks through.
 8. **Leaving the Room** - she passes through the door into the overgrown, shattered corridors of the
    institute. The scale of the timeline collapse hits her, and she realises the pendant is
    intimately tied to her lost memories. The tutorial ends and the main exploration/puzzle adventure

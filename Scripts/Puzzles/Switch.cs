@@ -5,7 +5,7 @@ using Godot;
 ///
 /// Two modes (set IsPressurePlate in the Inspector):
 ///  - Lever (default): the player/Echo presses E nearby to activate it. StaysOn=true means
-///    it latches on until the loop resets.
+///    it latches on until it is reset (which now only happens on a full restart).
 ///  - Pressure plate: active ONLY while a living Player or Echo stands on it. This is the
 ///    classic time-loop trick: an Echo that finished its replay standing on the plate keeps
 ///    the door open while the live player walks through.
@@ -102,7 +102,7 @@ public partial class Switch : Node2D, IInteractable, IUpdatable
         EmitSignal(SignalName.ActivationChanged, _isActivated);
     }
 
-    /// <summary>Called by the Room when a new loop starts.</summary>
+    /// <summary>Called by the Room on a full restart (after a game over).</summary>
     public void ResetState()
     {
         SetActivated(false);

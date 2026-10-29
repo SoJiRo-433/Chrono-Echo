@@ -50,7 +50,7 @@ public partial class Enemy : Entity
         _patrolB = _spawnPosition + new Vector2(_patrolDistance, 0f);
     }
 
-    /// <summary>The Room calls this at the start of every loop so enemies are fresh again.</summary>
+    /// <summary>The Room calls this on a full restart (after a game over) so enemies are fresh again.</summary>
     public void ResetForNewLoop()
     {
         Revive();
