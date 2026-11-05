@@ -26,6 +26,7 @@ public partial class DialogueManager : Node
 
 	// placeholder UI
 	private CanvasLayer _layer;
+	private TextureRect _memoryImage;
 	private ColorRect _panel;
 	private Label _dialogueLabel;
 	private Label _toastLabel;
@@ -209,6 +210,17 @@ public partial class DialogueManager : Node
 	{
 		_layer = new CanvasLayer { Layer = 10 };
 
+		_memoryImage = new TextureRect
+		{
+			Texture = GD.Load<Texture2D>("res://Assets/blue_light_memory.jpg"),
+			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+			StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
+			MouseFilter = Control.MouseFilterEnum.Ignore,
+			Visible = false
+		};
+		_memoryImage.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+		_layer.AddChild(_memoryImage);
+
 		_panel = new ColorRect { Color = new Color(0f, 0f, 0f, 0.78f), Position = new Vector2(20f, 450f), Size = new Vector2(1112f, 180f), Visible = false };
 		_dialogueLabel = new Label { Position = new Vector2(16f, 12f), Size = new Vector2(1080f, 156f), AutowrapMode = TextServer.AutowrapMode.WordSmart };
 		_dialogueLabel.AddThemeFontSizeOverride("font_size", 20);
@@ -226,6 +238,9 @@ public partial class DialogueManager : Node
 
 	private void RefreshOverlay()
 	{
+		if (_memoryImage != null)
+			_memoryImage.Visible = _isActive && _currentData?.Id == "pendant_flash";
+
 		if (_panel == null) return;
 		_panel.Visible = _isActive;
 		if (!_isActive || _currentNode == null) return;
