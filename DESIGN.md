@@ -209,7 +209,7 @@ rooms in this repo.
    that is?" / "I should keep this."
 3. **Looking Around** (extension of scene 2) - inspect at least three objects to trigger her internal
    monologue before the path forward opens: check boxes ("Just some mechanical parts."), the
-   destroyed machine ("Probably the machine that is supposed to traverse time."), photos, drawers.
+   destroyed machine ("Probably a machine to churn out data."), photos, drawers.
 4. **Discovering the Mysterious Pendant** - a pendant on the floor, pulsing with a faint, unnatural
    blue glow. Collecting it adds it to her inventory. Dialogue: "What is this?"
 5. **Interacting with the Pendant** - the glow intensifies with a chime and a visual distortion, and

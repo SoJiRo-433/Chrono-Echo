@@ -19,6 +19,8 @@ public abstract partial class Entity : Node2D, IDamageable, IUpdatable
     private int _attackDamage = 1;
     private float _attackRange = 44f;
     private float _attackFlashTimer;
+    private float _jumpAirtimeSeconds = 0.6f;
+    private float _jumpTimer;
     private Room _room;
     #endregion
 
@@ -29,9 +31,17 @@ public abstract partial class Entity : Node2D, IDamageable, IUpdatable
     [Export] public int AttackDamage { get => _attackDamage; set => _attackDamage = Mathf.Max(0, value); }
     [Export] public float AttackRange { get => _attackRange; set => _attackRange = Mathf.Max(1f, value); }
 
+    // How long one jump keeps the actor off the floor. Short on purpose: a leap clears exactly one
+    // missing step of the Atrium's stairway, so the jump is a timing decision, not a way to fly.
+    [Export] public float JumpAirtimeSeconds { get => _jumpAirtimeSeconds; set => _jumpAirtimeSeconds = Mathf.Max(0.1f, value); }
+
     public int Health => _health;
     public bool IsAlive => _isAlive;
     public bool IsInvincible => _invincibilityTimer > 0f;
+
+    /// <summary>True while a jump is in the air. The Atrium's fall checks read this: mid-leap the
+    /// actor is not standing on anything, so a hole in the floor cannot swallow them.</summary>
+    public bool IsAirborne => _jumpTimer > 0f;
     public Room CurrentRoom => _room;
     public float BodyRadius => 14f;
     public float InteractRadius => 56f;
@@ -71,6 +81,11 @@ public abstract partial class Entity : Node2D, IDamageable, IUpdatable
         DrawLine(Vector2.Zero, FacingDirection * BodyRadius, Colors.White, 2f);
         if (_attackFlashTimer > 0f)
             DrawArc(Vector2.Zero, _attackRange, 0f, Mathf.Tau, 32, new Color(1f, 1f, 1f, 0.6f), 2f);
+
+        // Airborne feedback: the player has to be able to see the window a jump buys her, and an
+        // Echo replaying one has to show the same thing.
+        if (_jumpTimer > 0f)
+            DrawArc(Vector2.Zero, BodyRadius + 5f, 0f, Mathf.Tau, 24, new Color(1f, 1f, 1f, 0.45f), 2f);
     }
     #endregion
 
@@ -79,6 +94,7 @@ public abstract partial class Entity : Node2D, IDamageable, IUpdatable
     {
         if (_invincibilityTimer > 0f) _invincibilityTimer = Mathf.Max(0f, _invincibilityTimer - delta);
         if (_attackFlashTimer > 0f) _attackFlashTimer = Mathf.Max(0f, _attackFlashTimer - delta);
+        if (_jumpTimer > 0f) _jumpTimer = Mathf.Max(0f, _jumpTimer - delta);
 
         // Blink while invincible so the player can SEE the i-frames.
         bool blinkOff = IsInvincible && ((int)(_invincibilityTimer * 16f) % 2 == 0);
@@ -114,6 +130,13 @@ public abstract partial class Entity : Node2D, IDamageable, IUpdatable
         TryInteractWithNearby();
     }
 
+    /// <summary>Leaves the floor for JumpAirtimeSeconds. Position does not change - this is a
+    /// top-down room, so a jump is a state the fall checks can read, not an arc through the air.</summary>
+    public virtual void Jump()
+    {
+        _jumpTimer = _jumpAirtimeSeconds;
+    }
+
     public virtual void Attack()
     {
         _attackFlashTimer = 0.12f;
@@ -128,6 +151,9 @@ public abstract partial class Entity : Node2D, IDamageable, IUpdatable
         }
     }
 
+    /// <summary>Who this entity is willing to damage. Nothing is hostile any more - the game ships
+    /// without enemies, and the Enemy class has been deleted - so Attack has no targets. The rule
+    /// stays here rather than in a subclass: J is still a live verb and this is where it belongs.</summary>
     protected virtual bool IsHostileTo(Entity other) => false;
     #endregion
 

@@ -31,7 +31,8 @@ public sealed class EchoRecorder
         if (!_isRecording) return;
 
         bool actionChanged = !_hasLastAction || action != _lastAction;
-        bool isOneShot = action == PlayerAction.Interact || action == PlayerAction.Attack;
+        bool isOneShot = action == PlayerAction.Interact || action == PlayerAction.Attack
+                         || action == PlayerAction.Jump;
 
         // The very first tick is always stored: it anchors the Echo's starting position.
         if (actionChanged || isOneShot)

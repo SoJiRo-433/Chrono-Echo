@@ -23,7 +23,29 @@ public partial class Pendant : Node2D, IInteractable
     #endregion
 
     #region Lifecycle
-    public override void _Ready() { QueueRedraw(); }
+    public override void _Ready()
+    {
+        QueueRedraw();
+        GameStateManager state = GameStateManager.Instance;
+        if (state != null) state.FlagsReset += ResetPickup;
+    }
+
+    public override void _ExitTree()
+    {
+        GameStateManager state = GameStateManager.Instance;
+        if (state != null) state.FlagsReset -= ResetPickup;
+    }
+
+    /// <summary>A full flag reset (Player.RestartRun) puts the pendant back on the floor, so the
+    /// Echo ability that reset just took away can be earned again instead of being gone for good.
+    /// The flags and this node now agree on whether the pendant is in the world.</summary>
+    private void ResetPickup()
+    {
+        if (!_taken) return;
+        _taken = false;
+        Show();
+        QueueRedraw();
+    }
 
     public override void _Process(double delta)
     {

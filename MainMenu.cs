@@ -70,7 +70,7 @@ public partial class MainMenu : Control
 
     private void OnCGsPressed()
     {
-        UiHelper.Notify(this, "CGs", "Coming soon");
+        CgGallery.Open(this);
     }
 
     private void OnQuitPressed()

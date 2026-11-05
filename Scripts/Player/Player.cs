@@ -19,6 +19,7 @@ public partial class Player : Entity
     private readonly List<string> _inventory = new();
     private readonly PlayerInput _input = new();            // composition
     private readonly EchoRecorder _recorder = new();        // composition
+    private float _captureStartClock;                       // LoopClock value when the window opened
     #endregion
 
     #region Public properties
@@ -31,7 +32,20 @@ public partial class Player : Entity
     public bool IsRecording => _recorder.IsRecording;
     public IReadOnlyList<string> Inventory => _inventory;
 
+    // The Echo is an ability of the pendant, not of Aionia: until she picks it up the capture
+    // and projection keys do nothing at all (silently - no hint, no rejection line). The flag
+    // is the single source of truth, so a full flag reset takes the ability away again - and
+    // the Pendant node reappears to match (see Pendant.ListenForReset).
+    public bool HasPendant => GameStateManager.Instance?.GetFlag("touched_pendant") ?? false;
+
     public int CapturedFrameCount => _recorder.FrameCount;
+
+    /// <summary>Seconds left in the open capture window; 0 when nothing is being recorded.
+    /// The HUD bar drains against this.</summary>
+    public float CaptureSecondsLeft =>
+        !_recorder.IsRecording || CurrentRoom == null
+            ? 0f
+            : Mathf.Max(0f, CurrentRoom.MaxCaptureSeconds - (CurrentRoom.LoopClock - _captureStartClock));
 
     protected override Color BodyColor => new Color(0.25f, 0.55f, 1f);
     #endregion
@@ -73,8 +87,9 @@ public partial class Player : Entity
         if (!IsAlive || CurrentRoom == null) return;
 
         // Read the capture key before the action, so a window opened this tick still records
-        // this tick as its first frame.
-        if (_input.IsCaptureTogglePressed()) ToggleCapture();
+        // this tick as its first frame. Without the pendant the key is ignored outright.
+        if (HasPendant && _input.IsCaptureTogglePressed()) ToggleCapture();
+        AutoStopCaptureAtLimit();
 
         PlayerAction intended = _input.ReadAction();
         Vector2 positionBeforeMove = WorldPosition;
@@ -88,8 +103,8 @@ public partial class Player : Entity
             _recorder.Tick(CurrentRoom.LoopClock, effective, positionBeforeMove);
 
         // R projects the captured window as an Echo, in place. The run keeps going: no clock
-        // rewind, no puzzle/enemy reset, and the player is not moved.
-        if (_input.IsProjectEchoPressed()) ProjectEcho();
+        // rewind, no puzzle reset, and the player is not moved.
+        if (HasPendant && _input.IsProjectEchoPressed()) ProjectEcho();
     }
 
     private PlayerAction ExecuteAction(PlayerAction action, float delta)
@@ -102,6 +117,10 @@ public partial class Player : Entity
 
             case PlayerAction.Attack:
                 Attack();
+                return action;
+
+            case PlayerAction.Jump:
+                Jump();
                 return action;
 
             case PlayerAction.Idle:
@@ -129,9 +148,10 @@ public partial class Player : Entity
         EmitSignal(SignalName.PlayerDied);
         GameStateManager.Instance?.NotifyPlayerDied();
 
-        // Deferred on purpose: Die() is usually called from inside an enemy's Update().
-        // Changing the Room (spawning an Echo) in the middle of that tick could break
-        // loops that are still running. CallDeferred waits until the tick is finished.
+        // Deferred on purpose: Die() can be called from inside another entity's Update() - the
+        // Atrium's blue tiles damage whoever is standing on them. Changing the Room (spawning an
+        // Echo) in the middle of that tick could break loops that are still running. CallDeferred
+        // waits until the tick is finished.
         Callable.From(ResolveDeath).CallDeferred();
     }
 
@@ -140,8 +160,6 @@ public partial class Player : Entity
         bool used = TryInteractWithNearby();
         EmitSignal(SignalName.PlayerInteracted, used);
     }
-
-    protected override bool IsHostileTo(Entity other) => other is Enemy;
     #endregion
 
     #region Lives and respawn
@@ -178,6 +196,13 @@ public partial class Player : Entity
         _isGameOver = false;
         _inventory.Clear();
         GameStateManager.Instance?.ResetFlags();
+
+        // The Echo is an ability of the pendant, so the flag reset takes it away - and in Room01
+        // the pendant goes back on the floor at the same moment, ready to be picked up again.
+        // Anywhere else there is no pendant to find, and a game-over restart would delete the
+        // ability for good: a level that cannot hand the pendant back keeps it instead.
+        if (!room.HasPendantOnTheFloor) GameStateManager.Instance?.SetFlag("touched_pendant", true);
+
         SyncLivesToState();
         room.ClearEchoes();
         room.StartNewLoop();
@@ -196,6 +221,7 @@ public partial class Player : Entity
     public void StartCapture()
     {
         _recorder.StartRecording();   // pressing the key again starts a new window
+        _captureStartClock = CurrentRoom != null ? CurrentRoom.LoopClock : 0f;
     }
 
     public void StopCapture()
@@ -208,6 +234,15 @@ public partial class Player : Entity
     {
         if (_recorder.IsRecording) StopCapture();
         else StartCapture();
+    }
+
+    /// <summary>The capture window is capped per room ([Export] MaxCaptureSeconds), so the recorded
+    /// past can never grow past what the puzzle needs. The window closes itself once the cap is hit.</summary>
+    private void AutoStopCaptureAtLimit()
+    {
+        if (!_recorder.IsRecording || CurrentRoom == null) return;
+        if (CurrentRoom.LoopClock - _captureStartClock < CurrentRoom.MaxCaptureSeconds) return;
+        StopCapture();
     }
 
     public void ProjectEcho()

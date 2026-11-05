@@ -1,0 +1,432 @@
+[gd_scene load_steps=10 format=3]
+
+[ext_resource type="Script" path="res://Scripts/Rooms/RoomAtrium.cs" id="1_room"]
+[ext_resource type="Script" path="res://Scripts/Dialogue/DialogueManager.cs" id="2_dlg"]
+[ext_resource type="Script" path="res://Scripts/Puzzles/Obstacle.cs" id="3_obs"]
+[ext_resource type="Script" path="res://Scripts/Puzzles/Door.cs" id="4_door"]
+[ext_resource type="Script" path="res://Scripts/Puzzles/Switch.cs" id="5_sw"]
+[ext_resource type="Script" path="res://Scripts/Puzzles/FluctuatingTile.cs" id="6_tile"]
+[ext_resource type="Script" path="res://Scripts/Puzzles/TimeStainStep.cs" id="7_step"]
+[ext_resource type="Script" path="res://Scripts/Rooms/FloorMarker.cs" id="8_marker"]
+[ext_resource type="PackedScene" path="res://Scenes/Player.tscn" id="9_player"]
+
+[node name="RoomAtrium" type="Node2D"]
+script = ExtResource("1_room")
+RoomSize = Vector2(1152, 648)
+PlayerStartPosition = Vector2(60, 620)
+ExitPosition = Vector2(1076, 20)
+ExitSize = Vector2(72, 100)
+MaxEchoes = 3
+MaxCaptureSeconds = 5.0
+LevelNumber = 3
+NextLevelPath = ""
+LoopReplay = true
+EchoLifetimeSeconds = 25.0
+IntroDialogueId = "atrium_intro"
+ClearDialogueId = ""
+CompletionFlag = "atrium_complete"
+ConsoleAPath = NodePath("ConsoleA")
+ConsoleBPath = NodePath("ConsoleB")
+StairwayGatePath = NodePath("StairwayGate")
+WindowSpotAPath = NodePath("WindowSpotA")
+WindowSpotBPath = NodePath("WindowSpotB")
+WindowSpotCPath = NodePath("WindowSpotC")
+ExitDoorPath = NodePath("ExitDoor")
+BridgeTriggerPath = NodePath("BridgeTrigger")
+TerminalTriggerPath = NodePath("TerminalTrigger")
+JumpGapPath = NodePath("JumpGap")
+BridgeFallRespawnPoint = Vector2(640, 610)
+StairwayFallRespawnPoint = Vector2(430, 150)
+TerminalDialogueId = "atrium_terminal"
+TerminalRevealDialogueId = "atrium_terminal_reveal"
+StairwayLoopZone = Rect2(490, 48, 212, 172)
+
+[node name="DialogueManager" type="Node" parent="."]
+script = ExtResource("2_dlg")
+
+[node name="MarkerEntry" type="Node2D" parent="."]
+position = Vector2(40, 486)
+script = ExtResource("8_marker")
+Size = Vector2(200, 28)
+Caption = "SCENE 1 - ENTRY HALL"
+
+[node name="EntrancePlate" type="Node2D" parent="."]
+position = Vector2(110, 540)
+script = ExtResource("5_sw")
+LinkedDoorPath = NodePath("../Gate")
+IsPressurePlate = true
+PlateRadius = 28.0
+
+[node name="BlueTile1" type="Node2D" parent="."]
+position = Vector2(236, 480)
+script = ExtResource("6_tile")
+Size = Vector2(60, 84)
+PeriodSeconds = 4.0
+SolidSeconds = 2.0
+PhaseSeconds = 0.0
+Deadly = true
+ContactDamage = 3
+
+[node name="BlueTile2" type="Node2D" parent="."]
+position = Vector2(340, 480)
+script = ExtResource("6_tile")
+Size = Vector2(60, 84)
+PeriodSeconds = 4.0
+SolidSeconds = 2.0
+PhaseSeconds = 0.5
+Deadly = true
+ContactDamage = 3
+
+[node name="BlueTile3" type="Node2D" parent="."]
+position = Vector2(444, 480)
+script = ExtResource("6_tile")
+Size = Vector2(60, 84)
+PeriodSeconds = 4.0
+SolidSeconds = 2.0
+PhaseSeconds = 1.0
+Deadly = true
+ContactDamage = 3
+
+[node name="BlueTile4" type="Node2D" parent="."]
+position = Vector2(288, 564)
+script = ExtResource("6_tile")
+Size = Vector2(60, 84)
+PeriodSeconds = 4.0
+SolidSeconds = 2.0
+PhaseSeconds = 1.5
+Deadly = true
+ContactDamage = 3
+
+[node name="BlueTile5" type="Node2D" parent="."]
+position = Vector2(392, 564)
+script = ExtResource("6_tile")
+Size = Vector2(60, 84)
+PeriodSeconds = 4.0
+SolidSeconds = 2.0
+PhaseSeconds = 2.0
+Deadly = true
+ContactDamage = 3
+
+[node name="BlueTile6" type="Node2D" parent="."]
+position = Vector2(496, 564)
+script = ExtResource("6_tile")
+Size = Vector2(60, 84)
+PeriodSeconds = 4.0
+SolidSeconds = 2.0
+PhaseSeconds = 2.5
+Deadly = true
+ContactDamage = 3
+
+[node name="YorukaMark" type="Node2D" parent="."]
+position = Vector2(170, 600)
+script = ExtResource("8_marker")
+Size = Vector2(80, 28)
+Caption = "YORUKA"
+
+[node name="Gate" type="Node2D" parent="."]
+position = Vector2(560, 480)
+script = ExtResource("4_door")
+Size = Vector2(32, 168)
+OpenedFlag = "atrium_gate_opened"
+CloseDelaySeconds = 5.0
+
+[node name="MidWall" type="Node2D" parent="."]
+position = Vector2(0, 450)
+script = ExtResource("3_obs")
+Size = Vector2(1040, 30)
+
+[node name="MarkerWalkway" type="Node2D" parent="."]
+position = Vector2(640, 486)
+script = ExtResource("8_marker")
+Size = Vector2(300, 28)
+Caption = "LOWER WALKWAY (FALL ZONE)"
+
+[node name="WalkGap1" type="Node2D" parent="."]
+position = Vector2(700, 480)
+script = ExtResource("6_tile")
+Size = Vector2(140, 168)
+PeriodSeconds = 4.0
+SolidSeconds = 2.0
+PhaseSeconds = 0.0
+GapWhenAbsent = true
+
+[node name="Counterweight" type="Node2D" parent="."]
+position = Vector2(980, 600)
+script = ExtResource("5_sw")
+IsPressurePlate = true
+PlateRadius = 30.0
+
+[node name="CounterweightPlatform" type="Node2D" parent="."]
+position = Vector2(938, 578)
+script = ExtResource("8_marker")
+Size = Vector2(84, 44)
+Caption = "ECHO PLATFORM (hold)"
+Fill = Color(0.4, 0.7, 1, 0.1)
+Outline = Color(0.6, 0.85, 1, 0.7)
+Dashed = true
+
+[node name="MarkerSkybridge" type="Node2D" parent="."]
+position = Vector2(400, 258)
+script = ExtResource("8_marker")
+Size = Vector2(320, 28)
+Caption = "SCENE 2 - GLASS SKYBRIDGE"
+
+[node name="BridgeTrigger" type="Node2D" parent="."]
+position = Vector2(40, 250)
+script = ExtResource("8_marker")
+Size = Vector2(1000, 200)
+Fill = Color(0.45, 0.6, 0.85, 0.05)
+Outline = Color(0.55, 0.7, 0.95, 0.2)
+
+[node name="SkyPanel1" type="Node2D" parent="."]
+position = Vector2(40, 250)
+script = ExtResource("6_tile")
+Size = Vector2(120, 200)
+PeriodSeconds = 4.0
+SolidSeconds = 2.0
+PhaseSeconds = 0.0
+GapWhenAbsent = true
+HoldOpenSwitchPath = NodePath("../Counterweight")
+
+[node name="SkyPanel2" type="Node2D" parent="."]
+position = Vector2(160, 250)
+script = ExtResource("6_tile")
+Size = Vector2(120, 200)
+PeriodSeconds = 4.0
+SolidSeconds = 2.0
+PhaseSeconds = 3.0
+GapWhenAbsent = true
+HoldOpenSwitchPath = NodePath("../Counterweight")
+
+[node name="SkyPanel3" type="Node2D" parent="."]
+position = Vector2(280, 250)
+script = ExtResource("6_tile")
+Size = Vector2(120, 200)
+PeriodSeconds = 4.0
+SolidSeconds = 2.0
+PhaseSeconds = 2.0
+GapWhenAbsent = true
+HoldOpenSwitchPath = NodePath("../Counterweight")
+
+[node name="SkyPanel4" type="Node2D" parent="."]
+position = Vector2(400, 250)
+script = ExtResource("6_tile")
+Size = Vector2(120, 200)
+PeriodSeconds = 4.0
+SolidSeconds = 2.0
+PhaseSeconds = 1.0
+GapWhenAbsent = true
+HoldOpenSwitchPath = NodePath("../Counterweight")
+
+[node name="SkyPanel5" type="Node2D" parent="."]
+position = Vector2(520, 250)
+script = ExtResource("6_tile")
+Size = Vector2(120, 200)
+PeriodSeconds = 4.0
+SolidSeconds = 2.0
+PhaseSeconds = 0.0
+GapWhenAbsent = true
+
+[node name="SkyPanel6" type="Node2D" parent="."]
+position = Vector2(640, 250)
+script = ExtResource("6_tile")
+Size = Vector2(120, 200)
+PeriodSeconds = 4.0
+SolidSeconds = 2.0
+PhaseSeconds = 3.0
+GapWhenAbsent = true
+
+[node name="SkyPanel7" type="Node2D" parent="."]
+position = Vector2(760, 250)
+script = ExtResource("6_tile")
+Size = Vector2(120, 200)
+PeriodSeconds = 4.0
+SolidSeconds = 2.0
+PhaseSeconds = 2.0
+GapWhenAbsent = true
+
+[node name="SkyPanel8" type="Node2D" parent="."]
+position = Vector2(880, 250)
+script = ExtResource("6_tile")
+Size = Vector2(120, 200)
+PeriodSeconds = 4.0
+SolidSeconds = 2.0
+PhaseSeconds = 1.0
+GapWhenAbsent = true
+
+[node name="SkyPanel9" type="Node2D" parent="."]
+position = Vector2(1000, 250)
+script = ExtResource("6_tile")
+Size = Vector2(112, 200)
+PeriodSeconds = 4.0
+SolidSeconds = 2.0
+PhaseSeconds = 0.0
+GapWhenAbsent = true
+
+[node name="WallBC" type="Node2D" parent="."]
+position = Vector2(340, 220)
+script = ExtResource("3_obs")
+Size = Vector2(772, 30)
+
+[node name="MarkerTerminal" type="Node2D" parent="."]
+position = Vector2(40, 20)
+script = ExtResource("8_marker")
+Size = Vector2(300, 28)
+Caption = "SCENE 3 - GLITCHED TERMINAL"
+
+[node name="TerminalTrigger" type="Node2D" parent="."]
+position = Vector2(40, 60)
+script = ExtResource("8_marker")
+Size = Vector2(400, 150)
+Fill = Color(0.4, 0.85, 0.9, 0.05)
+Outline = Color(0.5, 0.9, 0.95, 0.2)
+
+[node name="ConsoleA" type="Node2D" parent="."]
+position = Vector2(150, 120)
+script = ExtResource("5_sw")
+IsPressurePlate = true
+PlateRadius = 26.0
+SequencePool = PackedStringArray("#@*+", "@*+#", "*+#@", "+#@*")
+SequenceIndex = 0
+
+[node name="ConsoleB" type="Node2D" parent="."]
+position = Vector2(300, 120)
+script = ExtResource("5_sw")
+IsPressurePlate = true
+PlateRadius = 26.0
+SequencePool = PackedStringArray("#@*+", "@*+#", "*+#@", "+#@*")
+SequenceIndex = 1
+
+[node name="WallStairTop" type="Node2D" parent="."]
+position = Vector2(460, 0)
+script = ExtResource("3_obs")
+Size = Vector2(30, 60)
+
+[node name="StairwayGate" type="Node2D" parent="."]
+position = Vector2(460, 60)
+script = ExtResource("4_door")
+Size = Vector2(30, 120)
+OpenedFlag = "atrium_stairway_opened"
+LatchOpen = true
+
+[node name="WallStairBottom" type="Node2D" parent="."]
+position = Vector2(460, 180)
+script = ExtResource("3_obs")
+Size = Vector2(30, 40)
+
+[node name="StairCeiling" type="Node2D" parent="."]
+position = Vector2(490, 0)
+script = ExtResource("3_obs")
+Size = Vector2(212, 48)
+
+[node name="MarkerStairway" type="Node2D" parent="."]
+position = Vector2(496, 222)
+script = ExtResource("8_marker")
+Size = Vector2(200, 26)
+Caption = "SCENE 4 - BROKEN STAIRWAY"
+
+[node name="Step1" type="Node2D" parent="."]
+position = Vector2(530, 48)
+script = ExtResource("7_step")
+Size = Vector2(60, 172)
+StainSeconds = 3.0
+
+[node name="JumpGap" type="Node2D" parent="."]
+position = Vector2(590, 48)
+script = ExtResource("8_marker")
+Size = Vector2(28, 172)
+Caption = "JUMP (Space)"
+Fill = Color(0.03, 0.02, 0.06, 0.75)
+Outline = Color(0.95, 0.85, 0.4, 0.8)
+Dashed = true
+
+[node name="Step2" type="Node2D" parent="."]
+position = Vector2(618, 48)
+script = ExtResource("7_step")
+Size = Vector2(60, 172)
+StainSeconds = 3.0
+
+[node name="Step3" type="Node2D" parent="."]
+position = Vector2(660, 48)
+script = ExtResource("7_step")
+Size = Vector2(42, 172)
+StainSeconds = 3.0
+
+[node name="MarkerDeck" type="Node2D" parent="."]
+position = Vector2(700, 20)
+script = ExtResource("8_marker")
+Size = Vector2(240, 28)
+Caption = "SCENE 5 - OBSERVATION DECK"
+
+[node name="WindowSpotA" type="Node2D" parent="."]
+position = Vector2(760, 90)
+script = ExtResource("5_sw")
+IsPressurePlate = true
+PlateRadius = 22.0
+FlagToSet = "atrium_spot_one"
+
+[node name="SpotMarker1" type="Node2D" parent="."]
+position = Vector2(736, 66)
+script = ExtResource("8_marker")
+Size = Vector2(48, 48)
+Caption = ""
+Outline = Color(0.55, 0.8, 1, 0.85)
+DottedRing = true
+
+[node name="WindowSpotB" type="Node2D" parent="."]
+position = Vector2(870, 90)
+script = ExtResource("5_sw")
+IsPressurePlate = true
+PlateRadius = 22.0
+
+[node name="SpotMarker2" type="Node2D" parent="."]
+position = Vector2(846, 66)
+script = ExtResource("8_marker")
+Size = Vector2(48, 48)
+Caption = ""
+Outline = Color(0.55, 0.8, 1, 0.85)
+DottedRing = true
+
+[node name="WindowSpotC" type="Node2D" parent="."]
+position = Vector2(980, 90)
+script = ExtResource("5_sw")
+IsPressurePlate = true
+PlateRadius = 22.0
+
+[node name="SpotMarker3" type="Node2D" parent="."]
+position = Vector2(956, 66)
+script = ExtResource("8_marker")
+Size = Vector2(48, 48)
+Caption = ""
+Outline = Color(0.55, 0.8, 1, 0.85)
+DottedRing = true
+
+[node name="WallDeckBottom" type="Node2D" parent="."]
+position = Vector2(700, 140)
+script = ExtResource("3_obs")
+Size = Vector2(452, 80)
+
+[node name="ExitWallTop" type="Node2D" parent="."]
+position = Vector2(1040, 0)
+script = ExtResource("3_obs")
+Size = Vector2(32, 20)
+
+[node name="ExitDoor" type="Node2D" parent="."]
+position = Vector2(1040, 20)
+script = ExtResource("4_door")
+Size = Vector2(32, 100)
+OpenedFlag = "atrium_exit_opened"
+
+[node name="ExitWallBottom" type="Node2D" parent="."]
+position = Vector2(1040, 120)
+script = ExtResource("3_obs")
+Size = Vector2(32, 20)
+
+[node name="MarkerExit" type="Node2D" parent="."]
+position = Vector2(1076, 124)
+script = ExtResource("8_marker")
+Size = Vector2(76, 26)
+Caption = "EXIT - LEVEL 4 (after F3)"
+
+[node name="Player" parent="." instance=ExtResource("9_player")]
+position = Vector2(60, 620)

@@ -1,0 +1,253 @@
+[gd_scene load_steps=9 format=3]
+
+[ext_resource type="Script" path="res://Scripts/Rooms/RoomLibrary.cs" id="1_room"]
+[ext_resource type="Script" path="res://Scripts/Dialogue/DialogueManager.cs" id="2_dlg"]
+[ext_resource type="Script" path="res://Scripts/Puzzles/Obstacle.cs" id="3_obs"]
+[ext_resource type="Script" path="res://Scripts/Puzzles/Door.cs" id="4_door"]
+[ext_resource type="Script" path="res://Scripts/Puzzles/Switch.cs" id="5_sw"]
+[ext_resource type="Script" path="res://Scripts/Puzzles/Inspectable.cs" id="6_ins"]
+[ext_resource type="Script" path="res://Scripts/Rooms/FloorMarker.cs" id="7_marker"]
+[ext_resource type="PackedScene" path="res://Scenes/Player.tscn" id="8_player"]
+
+[node name="RoomLibrary" type="Node2D"]
+script = ExtResource("1_room")
+RoomSize = Vector2(1152, 648)
+PlayerStartPosition = Vector2(60, 180)
+ExitPosition = Vector2(24, 460)
+ExitSize = Vector2(90, 130)
+MaxEchoes = 2
+MaxCaptureSeconds = 5.0
+LevelNumber = 2
+NextLevelPath = "res://Scenes/Rooms/RoomAtrium.tscn"
+IntroDialogueId = "library_intro"
+ClearDialogueId = ""
+CompletionFlag = "library_complete"
+LoopReplay = false
+EchoLifetimeSeconds = 20.0
+YorukaPath = NodePath("Yoruka")
+YorukaWaitingPath = NodePath("YorukaWaiting")
+YorukaItemPath = NodePath("YorukaItem")
+ShelvesBlockPath = NodePath("CollapsedShelvesDoor")
+LibraryDoorsPath = NodePath("LibraryDoors")
+CorridorTriggerPath = NodePath("CorridorTrigger")
+
+[node name="DialogueManager" type="Node" parent="."]
+script = ExtResource("2_dlg")
+
+[node name="MarkerArchives" type="Node2D" parent="."]
+position = Vector2(40, 20)
+script = ExtResource("7_marker")
+Size = Vector2(230, 34)
+Caption = "SCENE 2 - THE ARCHIVES"
+
+[node name="CorkBoard" type="Node2D" parent="."]
+position = Vector2(60, 40)
+script = ExtResource("6_ins")
+Size = Vector2(150, 56)
+Caption = "CORK BOARD (E)"
+Fill = Color(0.3, 0.22, 0.16, 0.95)
+Outline = Color(0.8, 0.68, 0.48, 1)
+FirstDialogueId = "library_cork_board"
+FlagToSet = "library_cork_board_seen"
+Solid = true
+
+[node name="ShelfBarA" type="Node2D" parent="."]
+position = Vector2(240, 60)
+script = ExtResource("3_obs")
+Size = Vector2(180, 26)
+
+[node name="Bookshelves" type="Node2D" parent="."]
+position = Vector2(240, 120)
+script = ExtResource("6_ins")
+Size = Vector2(140, 56)
+Caption = "BOOKSHELVES (E)"
+Fill = Color(0.18, 0.23, 0.3, 0.95)
+Outline = Color(0.62, 0.74, 0.86, 1)
+FirstDialogueId = "library_bookshelves"
+FlagToSet = "library_bookshelves_seen"
+Solid = true
+
+[node name="ShelfBarB" type="Node2D" parent="."]
+position = Vector2(240, 200)
+script = ExtResource("3_obs")
+Size = Vector2(140, 26)
+
+[node name="Computer" type="Node2D" parent="."]
+position = Vector2(60, 260)
+script = ExtResource("6_ins")
+Size = Vector2(130, 50)
+Caption = "COMPUTER (E)"
+Fill = Color(0.12, 0.3, 0.3, 0.95)
+Outline = Color(0.4, 0.85, 0.9, 1)
+FirstDialogueId = "library_computer"
+FlagToSet = "library_computer_seen"
+Solid = true
+
+[node name="Drawers" type="Node2D" parent="."]
+position = Vector2(330, 260)
+script = ExtResource("6_ins")
+Size = Vector2(90, 50)
+Caption = "DRAWERS (E)"
+Fill = Color(0.3, 0.26, 0.2, 0.95)
+Outline = Color(0.8, 0.7, 0.5, 1)
+FirstDialogueId = "library_drawers"
+FlagToSet = "library_drawers_seen"
+Solid = true
+
+[node name="Yoruka" type="Node2D" parent="."]
+position = Vector2(350, 100)
+script = ExtResource("6_ins")
+Size = Vector2(64, 110)
+Caption = "YORUKA (E)"
+Fill = Color(0.4, 0.22, 0.32, 0.95)
+Outline = Color(0.95, 0.65, 0.78, 1)
+FirstDialogueId = "library_yoruka"
+
+[node name="YorukaItem" type="Node2D" parent="."]
+position = Vector2(350, 100)
+script = ExtResource("6_ins")
+Size = Vector2(44, 30)
+Caption = "DROPPED ITEM (E)"
+Fill = Color(0.85, 0.78, 0.55, 0.95)
+Outline = Color(1, 0.92, 0.65, 1)
+FirstDialogueId = "library_item_taken"
+RepeatDialogueId = "library_item_taken"
+FlagToSet = "library_item_taken"
+
+[node name="WallArchRightTop" type="Node2D" parent="."]
+position = Vector2(430, 0)
+script = ExtResource("3_obs")
+Size = Vector2(30, 110)
+
+[node name="CollapsedShelvesDoor" type="Node2D" parent="."]
+position = Vector2(650, 110)
+script = ExtResource("4_door")
+Size = Vector2(30, 120)
+OpenedFlag = "library_shelves_opened"
+ApproachDialogueId = "library_collapsed_shelves"
+ApproachFlag = "library_shelves_seen"
+
+[node name="WallArchRightBottom" type="Node2D" parent="."]
+position = Vector2(430, 230)
+script = ExtResource("3_obs")
+Size = Vector2(30, 90)
+
+[node name="MarkerCollapsed" type="Node2D" parent="."]
+position = Vector2(470, 20)
+script = ExtResource("7_marker")
+Size = Vector2(180, 34)
+Caption = "SCENE 3 - COLLAPSED SHELVES"
+
+[node name="FallenShelf" type="Node2D" parent="."]
+position = Vector2(490, 50)
+script = ExtResource("3_obs")
+Size = Vector2(140, 34)
+
+[node name="Rubble" type="Node2D" parent="."]
+position = Vector2(585, 232)
+script = ExtResource("3_obs")
+Size = Vector2(40, 58)
+
+[node name="RubbleLatch" type="Node2D" parent="."]
+position = Vector2(465, 232)
+script = ExtResource("3_obs")
+Size = Vector2(40, 58)
+
+[node name="ShelvesLatch" type="Node2D" parent="."]
+position = Vector2(555, 245)
+script = ExtResource("5_sw")
+LinkedDoorPath = NodePath("../CollapsedShelvesDoor")
+IsPressurePlate = true
+PlateRadius = 28.0
+
+[node name="ShelvesLatchSpot" type="Node2D" parent="."]
+position = Vector2(531, 221)
+script = ExtResource("7_marker")
+Size = Vector2(48, 48)
+Caption = ""
+Outline = Color(0.55, 0.8, 1, 0.85)
+DottedRing = true
+
+[node name="WallCSRightTop" type="Node2D" parent="."]
+position = Vector2(650, 0)
+script = ExtResource("3_obs")
+Size = Vector2(30, 110)
+
+[node name="WallCSRightBottom" type="Node2D" parent="."]
+position = Vector2(650, 230)
+script = ExtResource("3_obs")
+Size = Vector2(30, 90)
+
+[node name="MarkerTerminal" type="Node2D" parent="."]
+position = Vector2(700, 20)
+script = ExtResource("7_marker")
+Size = Vector2(200, 34)
+Caption = "SCENE 4 - TERMINAL"
+
+[node name="TerminalLog" type="Node2D" parent="."]
+position = Vector2(900, 100)
+script = ExtResource("6_ins")
+Size = Vector2(90, 56)
+Caption = "TERMINAL (E)"
+Fill = Color(0.12, 0.28, 0.32, 0.95)
+Outline = Color(0.4, 0.85, 0.9, 1)
+FirstDialogueId = "library_terminal"
+RepeatDialogueId = "library_terminal"
+
+[node name="YorukaWaiting" type="Node2D" parent="."]
+position = Vector2(760, 160)
+script = ExtResource("6_ins")
+Size = Vector2(64, 110)
+Caption = "YORUKA (E)"
+Fill = Color(0.4, 0.22, 0.32, 0.95)
+Outline = Color(0.95, 0.65, 0.78, 1)
+FirstDialogueId = "library_yoruka_followup"
+RepeatDialogueId = "library_yoruka_followup"
+
+[node name="WallRowBottomLeft" type="Node2D" parent="."]
+position = Vector2(0, 320)
+script = ExtResource("3_obs")
+Size = Vector2(820, 40)
+
+[node name="WallRowBottomRight" type="Node2D" parent="."]
+position = Vector2(980, 320)
+script = ExtResource("3_obs")
+Size = Vector2(172, 40)
+
+[node name="MarkerCorridor" type="Node2D" parent="."]
+position = Vector2(600, 368)
+script = ExtResource("7_marker")
+Size = Vector2(300, 34)
+Caption = "SCENE 5 - ROOT-WEBBED CORRIDOR"
+
+[node name="CorridorTrigger" type="Node2D" parent="."]
+position = Vector2(400, 400)
+script = ExtResource("7_marker")
+Size = Vector2(560, 200)
+Fill = Color(0.55, 0.45, 0.85, 0.05)
+Outline = Color(0.6, 0.5, 0.9, 0.25)
+
+[node name="WallCorrLeftTop" type="Node2D" parent="."]
+position = Vector2(140, 360)
+script = ExtResource("3_obs")
+Size = Vector2(30, 100)
+
+[node name="LibraryDoors" type="Node2D" parent="."]
+position = Vector2(140, 460)
+script = ExtResource("4_door")
+Size = Vector2(30, 120)
+OpenedFlag = "library_doors_opened"
+
+[node name="WallCorrLeftBottom" type="Node2D" parent="."]
+position = Vector2(140, 580)
+script = ExtResource("3_obs")
+Size = Vector2(30, 68)
+
+[node name="MarkerDoors" type="Node2D" parent="."]
+position = Vector2(24, 608)
+script = ExtResource("7_marker")
+Size = Vector2(120, 30)
+Caption = "HEAVY LIBRARY DOORS"
+
+[node name="Player" parent="." instance=ExtResource("8_player")]
+position = Vector2(60, 180)

@@ -11,6 +11,7 @@ public sealed class PlayerInput
         AddKeyAction("move_right", Key.D, Key.Right);
         AddKeyAction("interact", Key.E);
         AddKeyAction("attack", Key.J);
+        AddKeyAction("jump", Key.Space);
         AddKeyAction("toggle_capture", Key.T);
         AddKeyAction("project_echo", Key.R);
     }
@@ -27,6 +28,10 @@ public sealed class PlayerInput
     #region Reading input
     public PlayerAction ReadAction()
     {
+        // A jump is a single tick, so it takes the tick it was pressed on: the step she gives up
+        // is one sixtieth of a second of walking, and the recording keeps the leap where it
+        // happened. Dialogue is paused, so Space is free for this while a conversation is closed.
+        if (Input.IsActionJustPressed("jump")) return PlayerAction.Jump;
         if (Input.IsActionJustPressed("interact")) return PlayerAction.Interact;
         if (Input.IsActionJustPressed("attack")) return PlayerAction.Attack;
         if (Input.IsActionPressed("move_up")) return PlayerAction.MoveUp;
