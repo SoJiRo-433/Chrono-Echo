@@ -44,6 +44,7 @@ public sealed class PlayerInput
     public PlayerAction ReadAction()
     {
         if (Input.IsActionJustPressed("interact")) return PlayerAction.Interact;
+        if (Input.IsActionPressed("interact")) return PlayerAction.InteractHeld;
         if (Input.IsActionJustPressed("attack")) return PlayerAction.Attack;
         if (Input.IsActionPressed("move_up")) return PlayerAction.MoveUp;
         if (Input.IsActionPressed("move_down")) return PlayerAction.MoveDown;

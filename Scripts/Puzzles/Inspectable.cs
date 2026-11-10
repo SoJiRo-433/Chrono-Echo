@@ -22,7 +22,9 @@ public partial class Inspectable : Node2D, IInteractable
     private string _firstDialogueId = "";
     private string _repeatDialogueId = "";
     private string _flagToSet = "";
+    private string _requiredFlag = "";
     private bool _solid;
+    private bool _drawBox = true;
     private bool _examined;
     #endregion
 
@@ -40,9 +42,15 @@ public partial class Inspectable : Node2D, IInteractable
 
     /// <summary>Story flag set the first time this object is examined (empty = sets nothing).</summary>
     [Export] public string FlagToSet { get => _flagToSet; set => _flagToSet = value ?? ""; }
+    [Export] public string RequiredFlag { get => _requiredFlag; set => _requiredFlag = value ?? ""; }
 
     /// <summary>Solid objects block movement, exactly like an Obstacle.</summary>
     [Export] public bool Solid { get => _solid; set => _solid = value; }
+
+    // For a room whose art comes from its own painted backdrop: the fill and outline are not drawn,
+    // so the painting shows the object, but the caption and the interaction stay. Visible is left
+    // alone on purpose - Room.FindNearestInteractable skips invisible nodes.
+    [Export] public bool DrawBox { get => _drawBox; set { _drawBox = value; QueueRedraw(); } }
 
     public bool HasBeenExamined => _examined;
     public Rect2 Bounds => new Rect2(Position, _size);
@@ -73,6 +81,7 @@ public partial class Inspectable : Node2D, IInteractable
     #region IInteractable
     public void Interact(Entity interactor)
     {
+        if (_requiredFlag != "" && GameStateManager.Instance?.GetFlag(_requiredFlag) != true) return;
         bool firstTime = !_examined;
         _examined = true;
 
@@ -87,6 +96,7 @@ public partial class Inspectable : Node2D, IInteractable
     #region Drawing
     public override void _Draw()
     {
+        if (!_drawBox) return;
         Rect2 box = new Rect2(Vector2.Zero, _size);
         DrawRect(box, _fill);
         DrawRect(box, _outline, false, 2f);

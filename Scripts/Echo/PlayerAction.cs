@@ -5,6 +5,7 @@
 /// </summary>
 public enum PlayerAction
 {
+<<<<<<< Updated upstream
     Idle,
     MoveUp,
     MoveDown,
@@ -12,4 +13,15 @@ public enum PlayerAction
     MoveRight,
     Attack,
     Interact
+=======
+	Idle,
+	MoveUp,
+	MoveDown,
+	MoveLeft,
+	MoveRight,
+	Attack,
+	Interact,
+	InteractHeld,
+	Jump
+>>>>>>> Stashed changes
 }

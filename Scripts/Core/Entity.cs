@@ -23,6 +23,11 @@ public abstract partial class Entity : Node2D, IDamageable, IUpdatable
     #endregion
 
     #region Private state (encapsulation: no public fields anywhere)
+    // Draw layer for anything that walks: above the room's floor plan. Levels 4-6 build their map
+    // in code when the room is ready, which puts every floor rectangle and wall *after* the actors
+    // in the draw order, so without an explicit layer an actor is painted over by its own floor.
+    private const int ActorZIndex = 12;
+
     private Vector2 _position;
     private int _health;
     private int _maxHealth = 3;
@@ -70,6 +75,7 @@ public abstract partial class Entity : Node2D, IDamageable, IUpdatable
     #region Godot lifecycle
     public override void _Ready()
     {
+        ZIndex = ActorZIndex;   // see ActorZIndex: the code-built levels add their map after us
         _position = Position;
         _health = _maxHealth;
         _isAlive = true;
@@ -145,10 +151,27 @@ public abstract partial class Entity : Node2D, IDamageable, IUpdatable
         TryInteractWithNearby();
     }
 
+<<<<<<< Updated upstream
     /// <summary>
     /// Default Attack: hit every hostile, living entity inside AttackRange.
     /// Who counts as "hostile" is decided by the subclass (see IsHostileTo).
     /// </summary>
+=======
+    public virtual void InteractHeld(float delta)
+    {
+        if (_room == null) return;
+        IInteractable target = _room.FindNearestInteractable(_position, InteractRadius);
+        if (target is IHeldInteractable held) held.HoldInteract(this, delta);
+    }
+
+    /// <summary>Leaves the floor for JumpAirtimeSeconds. Position does not change - this is a
+    /// top-down room, so a jump is a state the fall checks can read, not an arc through the air.</summary>
+    public virtual void Jump()
+    {
+        _jumpTimer = _jumpAirtimeSeconds;
+    }
+
+>>>>>>> Stashed changes
     public virtual void Attack()
     {
         _attackFlashTimer = 0.12f;

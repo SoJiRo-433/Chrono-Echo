@@ -1,0 +1,28 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://Scripts/Rooms/RoomBusiness.cs" id="1_room"]
+[ext_resource type="Script" path="res://Scripts/Dialogue/DialogueManager.cs" id="2_dialogue"]
+[ext_resource type="PackedScene" path="res://Scenes/Player.tscn" id="3_player"]
+
+[node name="Room06Business" type="Node2D"]
+script = ExtResource("1_room")
+RoomSize = Vector2(667, 747)
+WorldSize = Vector2(667, 747)
+PlayerStartPosition = Vector2(123, 634)
+ExitPosition = Vector2(192, 108)
+ExitSize = Vector2(72, 50)
+MaxEchoes = 3
+MaxCaptureSeconds = 15.0
+LevelNumber = 6
+NextLevelPath = ""
+LoopReplay = false
+EchoLifetimeSeconds = 15.0
+IntroDialogueId = "level6_lobby_gate"
+ClearDialogueId = ""
+CompletionFlag = "level6_complete"
+
+[node name="DialogueManager" type="Node" parent="."]
+script = ExtResource("2_dialogue")
+
+[node name="Player" parent="." instance=ExtResource("3_player")]
+position = Vector2(123, 634)

@@ -10,6 +10,7 @@
 [ext_resource type="Script" path="res://Scripts/Rooms/FloorMarker.cs" id="8_marker"]
 [ext_resource type="Script" path="res://Scripts/Puzzles/Inspectable.cs" id="9_inspect"]
 [ext_resource type="Script" path="res://Scripts/Puzzles/Pendant.cs" id="10_pendant"]
+[ext_resource type="Texture2D" path="res://Assets/level1_tutorial_room.png" id="11_backdrop"]
 
 [node name="Room01" type="Node2D"]
 script = ExtResource("1_room")
@@ -18,11 +19,17 @@ PlayerStartPosition = Vector2(118, 306)
 ExitPosition = Vector2(1054, 260)
 ExitSize = Vector2(79, 110)
 MaxEchoes = 3
+MaxCaptureSeconds = 9.0
 LevelNumber = 1
 NextLevelPath = "res://Scenes/Rooms/Room02.tscn"
 
 [node name="DialogueManager" type="Node" parent="."]
 script = ExtResource("2_dlg")
+
+[node name="Backdrop" type="Sprite2D" parent="."]
+texture = ExtResource("11_backdrop")
+centered = false
+scale = Vector2(0.6, 0.6)
 
 [node name="DividerUpper" type="Node2D" parent="."]
 position = Vector2(1008, 0)
@@ -54,6 +61,7 @@ Size = Vector2(159, 67)
 Caption = "START / WAKE-UP (Scene 1)"
 Fill = Color(0.2, 0.6, 0.9, 0.1)
 Outline = Color(0.35, 0.7, 0.95, 0.6)
+DrawBox = false
 
 [node name="GlassMarker" type="Node2D" parent="."]
 position = Vector2(53, 41)
@@ -62,6 +70,7 @@ Size = Vector2(144, 32)
 Caption = "BROKEN GLASS"
 Fill = Color(0.75, 0.85, 0.9, 0.08)
 Outline = Color(0.6, 0.75, 0.85, 0.4)
+DrawBox = false
 
 [node name="RubbleMarker" type="Node2D" parent="."]
 position = Vector2(925, 41)
@@ -70,6 +79,7 @@ Size = Vector2(106, 29)
 Caption = "RUBBLE"
 Fill = Color(0.7, 0.68, 0.62, 0.1)
 Outline = Color(0.65, 0.62, 0.55, 0.45)
+DrawBox = false
 
 [node name="PanelMarker" type="Node2D" parent="."]
 position = Vector2(53, 567)
@@ -78,14 +88,16 @@ Size = Vector2(159, 32)
 Caption = "FALLEN PANEL"
 Fill = Color(0.7, 0.68, 0.62, 0.1)
 Outline = Color(0.65, 0.62, 0.55, 0.45)
+DrawBox = false
 
 [node name="DebrisMarker" type="Node2D" parent="."]
-position = Vector2(1016, 588)
+position = Vector2(1052, 588)
 script = ExtResource("8_marker")
 Size = Vector2(91, 29)
 Caption = "DEBRIS"
 Fill = Color(0.7, 0.68, 0.62, 0.1)
 Outline = Color(0.65, 0.62, 0.55, 0.45)
+DrawBox = false
 
 [node name="PhotoMarker" type="Node2D" parent="."]
 position = Vector2(459, 168)
@@ -95,6 +107,7 @@ Caption = "FINAL PAGE: BURNT PHOTO (Aionia + Felix)"
 Fill = Color(0.9, 0.8, 0.6, 0.12)
 Outline = Color(0.85, 0.75, 0.55, 0.6)
 VisibleFlag = "saw_burnt_photo"
+DrawBox = false
 
 [node name="AnomalyMarker" type="Node2D" parent="."]
 position = Vector2(788, 255)
@@ -103,6 +116,7 @@ Size = Vector2(220, 67)
 Caption = "SPATIAL ANOMALY - Echo spawns here"
 Fill = Color(0.55, 0.45, 0.85, 0.1)
 Outline = Color(0.6, 0.5, 0.9, 0.6)
+DrawBox = false
 
 [node name="EchoZoneMarker" type="Node2D" parent="."]
 position = Vector2(758, 411)
@@ -111,6 +125,7 @@ Size = Vector2(235, 49)
 Caption = "ECHO RECORDING ZONE - press R"
 Fill = Color(0.4, 0.8, 0.45, 0.1)
 Outline = Color(0.45, 0.85, 0.5, 0.6)
+DrawBox = false
 
 [node name="ReportLog" type="Node2D" parent="."]
 position = Vector2(242, 52)
@@ -123,6 +138,7 @@ FirstDialogueId = "report_log"
 RepeatDialogueId = "report_log_again"
 FlagToSet = "read_report_log"
 Solid = true
+DrawBox = false
 
 [node name="Drawers" type="Node2D" parent="."]
 position = Vector2(273, 168)
@@ -134,6 +150,7 @@ Outline = Color(0.8, 0.74, 0.62, 1)
 FirstDialogueId = "drawers"
 FlagToSet = "checked_drawers"
 Solid = true
+DrawBox = false
 
 [node name="TimeMachine" type="Node2D" parent="."]
 position = Vector2(546, 40)
@@ -145,6 +162,7 @@ Outline = Color(0.75, 0.8, 0.85, 1)
 FirstDialogueId = "time_machine"
 FlagToSet = "checked_machine"
 Solid = true
+DrawBox = false
 
 [node name="Cabinet" type="Node2D" parent="."]
 position = Vector2(553, 469)
@@ -156,17 +174,44 @@ Outline = Color(0.8, 0.74, 0.65, 1)
 FirstDialogueId = "cabinet"
 FlagToSet = "checked_cabinet"
 Solid = true
+DrawBox = false
 
 [node name="BrokenMachinery" type="Node2D" parent="."]
-position = Vector2(197, 474)
+position = Vector2(180, 488)
 script = ExtResource("9_inspect")
-Size = Vector2(190, 58)
+Size = Vector2(129, 55)
 Caption = "BROKEN MACHINERY (E)"
 Fill = Color(0.48, 0.52, 0.55, 0.9)
 Outline = Color(0.72, 0.78, 0.82, 1)
 FirstDialogueId = "broken_machinery"
 FlagToSet = "checked_machinery"
+DrawBox = false
 
+<<<<<<< Updated upstream
+=======
+[node name="Boxes" type="Node2D" parent="."]
+position = Vector2(120, 120)
+script = ExtResource("9_inspect")
+Size = Vector2(140, 60)
+Caption = "BOXES (E)"
+Fill = Color(0.55, 0.5, 0.42, 0.9)
+Outline = Color(0.8, 0.74, 0.62, 1)
+FirstDialogueId = "boxes"
+FlagToSet = "checked_boxes"
+DrawBox = false
+
+[node name="Photos" type="Node2D" parent="."]
+position = Vector2(720, 168)
+script = ExtResource("9_inspect")
+Size = Vector2(140, 70)
+Caption = "PHOTOS (E)"
+Fill = Color(0.6, 0.55, 0.45, 0.9)
+Outline = Color(0.85, 0.78, 0.65, 1)
+FirstDialogueId = "photos"
+FlagToSet = "checked_photos"
+DrawBox = false
+
+>>>>>>> Stashed changes
 [node name="Pendant" type="Node2D" parent="."]
 position = Vector2(614, 287)
 script = ExtResource("10_pendant")

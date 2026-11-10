@@ -6,6 +6,7 @@ using System.Collections.Generic;
 /// </summary>
 public sealed class DialogueChoice
 {
+<<<<<<< Updated upstream
     public string Text { get; }
     public string NextNodeId { get; }       // null/empty = end the dialogue
     public string FlagToSet { get; }        // null/empty = no flag
@@ -27,6 +28,52 @@ public sealed class DialogueChoice
     {
         return string.IsNullOrEmpty(RequiredFlag) || GameStateManager.Instance?.GetFlag(RequiredFlag) == true;
     }
+=======
+	public string Text { get; }
+	public string NextNodeId { get; }       // null/empty = end the dialogue
+	public string FlagToSet { get; }        // null/empty = no flag
+	public bool FlagValue { get; }
+	public string RequiredFlag { get; }        // null/empty = always available
+	public string HiddenIfFlag { get; }        // null/empty = never hidden; set = vanish once chosen
+	public string AffectionCharacter { get; }  // null/empty = this choice moves no relationship
+	public float AffectionDelta { get; }
+	private readonly List<KeyValuePair<string, float>> _additionalAffectionChanges = new();
+	public IReadOnlyList<KeyValuePair<string, float>> AdditionalAffectionChanges => _additionalAffectionChanges;
+
+	public DialogueChoice(string text, string nextNodeId = null, string flagToSet = null,
+						  bool flagValue = true, string requiredFlag = null, string hiddenIfFlag = null,
+						  string affectionCharacter = null, float affectionDelta = 0f)
+	{
+		Text = text;
+		NextNodeId = nextNodeId;
+		FlagToSet = flagToSet;
+		FlagValue = flagValue;
+		RequiredFlag = requiredFlag;
+		HiddenIfFlag = hiddenIfFlag;
+		AffectionCharacter = affectionCharacter;
+		AffectionDelta = affectionDelta;
+	}
+
+	public DialogueChoice AddAffection(string character, float delta)
+	{
+		if (!string.IsNullOrEmpty(character) && delta != 0f)
+			_additionalAffectionChanges.Add(new KeyValuePair<string, float>(character, delta));
+		return this;
+	}
+
+	public bool IsAvailable()
+	{
+		if (!string.IsNullOrEmpty(RequiredFlag) && GameStateManager.Instance?.GetFlag(RequiredFlag) != true)
+			return false;
+
+		// "hidden if" is the mirror of "required": a branch the player already took
+		// disappears from the list when the conversation loops back to the same choice.
+		if (!string.IsNullOrEmpty(HiddenIfFlag) && GameStateManager.Instance?.GetFlag(HiddenIfFlag) == true)
+			return false;
+
+		return true;
+	}
+>>>>>>> Stashed changes
 }
 
 /// <summary>

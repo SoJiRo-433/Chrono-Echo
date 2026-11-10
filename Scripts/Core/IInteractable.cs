@@ -17,3 +17,9 @@ public interface IInteractable
     /// <summary>Called when an entity interacts with this object.</summary>
     void Interact(Entity interactor);
 }
+
+/// <summary>An interactable that responds continuously while its user holds E.</summary>
+public interface IHeldInteractable
+{
+    void HoldInteract(Entity interactor, float delta);
+}

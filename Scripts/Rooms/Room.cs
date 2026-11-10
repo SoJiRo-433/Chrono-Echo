@@ -15,6 +15,11 @@ using Godot;
 /// </summary>
 public partial class Room : Node2D
 {
+    /// <summary>The single world-size multiplier for all six levels. Timers remain in seconds.</summary>
+    public const float SCALE_FACTOR = 1.5f;
+
+    /// <summary>How far a scripted camera pan zooms in while it holds.</summary>
+    private const float PanZoom = 1.35f;
     #region Signals
     [Signal] public delegate void LoopStartedEventHandler(int loopNumber);
     [Signal] public delegate void RoomCompletedEventHandler();
@@ -42,13 +47,27 @@ public partial class Room : Node2D
     private bool _showDebugHud = true;
     private int _levelNumber = 1;
     private string _nextLevelPath = "";
+<<<<<<< Updated upstream
+=======
+    private string _exitLockedHint = "";
+    private string _demoEchoDialogueId = "";
+>>>>>>> Stashed changes
 
     private float _loopClock;
     private int _loopNumber = 1;
     private bool _isComplete;
     private bool _transitionStarted;
+    private bool _exitLocked;
     private DialogueManager _dialogue;
+<<<<<<< Updated upstream
     private ColorRect _hudPanel;
+=======
+    private Camera2D _camera;
+    private Vector2 _cameraPanTarget;
+    private float _cameraPanSecondsLeft;
+    private Pendant _pendant;
+    private ColorRect _hudPanel;         // F3-toggled debug readout
+>>>>>>> Stashed changes
     private Label _hudLabel;
     private Label _bannerLabel;
     private Label _controlsLabel;
@@ -56,6 +75,8 @@ public partial class Room : Node2D
 
     #region Public properties
     [Export] public Vector2 RoomSize { get => _roomSize; set { _roomSize = value; QueueRedraw(); } }
+    /// <summary>Logical room bounds used by the camera and collision checks before SCALE_FACTOR.</summary>
+    [Export] public Vector2 WorldSize { get => _roomSize; set { _roomSize = value; QueueRedraw(); } }
     [Export] public Vector2 PlayerStartPosition { get => _playerStart; set => _playerStart = value; }
     [Export] public Vector2 ExitPosition { get => _exitPosition; set { _exitPosition = value; QueueRedraw(); } }
     [Export] public Vector2 ExitSize { get => _exitSize; set { _exitSize = value; QueueRedraw(); } }
@@ -74,6 +95,17 @@ public partial class Room : Node2D
     /// </summary>
     [Export] public string NextLevelPath { get => _nextLevelPath; set => _nextLevelPath = value ?? ""; }
 
+<<<<<<< Updated upstream
+=======
+    // A room whose exit is gated by what the level still wants done puts the reason here. Standing in
+    // the green box then says what is outstanding instead of doing nothing at all.
+    [Export] public string ExitLockedHint { get => _exitLockedHint; set => _exitLockedHint = value ?? ""; }
+
+    // When this conversation finishes, the room projects a scripted demo Echo in front of the
+    // player (Scene 6's "a blue light appeared in front of you"). Empty = no demo.
+    [Export] public string DemoEchoDialogueId { get => _demoEchoDialogueId; set => _demoEchoDialogueId = value ?? ""; }
+
+>>>>>>> Stashed changes
     public IReadOnlyList<Entity> Entities => _entities;
     public IReadOnlyList<Echo> Echoes => _echoes;
     public IReadOnlyList<Obstacle> Obstacles => _obstacles;
@@ -97,6 +129,27 @@ public partial class Room : Node2D
     public float StepSeconds => 1f / Engine.PhysicsTicksPerSecond;
 
     public Rect2 ExitBounds => new Rect2(_exitPosition, _exitSize);
+    public virtual float MovementScaleAt(Vector2 worldPosition) => 1f;
+
+    /// <summary>Takes the camera off the player for a moment and parks it on a world point - the
+    /// Library's scripted pan to Yoruka. It hands the camera back to the follow when it expires.
+    /// A small zoom comes with it, because a room this small clamps the camera so hard that a
+    /// pan alone would not read.</summary>
+    public void PanCameraTo(Vector2 worldPosition, float seconds)
+    {
+        _cameraPanTarget = worldPosition;
+        _cameraPanSecondsLeft = Mathf.Max(0.05f, seconds);
+        if (_camera != null) _camera.Zoom = Vector2.One * PanZoom;
+    }
+
+    /// <summary>A reusable reset-and-respawn hook for hazards whose design resets a whole room.</summary>
+    public void HandlePuzzleHit(string hazard)
+    {
+        ResetPuzzles();
+        if (Player == null) return;
+        Player.TakeScratch();
+        Player.WorldPosition = _playerStart;
+    }
     #endregion
 
     #region Lifecycle
@@ -106,6 +159,7 @@ public partial class Room : Node2D
         _loopClock = -StepSeconds;
 
         RegisterChildren();
+        BuildRoomCamera();
         GameStateManager.Instance?.RegisterRoom(this);
         GameStateManager.Instance?.RegisterLevel(_levelNumber);
 
@@ -137,7 +191,12 @@ public partial class Room : Node2D
                     break;
                 case Door door: _doors.Add(door); _interactables.Add(door); break;
                 case Inspectable inspectable: _inspectables.Add(inspectable); _interactables.Add(inspectable); break;
+<<<<<<< Updated upstream
                 case Pendant pendant: _interactables.Add(pendant); break;
+=======
+                case Pendant pendant: _pendant = pendant; _interactables.Add(pendant); break;
+                case Node2D node when node is IInteractable interactable: _interactables.Add(interactable); break;
+>>>>>>> Stashed changes
             }
         }
     }
@@ -150,18 +209,85 @@ public partial class Room : Node2D
         // every entity sees the same clock value within one tick.
         _loopClock += (float)delta;
 
-        if (!_isComplete && Player != null && Player.IsAlive && ExitBounds.Intersects(Player.Bounds))
+        if (!_isComplete && CanCompleteRoom() && Player != null && Player.IsAlive && ExitBounds.Intersects(Player.Bounds))
             CompleteRoom();
     }
 
+    /// <summary>True while she stands in an exit that is still gated, so the banner can say why it
+    /// did nothing. Worked out here rather than in the physics step because the banner has to keep
+    /// up even while a conversation has the game paused - Level 6's border starts one on the way in.</summary>
+    private void RefreshExitLocked()
+    {
+        _exitLocked = !_isComplete && Player != null && Player.IsAlive
+                      && ExitBounds.Intersects(Player.Bounds) && !CanCompleteRoom();
+    }
+
+    protected virtual bool CanCompleteRoom() => true;
+
     public override void _Process(double delta)
     {
+<<<<<<< Updated upstream
         if (_hudPanel == null) return;
         _hudLabel.Text = BuildHudText();
+=======
+        UpdateRoomCamera((float)delta);
+        RefreshExitLocked();
+        if (_hudLabel != null) _hudLabel.Text = BuildHudText();
+>>>>>>> Stashed changes
         RefreshBanner();
     }
 
+<<<<<<< Updated upstream
     /// <summary>F3 hides the overlay, so a screenshot is not covered in debug text.</summary>
+=======
+    /// <summary>Creates the world camera independently of the CanvasLayer HUD and dialogue UI.</summary>
+    private void BuildRoomCamera()
+    {
+        _camera = new Camera2D
+        {
+            Name = "RoomCamera",
+            Enabled = true,
+            PositionSmoothingEnabled = true,
+            PositionSmoothingSpeed = 5f
+        };
+        AddChild(_camera);
+        if (Player != null) _camera.Position = Player.WorldPosition;
+        _camera.MakeCurrent();
+    }
+
+    private void UpdateRoomCamera(float delta)
+    {
+        if (_camera == null || Player == null) return;
+
+        // A scripted pan keeps the camera for a moment and then gives it back to the follow.
+        if (_cameraPanSecondsLeft > 0f)
+        {
+            _cameraPanSecondsLeft = Mathf.Max(0f, _cameraPanSecondsLeft - delta);
+            _camera.Position = _camera.Position.Lerp(ClampCamera(_cameraPanTarget), Mathf.Min(1f, delta * 5f));
+            return;
+        }
+
+        _camera.Position = ClampCamera(Player.WorldPosition);
+        if (!_camera.Zoom.IsEqualApprox(Vector2.One))
+            _camera.Zoom = _camera.Zoom.Lerp(Vector2.One, Mathf.Min(1f, delta * 4f));
+    }
+
+    /// <summary>Keeps the camera inside the room, whatever it is looking at.</summary>
+    private Vector2 ClampCamera(Vector2 target)
+    {
+        Vector2 viewport = GetViewportRect().Size / SCALE_FACTOR;
+        Vector2 half = viewport * 0.5f;
+        target.X = _roomSize.X <= viewport.X ? _roomSize.X * 0.5f : Mathf.Clamp(target.X, half.X, _roomSize.X - half.X);
+        target.Y = _roomSize.Y <= viewport.Y ? _roomSize.Y * 0.5f : Mathf.Clamp(target.Y, half.Y, _roomSize.Y - half.Y);
+        return target;
+    }
+
+    public override void _EnterTree()
+    {
+        Scale = Vector2.One * SCALE_FACTOR;
+    }
+
+>>>>>>> Stashed changes
     public override void _UnhandledInput(InputEvent @event)
     {
         if (_hudPanel == null) return;
@@ -176,7 +302,10 @@ public partial class Room : Node2D
 
     public override void _Draw()
     {
-        DrawRect(new Rect2(Vector2.Zero, _roomSize), new Color(0.09f, 0.09f, 0.13f));
+        Vector2 visibleWorld = GetViewportRect().Size / SCALE_FACTOR;
+        Vector2 bgSize = new Vector2(Mathf.Max(_roomSize.X, visibleWorld.X), Mathf.Max(_roomSize.Y, visibleWorld.Y));
+        Vector2 bgPosition = (_roomSize - bgSize) * 0.5f;
+        DrawRect(new Rect2(bgPosition, bgSize), new Color(0.09f, 0.09f, 0.13f));
         DrawRect(ExitBounds, new Color(0.2f, 0.8f, 0.3f, 0.35f));
         DrawRect(ExitBounds, new Color(0.3f, 1f, 0.4f), false, 2f);
     }
@@ -235,8 +364,12 @@ public partial class Room : Node2D
     #endregion
 
     #region Queries used by entities and puzzles
+<<<<<<< Updated upstream
     /// <summary>True if 'bounds' leaves the room or touches an obstacle or a CLOSED door.</summary>
     public bool IsBlocked(Rect2 bounds)
+=======
+    public virtual bool IsBlocked(Rect2 bounds)
+>>>>>>> Stashed changes
     {
         if (!new Rect2(Vector2.Zero, _roomSize).Encloses(bounds)) return true;
 
@@ -327,14 +460,57 @@ public partial class Room : Node2D
             Size = new Vector2(336f, 88f),
             MouseFilter = Control.MouseFilterEnum.Ignore
         };
+<<<<<<< Updated upstream
         _hudLabel.AddThemeFontSizeOverride("font_size", 13);
         _hudLabel.AddThemeColorOverride("font_color", new Color(0.82f, 0.87f, 0.93f));
         _hudPanel.AddChild(_hudLabel);
+=======
+        _recordBarBg.AddChild(_recordBarFill);
+
+        _recordLabel = new Label
+        {
+            Position = new Vector2(324f, 590f),
+            Size = new Vector2(460f, 24f),
+            MouseFilter = Control.MouseFilterEnum.Ignore,
+            Visible = false
+        };
+        _recordLabel.AddThemeFontSizeOverride("font_size", 13);
+        _recordLabel.AddThemeColorOverride("font_color", new Color(0.75f, 0.97f, 1f));
+        _recordLabel.AddThemeColorOverride("font_outline_color", Colors.Black);
+        _recordLabel.AddThemeConstantOverride("outline_size", 4);
+
+        // --- echo timer: the soonest projection to decay, so the room's clock stays legible ---
+        _echoTimerLabel = new Label
+        {
+            Position = new Vector2(14f, 564f),
+            Size = new Vector2(520f, 24f),
+            MouseFilter = Control.MouseFilterEnum.Ignore,
+            Visible = false
+        };
+        _echoTimerLabel.AddThemeFontSizeOverride("font_size", 13);
+        _echoTimerLabel.AddThemeColorOverride("font_color", new Color(0.55f, 0.95f, 1f));
+        _echoTimerLabel.AddThemeColorOverride("font_outline_color", Colors.Black);
+        _echoTimerLabel.AddThemeConstantOverride("outline_size", 4);
+
+        // --- objective: replaces "Name: line" once an Objective line has been read ---
+        _objectiveLabel = new Label
+        {
+            Position = new Vector2(0f, 6f),
+            Size = new Vector2(GetViewportRect().Size.X, 26f),
+            HorizontalAlignment = HorizontalAlignment.Center,
+            MouseFilter = Control.MouseFilterEnum.Ignore,
+            Visible = false
+        };
+        _objectiveLabel.AddThemeFontSizeOverride("font_size", 15);
+        _objectiveLabel.AddThemeColorOverride("font_color", new Color(1f, 0.86f, 0.45f));
+        _objectiveLabel.AddThemeColorOverride("font_outline_color", Colors.Black);
+        _objectiveLabel.AddThemeConstantOverride("outline_size", 4);
+>>>>>>> Stashed changes
 
         _bannerLabel = new Label
         {
             Position = new Vector2(0f, 70f),
-            Size = new Vector2(1152f, 36f),
+            Size = new Vector2(GetViewportRect().Size.X, 36f),
             HorizontalAlignment = HorizontalAlignment.Center,
             MouseFilter = Control.MouseFilterEnum.Ignore,
             Visible = false
@@ -367,7 +543,8 @@ public partial class Room : Node2D
     {
         string text = "";
         if (Player != null && Player.IsGameOver) text = "GAME OVER - press R to restart";
-        else if (_isComplete) text = IsFinalLevel ? "ALL LEVELS CLEAR" : "ROOM CLEAR";
+        else if (_isComplete) text = IsFinalLevel && _levelNumber == 6 ? "LEVEL 6 CLEAR - to be continued" : IsFinalLevel ? "ALL LEVELS CLEAR" : "ROOM CLEAR";
+        else if (_exitLocked && _exitLockedHint != "") text = _exitLockedHint;
 
         _bannerLabel.Text = text;
         _bannerLabel.Visible = text != "" && _hudPanel.Visible;

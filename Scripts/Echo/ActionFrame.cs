@@ -25,6 +25,10 @@ public readonly struct ActionFrame
 
     public PlayerAction Action { get; }
 
+<<<<<<< Updated upstream
     /// <summary>True for actions that change the world (the only ones an Echo re-performs).</summary>
     public bool IsWorldAffecting => Action == PlayerAction.Interact || Action == PlayerAction.Attack;
+=======
+	public bool IsWorldAffecting => Action == PlayerAction.Interact || Action == PlayerAction.InteractHeld || Action == PlayerAction.Attack;
+>>>>>>> Stashed changes
 }

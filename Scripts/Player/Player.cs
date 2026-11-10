@@ -125,6 +125,10 @@ public partial class Player : Entity
                 Interact();
                 return action;
 
+            case PlayerAction.InteractHeld:
+                InteractHeld(delta);
+                return action;
+
             case PlayerAction.Attack:
                 Attack();
                 return action;
@@ -135,7 +139,8 @@ public partial class Player : Entity
             default:   // the four movement actions
                 Vector2 direction = PlayerInput.DirectionOf(action);
                 FacingDirection = direction;
-                bool moved = TryMove(direction * MoveSpeed * delta);
+                float movementScale = CurrentRoom?.MovementScaleAt(WorldPosition) ?? 1f;
+                bool moved = TryMove(direction * MoveSpeed / Room.SCALE_FACTOR * movementScale * delta);
                 return moved ? action : PlayerAction.Idle;
         }
     }
@@ -148,7 +153,16 @@ public partial class Player : Entity
         base.TakeDamage(amount);
     }
 
+<<<<<<< Updated upstream
     /// <summary>Death: announce it, then resolve it AFTER the current tick (see ResolveDeath).</summary>
+=======
+    /// <summary>Timing hazards cost one scratch but cannot end a run at zero health.</summary>
+    public void TakeScratch()
+    {
+        if (Health > 1) TakeDamage(1);
+    }
+
+>>>>>>> Stashed changes
     public override void Die()
     {
         base.Die();   // IsAlive = false, Died signal
