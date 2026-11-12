@@ -1,23 +1,6 @@
 using Godot;
 
-<<<<<<< Updated upstream
-/// <summary>
-/// A puzzle switch that controls a linked Door. Implements IInteractable AND IUpdatable.
-///
-/// Two modes (set IsPressurePlate in the Inspector):
-///  - Lever (default): the player/Echo presses E nearby to activate it. StaysOn=true means
-///    it latches on until the loop resets.
-///  - Pressure plate: active ONLY while a living Player or Echo stands on it. This is the
-///    classic time-loop trick: an Echo that finished its replay standing on the plate keeps
-///    the door open while the live player walks through.
-///
-/// Decoupling: the Switch never calls the Door directly while running - it emits
-/// ActivationChanged and the Door listens (wired once in _Ready).
-/// </summary>
-public partial class Switch : Node2D, IInteractable, IUpdatable
-=======
 public partial class Switch : Node2D, IInteractable, IHeldInteractable, IUpdatable
->>>>>>> Stashed changes
 {
     #region Signals
     [Signal] public delegate void ActivationChangedEventHandler(bool isActivated);
@@ -30,8 +13,6 @@ public partial class Switch : Node2D, IInteractable, IHeldInteractable, IUpdatab
     private float _plateRadius = 28f;
     private Door _linkedDoor;
     private Room _room;
-<<<<<<< Updated upstream
-=======
     private string _flagToSet = "";
     private string[] _sequencePool = System.Array.Empty<string>();
     private int _sequenceIndex;
@@ -43,23 +24,19 @@ public partial class Switch : Node2D, IInteractable, IHeldInteractable, IUpdatab
     private float _lastHoldClock = -1f;
     private bool _requireHeldInteraction;
     private static Font _consoleFont;
->>>>>>> Stashed changes
     #endregion
 
     #region Public properties
-    /// <summary>Path (set in the Inspector) to the Door this switch controls.</summary>
     [Export] public NodePath LinkedDoorPath { get; set; } = new NodePath();
+
+    // Recorded the first time this switch turns on. Rooms use it for things a door cannot say:
+    // the Atrium's counterweight that keeps the next stretch of bridge solid, for instance.
+    [Export] public string FlagToSet { get => _flagToSet; set => _flagToSet = value ?? ""; }
+
     [Export] public bool IsPressurePlate { get => _isPressurePlate; set { _isPressurePlate = value; QueueRedraw(); } }
     [Export] public bool StaysOn { get => _staysOn; set => _staysOn = value; }
     [Export] public float PlateRadius { get => _plateRadius; set { _plateRadius = Mathf.Max(4f, value); QueueRedraw(); } }
 
-<<<<<<< Updated upstream
-    public bool IsActivated => _isActivated;
-    public Door LinkedDoor => _linkedDoor;
-
-    /// <summary>A switch is a small circle, so its own position is the interaction point.</summary>
-    public float DistanceTo(Vector2 from) => from.DistanceTo(Position);
-=======
     // How much room answers to E on this switch. A plate reacts to weight rather than to hands, so
     // this only ever decides which device the player meant - and a box beats a point for that.
     [Export] public Vector2 InteractionSize { get; set; } = new Vector2(26f, 26f);
@@ -92,13 +69,13 @@ public partial class Switch : Node2D, IInteractable, IHeldInteractable, IUpdatab
     public Rect2 InteractionBounds => new Rect2(Position - InteractionSize * 0.5f, InteractionSize);
 
     public float DistanceTo(Vector2 from) => InteractionBounds.DistanceToPoint(from);
->>>>>>> Stashed changes
     #endregion
 
     #region Lifecycle
     public override void _Ready()
     {
         _room = GetParent() as Room;
+        _sequenceStartIndex = _sequenceIndex;   // the code a reset returns this console to
         if (!LinkedDoorPath.IsEmpty) LinkDoor(GetNodeOrNull<Door>(LinkedDoorPath));
         QueueRedraw();
     }
@@ -109,12 +86,16 @@ public partial class Switch : Node2D, IInteractable, IHeldInteractable, IUpdatab
         Update((float)delta);
     }
 
-    /// <summary>Connects this switch to a door (also usable from code).</summary>
     public void LinkDoor(Door door)
     {
         if (_linkedDoor != null) ActivationChanged -= _linkedDoor.OnSwitchChanged;
         _linkedDoor = door;
-        if (_linkedDoor != null) ActivationChanged += _linkedDoor.OnSwitchChanged;
+
+        if (_linkedDoor != null)
+        {
+            _linkedDoor.RegisterSwitch(this);   // so a door can require several plates at once
+            ActivationChanged += _linkedDoor.OnSwitchChanged;
+        }
     }
     #endregion
 
@@ -140,25 +121,26 @@ public partial class Switch : Node2D, IInteractable, IHeldInteractable, IUpdatab
         bool occupied = false;
         foreach (Entity entity in _room.Entities)
         {
+            // A hidden entity is off the board: an Echo that has decayed releases the plate on the
+            // same tick it goes, rather than a tick later when the room gets round to freeing it.
             bool canPress = entity is Player || entity is Echo;
-            if (canPress && entity.IsAlive && entity.WorldPosition.DistanceTo(Position) <= _plateRadius)
+            if (canPress && entity.IsAlive && entity.Visible &&
+                entity.WorldPosition.DistanceTo(Position) <= _plateRadius)
             {
                 occupied = true;
                 break;
             }
         }
         SetActivated(occupied);
+
+        // Standing on the plate counts as reaching the puzzle from its other end.
+        if (occupied) _linkedDoor?.NotifyApproached();
     }
     #endregion
 
     #region IInteractable (lever logic)
     public void Interact(Entity interactor)
     {
-<<<<<<< Updated upstream
-        if (_isPressurePlate) return;   // plates react to weight, not to hands
-        SetActivated(_staysOn ? true : !_isActivated);
-    }
-=======
         if (_requireHeldInteraction) return;
         // A console answers hands first: E steps it to its next code. What is *left* on it is
         // still weight, exactly like a plate - the player sets the code, the Echo holds it.
@@ -185,30 +167,27 @@ public partial class Switch : Node2D, IInteractable, IHeldInteractable, IUpdatab
         _sequenceIndex = Mathf.PosMod(_sequenceIndex + 1, _sequencePool.Length);
         QueueRedraw();
     }
->>>>>>> Stashed changes
     #endregion
 
     #region State
-    /// <summary>The only place the state changes - so the signal is never forgotten.</summary>
     private void SetActivated(bool value)
     {
         if (_isActivated == value) return;
         _isActivated = value;
         QueueRedraw();
         EmitSignal(SignalName.ActivationChanged, _isActivated);
+
+        if (_isActivated && _flagToSet != "") GameStateManager.Instance?.SetFlag(_flagToSet, true);
     }
 
-    /// <summary>Called by the Room when a new loop starts.</summary>
     public void ResetState()
     {
-<<<<<<< Updated upstream
-=======
         _sequenceIndex = _sequenceStartIndex;   // a restart puts the consoles back to their codes
         _holdElapsed = 0f;
         _lastHoldClock = -1f;
         _activeRemaining = 0f;
->>>>>>> Stashed changes
         SetActivated(false);
+        QueueRedraw();
     }
     #endregion
 
@@ -219,6 +198,26 @@ public partial class Switch : Node2D, IInteractable, IHeldInteractable, IUpdatab
         float radius = _isPressurePlate ? _plateRadius : 12f;
         DrawCircle(Vector2.Zero, radius, fill);
         DrawArc(Vector2.Zero, radius, 0f, Mathf.Tau, 32, new Color(0.2f, 0.2f, 0.2f), 2f);
+
+        if (IsConsole) DrawConsoleScreen();
+    }
+
+    /// <summary>The console's face. "Match the same sequence on both" has to be something the
+    /// player can read off the room, so the four symbols are drawn above the plate - and the frame
+    /// turns green while the console is weighed down.</summary>
+    private void DrawConsoleScreen()
+    {
+        Rect2 screen = new Rect2(-34f, -46f, 68f, 26f);
+        DrawRect(screen, new Color(0.05f, 0.09f, 0.12f, 0.95f));
+        DrawRect(screen, _isActivated ? new Color(0.45f, 1f, 0.6f) : new Color(0.5f, 0.7f, 0.85f), false, 2f);
+
+        if (_consoleFont == null)
+            _consoleFont = ResourceLoader.Load<Font>("res://Assets/Fonts/NotoSerifJP-VariableFont_wght.ttf");
+        if (_consoleFont == null) return;
+
+        DrawString(_consoleFont, new Vector2(screen.Position.X + 6f, screen.Position.Y + 19f),
+                   CurrentSequence, HorizontalAlignment.Center, screen.Size.X - 12f, 17,
+                   _isActivated ? new Color(0.6f, 1f, 0.7f) : new Color(0.6f, 0.85f, 1f));
     }
     #endregion
 }

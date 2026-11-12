@@ -2,17 +2,6 @@ using System.Collections.Generic;
 using System.Text;
 using Godot;
 
-/// <summary>
-/// A playable room. The CONTAINER that ties every system together.
-///
-/// OOP roles:
-///  - COMPOSITION: a Room HAS-A list of entities, obstacles, switches, doors (and echoes).
-///    It discovers them from its child nodes in _Ready().
-///  - Owns the shared LOOP CLOCK that keeps the recording and every Echo in sync.
-///  - Answers questions for others: IsBlocked(), FindNearestInteractable().
-///
-/// The Room node must sit at position (0,0): all coordinates are room coordinates.
-/// </summary>
 public partial class Room : Node2D
 {
     /// <summary>The single world-size multiplier for all six levels. Timers remain in seconds.</summary>
@@ -28,7 +17,6 @@ public partial class Room : Node2D
 
     #region Private state (composition: the lists)
     private readonly List<Entity> _entities = new();
-    private readonly List<Enemy> _enemies = new();
     private readonly List<Echo> _echoes = new();
     private readonly List<Obstacle> _obstacles = new();
     private readonly List<Switch> _switches = new();
@@ -41,17 +29,17 @@ public partial class Room : Node2D
     private Vector2 _exitPosition = new Vector2(980f, 274f);
     private Vector2 _exitSize = new Vector2(120f, 100f);
     private int _maxEchoes = 3;
+    private float _maxCaptureSeconds = 5f;
+    private bool _loopReplay;
+    private float _echoLifetimeSeconds = 20f;
     private string _introDialogueId = "intro";
     private string _clearDialogueId = "room01_clear";
     private string _completionFlag = "room01_complete";
     private bool _showDebugHud = true;
     private int _levelNumber = 1;
     private string _nextLevelPath = "";
-<<<<<<< Updated upstream
-=======
     private string _exitLockedHint = "";
     private string _demoEchoDialogueId = "";
->>>>>>> Stashed changes
 
     private float _loopClock;
     private int _loopNumber = 1;
@@ -59,18 +47,19 @@ public partial class Room : Node2D
     private bool _transitionStarted;
     private bool _exitLocked;
     private DialogueManager _dialogue;
-<<<<<<< Updated upstream
-    private ColorRect _hudPanel;
-=======
     private Camera2D _camera;
     private Vector2 _cameraPanTarget;
     private float _cameraPanSecondsLeft;
     private Pendant _pendant;
     private ColorRect _hudPanel;         // F3-toggled debug readout
->>>>>>> Stashed changes
     private Label _hudLabel;
-    private Label _bannerLabel;
     private Label _controlsLabel;
+    private Label _bannerLabel;          // always on: GAME OVER / ROOM CLEAR
+    private Label _recordLabel;          // always on while a capture window is open
+    private ColorRect _recordBarBg;
+    private ColorRect _recordBarFill;
+    private Label _objectiveLabel;       // always on once an Objective has been read
+    private Label _echoTimerLabel;       // always on while any Echo is still alive
     #endregion
 
     #region Public properties
@@ -81,22 +70,28 @@ public partial class Room : Node2D
     [Export] public Vector2 ExitPosition { get => _exitPosition; set { _exitPosition = value; QueueRedraw(); } }
     [Export] public Vector2 ExitSize { get => _exitSize; set { _exitSize = value; QueueRedraw(); } }
     [Export] public int MaxEchoes { get => _maxEchoes; set => _maxEchoes = Mathf.Max(1, value); }
+
+    // How long a single capture window may run before it closes itself. A puzzle never needs more
+    // than a few seconds of the past, and the cap keeps the Echo's frame list small.
+    [Export] public float MaxCaptureSeconds { get => _maxCaptureSeconds; set => _maxCaptureSeconds = Mathf.Max(0.5f, value); }
+
+    // Default LoopReplay for every Echo this room spawns: false keeps an Echo standing where its
+    // recording ended (Room01/Room02, so it can hold a plate); true makes it repeat (the Atrium).
+    [Export] public bool LoopReplay { get => _loopReplay; set => _loopReplay = value; }
+
+    // How long each projected Echo lasts before it decays and the room reclaims it. 0 = no limit.
+    // Keep it comfortably longer than the walk its puzzle asks for: once the Echo is gone, the
+    // plate it was holding comes up and the door it was propping open closes behind the player.
+    [Export] public float EchoLifetimeSeconds { get => _echoLifetimeSeconds; set => _echoLifetimeSeconds = Mathf.Max(0f, value); }
     [Export] public string IntroDialogueId { get => _introDialogueId; set => _introDialogueId = value ?? ""; }
     [Export] public string ClearDialogueId { get => _clearDialogueId; set => _clearDialogueId = value ?? ""; }
     [Export] public string CompletionFlag { get => _completionFlag; set => _completionFlag = value ?? ""; }
     [Export] public bool ShowDebugHud { get => _showDebugHud; set => _showDebugHud = value; }
 
-    /// <summary>1-based level number, shown on the HUD and reported to the GameStateManager.</summary>
     [Export] public int LevelNumber { get => _levelNumber; set => _levelNumber = Mathf.Max(1, value); }
 
-    /// <summary>
-    /// Scene loaded once this level is finished (the player reached the exit). Leave it
-    /// empty on the last level: the room then simply stays completed.
-    /// </summary>
     [Export] public string NextLevelPath { get => _nextLevelPath; set => _nextLevelPath = value ?? ""; }
 
-<<<<<<< Updated upstream
-=======
     // A room whose exit is gated by what the level still wants done puts the reason here. Standing in
     // the green box then says what is outstanding instead of doing nothing at all.
     [Export] public string ExitLockedHint { get => _exitLockedHint; set => _exitLockedHint = value ?? ""; }
@@ -105,7 +100,6 @@ public partial class Room : Node2D
     // player (Scene 6's "a blue light appeared in front of you"). Empty = no demo.
     [Export] public string DemoEchoDialogueId { get => _demoEchoDialogueId; set => _demoEchoDialogueId = value ?? ""; }
 
->>>>>>> Stashed changes
     public IReadOnlyList<Entity> Entities => _entities;
     public IReadOnlyList<Echo> Echoes => _echoes;
     public IReadOnlyList<Obstacle> Obstacles => _obstacles;
@@ -114,18 +108,19 @@ public partial class Room : Node2D
     public IReadOnlyList<Inspectable> Inspectables => _inspectables;
     public Player Player { get; private set; }
 
-    /// <summary>The room's DialogueManager, so scenery can start a conversation by id.</summary>
     public DialogueManager Dialogue => _dialogue;
 
-    /// <summary>Seconds since this loop started. Negative for one tick right after a reset.</summary>
     public float LoopClock => _loopClock;
     public int LoopNumber => _loopNumber;
     public bool IsComplete => _isComplete;
 
-    /// <summary>True when this room has no NextLevelPath, i.e. nothing follows it.</summary>
     public bool IsFinalLevel => string.IsNullOrEmpty(_nextLevelPath);
 
-    /// <summary>Length of one physics tick in seconds (1/60).</summary>
+    /// <summary>True when a flag reset puts the pendant back in the world here, because this room
+    /// has one lying on the floor. Only Room01 does; every later level is past it, so a restart
+    /// there must not take the Echo ability away with the flags (see Player.RestartRun).</summary>
+    public bool HasPendantOnTheFloor => _pendant != null;
+
     public float StepSeconds => 1f / Engine.PhysicsTicksPerSecond;
 
     public Rect2 ExitBounds => new Rect2(_exitPosition, _exitSize);
@@ -163,17 +158,16 @@ public partial class Room : Node2D
         GameStateManager.Instance?.RegisterRoom(this);
         GameStateManager.Instance?.RegisterLevel(_levelNumber);
 
-        foreach (Entity entity in _entities.ToArray()) entity.EnterRoom(this);   // Player starts recording here
+        foreach (Entity entity in _entities.ToArray()) entity.EnterRoom(this);   // Player is placed at the start
 
         _dialogue = GetNodeOrNull<DialogueManager>("DialogueManager");
         if (_dialogue != null) _dialogue.DialogueEnded += OnDialogueEnded;       // level hand-over waits for it
-        if (_showDebugHud) BuildDebugHud();
+        BuildHud();
         QueueRedraw();
 
         if (_introDialogueId != "") _dialogue?.StartDialogue(_introDialogueId);
     }
 
-    /// <summary>Sorts the child nodes into the Room's typed lists.</summary>
     private void RegisterChildren()
     {
         foreach (Node child in GetChildren())
@@ -181,7 +175,6 @@ public partial class Room : Node2D
             switch (child)
             {
                 case Player player: Player = player; _entities.Add(player); break;
-                case Enemy enemy: _enemies.Add(enemy); _entities.Add(enemy); break;
                 case Echo echo: _echoes.Add(echo); _entities.Add(echo); break;
                 case Obstacle obstacle: _obstacles.Add(obstacle); break;
                 case Switch sw:
@@ -191,12 +184,8 @@ public partial class Room : Node2D
                     break;
                 case Door door: _doors.Add(door); _interactables.Add(door); break;
                 case Inspectable inspectable: _inspectables.Add(inspectable); _interactables.Add(inspectable); break;
-<<<<<<< Updated upstream
-                case Pendant pendant: _interactables.Add(pendant); break;
-=======
                 case Pendant pendant: _pendant = pendant; _interactables.Add(pendant); break;
                 case Node2D node when node is IInteractable interactable: _interactables.Add(interactable); break;
->>>>>>> Stashed changes
             }
         }
     }
@@ -226,20 +215,15 @@ public partial class Room : Node2D
 
     public override void _Process(double delta)
     {
-<<<<<<< Updated upstream
-        if (_hudPanel == null) return;
-        _hudLabel.Text = BuildHudText();
-=======
         UpdateRoomCamera((float)delta);
         RefreshExitLocked();
         if (_hudLabel != null) _hudLabel.Text = BuildHudText();
->>>>>>> Stashed changes
         RefreshBanner();
+        RefreshRecordBar();
+        RefreshEchoTimer();
+        RefreshObjective();
     }
 
-<<<<<<< Updated upstream
-    /// <summary>F3 hides the overlay, so a screenshot is not covered in debug text.</summary>
-=======
     /// <summary>Creates the world camera independently of the CanvasLayer HUD and dialogue UI.</summary>
     private void BuildRoomCamera()
     {
@@ -287,12 +271,13 @@ public partial class Room : Node2D
         Scale = Vector2.One * SCALE_FACTOR;
     }
 
->>>>>>> Stashed changes
     public override void _UnhandledInput(InputEvent @event)
     {
         if (_hudPanel == null) return;
         if (!(@event is InputEventKey key) || !key.Pressed || key.IsEcho() || key.Keycode != Key.F3) return;
 
+        // F3 hides the DEBUG readout only. The recording bar and the banner are player-facing
+        // and stay on screen whatever F3 is set to.
         bool show = !_hudPanel.Visible;
         _hudPanel.Visible = show;
         _controlsLabel.Visible = show;
@@ -312,10 +297,6 @@ public partial class Room : Node2D
     #endregion
 
     #region Time loop control
-    /// <summary>
-    /// Starts a new loop: rewinds the clock, resets puzzles and enemies, and makes every
-    /// Echo replay from the beginning. Called by Player.ResetTimeLoop().
-    /// </summary>
     public void StartNewLoop()
     {
         _loopNumber++;
@@ -323,13 +304,11 @@ public partial class Room : Node2D
         _isComplete = false;
 
         ResetPuzzles();
-        foreach (Enemy enemy in _enemies) enemy.ResetForNewLoop();
         foreach (Echo echo in _echoes) echo.StartReplay();
 
         EmitSignal(SignalName.LoopStarted, _loopNumber);
     }
 
-    /// <summary>Adds a new Echo. If there are too many, the oldest one is removed.</summary>
     public void AddEcho(Echo echo)
     {
         if (_echoes.Count >= _maxEchoes)
@@ -342,8 +321,33 @@ public partial class Room : Node2D
 
         AddChild(echo);
         echo.EnterRoom(this);
+        echo.LoopReplay = _loopReplay;                 // the replay style for the echoes it spawns...
+        echo.LifetimeSeconds = _echoLifetimeSeconds;   // ...and how long each projection lasts
+
+        // ...and the same airtime the player jumps with, so a recorded leap clears the same step
+        // in the replay that it cleared in the recording.
+        if (Player != null) echo.JumpAirtimeSeconds = Player.JumpAirtimeSeconds;
+
+        echo.StartReplay();     // anchor the window to the clock; it replays forward from here
+        OnEchoProjected(echo);  // ...and now the room gets the last word on the projection
         _echoes.Add(echo);
         _entities.Add(echo);
+    }
+
+    /// <summary>Called once per projection, after its window has been anchored to the clock, so a
+    /// room can refine it. RoomAtrium overrides this: only its stairway wants a repeating window,
+    /// because a projection that repeats walks itself off a plate.</summary>
+    protected virtual void OnEchoProjected(Echo echo) { }
+
+    /// <summary>Reclaim a single Echo: it has decayed, or the room is thinning them out. Guarded so
+    /// a deferred removal that arrives after the room was already cleared is a no-op.</summary>
+    public void RemoveEcho(Echo echo)
+    {
+        if (echo == null || !GodotObject.IsInstanceValid(echo)) return;
+
+        _echoes.Remove(echo);
+        _entities.Remove(echo);
+        echo.QueueFree();
     }
 
     public void ClearEchoes()
@@ -356,7 +360,10 @@ public partial class Room : Node2D
         _echoes.Clear();
     }
 
-    private void ResetPuzzles()
+    /// <summary>Puts every puzzle back to its starting state. A subclass overrides this to clear
+    /// the pieces of state only it knows about - its one-shot beats, its stairway stains, the item
+    /// a character dropped - so an R-restart never leaves a solved room behind.</summary>
+    protected virtual void ResetPuzzles()
     {
         foreach (Switch sw in _switches) sw.ResetState();
         foreach (Door door in _doors) door.Close();
@@ -364,17 +371,12 @@ public partial class Room : Node2D
     #endregion
 
     #region Queries used by entities and puzzles
-<<<<<<< Updated upstream
-    /// <summary>True if 'bounds' leaves the room or touches an obstacle or a CLOSED door.</summary>
-    public bool IsBlocked(Rect2 bounds)
-=======
     public virtual bool IsBlocked(Rect2 bounds)
->>>>>>> Stashed changes
     {
         if (!new Rect2(Vector2.Zero, _roomSize).Encloses(bounds)) return true;
 
         foreach (Obstacle obstacle in _obstacles)
-            if (bounds.Intersects(obstacle.Bounds)) return true;
+            if (obstacle.IsSolid && bounds.Intersects(obstacle.Bounds)) return true;
 
         foreach (Door door in _doors)
             if (!door.IsOpen && bounds.Intersects(door.Bounds)) return true;
@@ -386,13 +388,16 @@ public partial class Room : Node2D
         return false;
     }
 
-    /// <summary>Nearest switch/door within 'radius' of 'from', or null.</summary>
     public IInteractable FindNearestInteractable(Vector2 from, float radius)
     {
         IInteractable best = null;
         float bestDistance = radius;
         foreach (IInteractable candidate in _interactables)
         {
+            // A hidden interactable is off the board: Yoruka once she has stormed off, a terminal
+            // the player has not reached yet. Hiding the node is all it takes to disable it.
+            if (candidate is Node2D node && !node.Visible) continue;
+
             float distance = candidate.DistanceTo(from);
             if (distance <= bestDistance) { best = candidate; bestDistance = distance; }
         }
@@ -401,10 +406,6 @@ public partial class Room : Node2D
     #endregion
 
     #region Completion
-    /// <summary>
-    /// The player reached the exit. In Room01 that means the pressure plate was touched and
-    /// the door it opens was walked through; the room then hands over to the next level.
-    /// </summary>
     private void CompleteRoom()
     {
         _isComplete = true;
@@ -419,18 +420,38 @@ public partial class Room : Node2D
         if (!dialogueStarted) BeginLevelTransition();
     }
 
-    /// <summary>
-    /// The closing dialogue finished: leave the level. Deferred on purpose, the same way
-    /// Player.Die() defers its respawn - this signal arrives from inside the DialogueManager's
-    /// own EndDialogue(), so changing the scene right here would free the DialogueManager
-    /// while it is still part way through its call stack.
-    /// </summary>
     private void OnDialogueEnded(string dialogueId)
     {
+        if (dialogueId != "" && dialogueId == _demoEchoDialogueId) SpawnDemoEcho();
         if (_isComplete) Callable.From(BeginLevelTransition).CallDeferred();
     }
 
-    /// <summary>Loads the next level, if there is one. Safe to call more than once.</summary>
+    /// <summary>Scene 6: after the pendant's memory flash the room projects a translucent copy of
+    /// Aionia that repeats the "touches its head" beat. It is an ordinary Echo built from ordinary
+    /// ActionFrames - no special-case physics and no player input involved.</summary>
+    private void SpawnDemoEcho()
+    {
+        if (Player == null) return;
+        if (GameStateManager.Instance?.GetFlag("echo_demo_spawned") ?? false) return;
+        GameStateManager.Instance?.SetFlag("echo_demo_spawned", true);
+
+        Vector2 forward = Player.FacingDirection == Vector2.Zero ? Vector2.Right : Player.FacingDirection;
+        Vector2 spot = Player.WorldPosition + forward * 76f;
+
+        float t0 = _loopClock;
+        var frames = new List<ActionFrame>
+        {
+            new ActionFrame(t0, spot, PlayerAction.Idle),
+            new ActionFrame(t0 + 0.4f, spot, PlayerAction.Interact),   // it touches its head
+            new ActionFrame(t0 + 1.0f, spot, PlayerAction.Idle),
+            new ActionFrame(t0 + 1.8f, spot, PlayerAction.Idle)
+        };
+
+        Echo echo = Player.EchoScene != null ? Player.EchoScene.Instantiate<Echo>() : new Echo();
+        echo.Initialize(frames);
+        AddEcho(echo);
+    }
+
     private void BeginLevelTransition()
     {
         if (_transitionStarted || IsFinalLevel) return;
@@ -441,30 +462,27 @@ public partial class Room : Node2D
     }
     #endregion
 
-    #region Debug HUD (placeholder UI)
-    /// <summary>Compact overlay: one status panel, a centred banner, and a controls footer.</summary>
-    private void BuildDebugHud()
+    #region Placeholder HUD (built in code, no assets)
+    private void BuildHud()
     {
         CanvasLayer layer = new CanvasLayer { Layer = 5 };
 
-        _hudPanel = new ColorRect
+        // --- recording bar: drains while a capture window is open, F3 or no F3 ---
+        _recordBarBg = new ColorRect
         {
-            Color = new Color(0.04f, 0.05f, 0.08f, 0.62f),
-            Position = new Vector2(14f, 12f),
-            Size = new Vector2(360f, 104f)
+            Color = new Color(0.04f, 0.05f, 0.08f, 0.8f),
+            Position = new Vector2(14f, 592f),
+            Size = new Vector2(300f, 20f),
+            MouseFilter = Control.MouseFilterEnum.Ignore,
+            Visible = false
         };
-
-        _hudLabel = new Label
+        _recordBarFill = new ColorRect
         {
-            Position = new Vector2(12f, 9f),
-            Size = new Vector2(336f, 88f),
+            Color = new Color(0.35f, 0.95f, 1f, 0.9f),
+            Position = new Vector2(2f, 2f),
+            Size = new Vector2(296f, 16f),
             MouseFilter = Control.MouseFilterEnum.Ignore
         };
-<<<<<<< Updated upstream
-        _hudLabel.AddThemeFontSizeOverride("font_size", 13);
-        _hudLabel.AddThemeColorOverride("font_color", new Color(0.82f, 0.87f, 0.93f));
-        _hudPanel.AddChild(_hudLabel);
-=======
         _recordBarBg.AddChild(_recordBarFill);
 
         _recordLabel = new Label
@@ -505,7 +523,6 @@ public partial class Room : Node2D
         _objectiveLabel.AddThemeColorOverride("font_color", new Color(1f, 0.86f, 0.45f));
         _objectiveLabel.AddThemeColorOverride("font_outline_color", Colors.Black);
         _objectiveLabel.AddThemeConstantOverride("outline_size", 4);
->>>>>>> Stashed changes
 
         _bannerLabel = new Label
         {
@@ -520,37 +537,119 @@ public partial class Room : Node2D
         _bannerLabel.AddThemeColorOverride("font_outline_color", Colors.Black);
         _bannerLabel.AddThemeConstantOverride("outline_size", 5);
 
-        _controlsLabel = new Label
-        {
-            Position = new Vector2(14f, 618f),
-            Size = new Vector2(1124f, 22f),
-            MouseFilter = Control.MouseFilterEnum.Ignore
-        };
-        _controlsLabel.Text = "WASD move   ·   T capture   ·   E interact   ·   J attack   ·   R reset loop   ·   Enter dialogue   ·   1/2 choose   ·   F3 hide HUD";
-        _controlsLabel.AddThemeFontSizeOverride("font_size", 12);
-        _controlsLabel.AddThemeColorOverride("font_color", new Color(0.62f, 0.66f, 0.72f));
-        _controlsLabel.AddThemeColorOverride("font_outline_color", new Color(0f, 0f, 0f, 0.8f));
-        _controlsLabel.AddThemeConstantOverride("outline_size", 3);
-
-        layer.AddChild(_hudPanel);
+        layer.AddChild(_recordBarBg);
+        layer.AddChild(_recordLabel);
+        layer.AddChild(_echoTimerLabel);
+        layer.AddChild(_objectiveLabel);
         layer.AddChild(_bannerLabel);
-        layer.AddChild(_controlsLabel);
+
+        // --- the debug readout is the only part F3 hides ---
+        if (_showDebugHud)
+        {
+            _hudPanel = new ColorRect
+            {
+                Color = new Color(0.04f, 0.05f, 0.08f, 0.62f),
+                Position = new Vector2(14f, 12f),
+                Size = new Vector2(360f, 128f)
+            };
+
+            _hudLabel = new Label
+            {
+                Position = new Vector2(12f, 9f),
+                Size = new Vector2(336f, 112f),
+                MouseFilter = Control.MouseFilterEnum.Ignore
+            };
+            _hudLabel.AddThemeFontSizeOverride("font_size", 13);
+            _hudLabel.AddThemeColorOverride("font_color", new Color(0.82f, 0.87f, 0.93f));
+            _hudPanel.AddChild(_hudLabel);
+
+            _controlsLabel = new Label
+            {
+                Position = new Vector2(14f, 618f),
+                Size = new Vector2(1124f, 22f),
+                MouseFilter = Control.MouseFilterEnum.Ignore
+            };
+            _controlsLabel.Text = "WASD move   ·   Space jump   ·   T record/stop   ·   E interact   ·   J attack   ·   R project echo   ·   Enter dialogue   ·   1/2 choose   ·   F3 hide HUD   ·   F11 fullscreen";
+            _controlsLabel.AddThemeFontSizeOverride("font_size", 12);
+            _controlsLabel.AddThemeColorOverride("font_color", new Color(0.62f, 0.66f, 0.72f));
+            _controlsLabel.AddThemeColorOverride("font_outline_color", new Color(0f, 0f, 0f, 0.8f));
+            _controlsLabel.AddThemeConstantOverride("outline_size", 3);
+
+            layer.AddChild(_hudPanel);
+            layer.AddChild(_controlsLabel);
+        }
+
         AddChild(layer);
     }
 
-    /// <summary>Keeps the banner to the one thing that matters right now, or hides it.</summary>
     private void RefreshBanner()
     {
+        if (_bannerLabel == null) return;
+
         string text = "";
         if (Player != null && Player.IsGameOver) text = "GAME OVER - press R to restart";
         else if (_isComplete) text = IsFinalLevel && _levelNumber == 6 ? "LEVEL 6 CLEAR - to be continued" : IsFinalLevel ? "ALL LEVELS CLEAR" : "ROOM CLEAR";
         else if (_exitLocked && _exitLockedHint != "") text = _exitLockedHint;
 
         _bannerLabel.Text = text;
-        _bannerLabel.Visible = text != "" && _hudPanel.Visible;
+        _bannerLabel.Visible = text != "";
     }
 
-    /// <summary>Five short lines. The flag list is trimmed, so it can never cover the screen.</summary>
+    private void RefreshRecordBar()
+    {
+        if (_recordBarBg == null) return;
+
+        bool recording = Player != null && Player.IsRecording;
+        _recordBarBg.Visible = recording;
+        _recordLabel.Visible = recording;
+        if (!recording) return;
+
+        float window = Mathf.Max(0.01f, _maxCaptureSeconds);
+        float left = Player.CaptureSecondsLeft;
+        float ratio = Mathf.Clamp(left / window, 0f, 1f);
+
+        _recordBarFill.Size = new Vector2(296f * ratio, 16f);
+        _recordBarFill.Color = ratio < 0.25f
+            ? new Color(1f, 0.5f, 0.4f, 0.95f)
+            : new Color(0.35f, 0.95f, 1f, 0.9f);
+        _recordLabel.Text = "REC   " + left.ToString("0.0") + "s left of " + window.ToString("0.#") + "s";
+    }
+
+    private void RefreshEchoTimer()
+    {
+        if (_echoTimerLabel == null) return;
+
+        if (_echoes.Count == 0 || _echoLifetimeSeconds <= 0f)
+        {
+            _echoTimerLabel.Visible = false;
+            return;
+        }
+
+        float soonest = SoonestEchoSeconds();
+        _echoTimerLabel.Visible = true;
+        _echoTimerLabel.Text = "ECHO   " + soonest.ToString("0.0") + "s left   (" +
+                               _echoes.Count + "/" + _maxEchoes + ")";
+        _echoTimerLabel.AddThemeColorOverride("font_color", soonest < _echoLifetimeSeconds * 0.25f
+            ? new Color(1f, 0.6f, 0.4f)
+            : new Color(0.55f, 0.95f, 1f));
+    }
+
+    private float SoonestEchoSeconds()
+    {
+        float soonest = float.MaxValue;
+        foreach (Echo echo in _echoes) soonest = Mathf.Min(soonest, echo.SecondsLeft);
+        return soonest;
+    }
+
+    private void RefreshObjective()
+    {
+        if (_objectiveLabel == null) return;
+
+        string objective = _dialogue != null ? _dialogue.CurrentObjective : "";
+        _objectiveLabel.Visible = objective != "";
+        _objectiveLabel.Text = objective == "" ? "" : "OBJECTIVE:   " + objective;
+    }
+
     private string BuildHudText()
     {
         if (Player == null) return "";
@@ -560,21 +659,41 @@ public partial class Room : Node2D
         sb.AppendLine("HP " + Player.Health + "/" + Player.MaxHealth +
                       "  ·  Lives " + Player.Lives +
                       "  ·  Loop " + _loopNumber +
-                      "  ·  Echoes " + _echoes.Count + "/" + _maxEchoes);
+                      "  ·  Echoes " + _echoes.Count + "/" + _maxEchoes + DescribeEchoTimers());
         sb.AppendLine(DescribeCapture() + "  ·  " + Mathf.Max(0f, _loopClock).ToString("0.0") + "s");
         sb.AppendLine("Plates " + CountActiveSwitches() + "/" + _switches.Count +
                       "  ·  Doors " + CountOpenDoors() + "/" + _doors.Count +
                       "  ·  Memories " + UnlockedFragmentCount + "/" + TotalFragmentCount);
+        sb.AppendLine(DescribeAffection());
         sb.AppendLine("Flags: " + ShortenList(ActiveFlags(), 42));
         return sb.ToString();
     }
 
-    /// <summary>What the capture window is doing right now, in as few words as possible.</summary>
     private string DescribeCapture()
     {
-        if (Player.IsRecording) return "Capture ON";
-        if (Player.CapturedFrameCount > 0) return "Capture held, " + Player.CapturedFrameCount + " frames";
-        return "Capture off - press T";
+        if (!Player.HasPendant) return "No pendant - Echo locked";
+        if (Player.IsRecording) return "Capture ON - " + Player.CaptureSecondsLeft.ToString("0.0") + "s left";
+        if (Player.CapturedFrameCount > 0) return "Captured " + Player.CapturedFrameCount + " frames - R to project";
+        return "Capture off - press T to record";
+    }
+
+    // Debug readout: the romance counters the dialogue choices move.
+    private static string DescribeAffection()
+    {
+        GameStateManager state = GameStateManager.Instance;
+        if (state == null) return "Affection: -";
+
+        return "Affection: Yoruka " + state.GetAffection(GameStateManager.Yoruka) +
+               "  ·  Adellaine " + state.GetAffection(GameStateManager.Adellaine) +
+               "  ·  Hesiod " + state.GetAffection(GameStateManager.Hesiod) +
+               "  ·  Felix " + state.GetAffection(GameStateManager.Felix);
+    }
+
+    // Debug readout: how long the room will keep each projection.
+    private string DescribeEchoTimers()
+    {
+        if (_echoes.Count == 0 || _echoLifetimeSeconds <= 0f) return "";
+        return " (next out " + SoonestEchoSeconds().ToString("0.0") + "s)";
     }
 
     private int CountActiveSwitches()
@@ -594,7 +713,6 @@ public partial class Room : Node2D
     private int UnlockedFragmentCount => _dialogue != null ? _dialogue.UnlockedFragments.Count : 0;
     private int TotalFragmentCount => _dialogue != null ? _dialogue.FragmentCount : 0;
 
-    /// <summary>Every story flag that is currently true.</summary>
     private List<string> ActiveFlags()
     {
         var flags = new List<string>();
@@ -605,10 +723,6 @@ public partial class Room : Node2D
         return flags;
     }
 
-    /// <summary>
-    /// Joins as many entries as fit in 'budget' characters, then reports how many were left
-    /// out ("a, b +7"). Keeps the flag line to one line however much story is unlocked.
-    /// </summary>
     private static string ShortenList(List<string> items, int budget)
     {
         if (items.Count == 0) return "-";

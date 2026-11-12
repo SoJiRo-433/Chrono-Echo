@@ -1,41 +1,8 @@
 using System.Collections.Generic;
 using Godot;
 
-/// <summary>
-/// A ghost that replays one previous loop. INHERITS Entity.
-///
-/// OOP roles:
-///  - INHERITANCE:   Echo : Entity.
-///  - POLYMORPHISM:  overrides Update(), TakeDamage(), Die(), Interact(); IsHostileTo().
-///  - ENCAPSULATION: the recorded frames are private; the Echo cannot be edited from outside.
-///
-/// HOW THE REPLAY WORKS (and why it is deterministic)
-///  1. The Room owns ONE shared loop clock (Room.LoopClock) that advances in fixed 1/60 s
-///     physics steps. The recording was made against that same clock, and the replay reads
-///     that same clock, so "time" means exactly the same thing in both.
-///  2. Each tick the Echo fires every frame whose Timestamp has been reached. A frame
-///     snaps the Echo to the recorded position and, if the action is Interact or Attack,
-///     re-performs it (only world-affecting actions are replayed - movement is NOT
-///     simulated again).
-///  3. Between two frames, the Echo's position is linearly interpolated. Because the
-///     recorder stored a frame at every change of direction, a straight line between two
-///     frames is exactly the path the player walked.
-///  4. A capture window can start AFTER the loop began, because the player chooses the
-///     moment. Until the window's first timestamp arrives the Echo waits at its anchor
-///     position - the spot it was captured - since it has no earlier frame to glide from.
-///  No randomness, no real-time clock, no live input: same frames in = same Echo out.
-///  Several Echoes can exist at once - each has its own frame list and they all read the
-///  same clock, so they stay in sync ("stacked" echoes).
-/// </summary>
 public partial class Echo : Entity
 {
-<<<<<<< Updated upstream
-    #region Private state
-    private List<ActionFrame> _frames = new();
-    private int _nextFrameIndex;
-    private bool _isReplaying;
-    #endregion
-=======
 	#region Private state
 	private List<ActionFrame> _frames = new();
 	private int _nextFrameIndex;
@@ -45,71 +12,40 @@ public partial class Echo : Entity
 	private float _lifeRemaining;
 	private bool _expired;
 	private PlayerAction _activeAction;
->>>>>>> Stashed changes
 
-    #region Public properties
-    public bool IsReplaying => _isReplaying;
-    public int FrameCount => _frames.Count;
-    protected override Color BodyColor => new Color(0.4f, 0.95f, 1f, 0.55f);
-    #endregion
+	private float _replayStartClock;
+	#endregion
 
-    #region Setup
-    /// <summary>Gives the Echo its recording. Called once, before it is added to the Room.</summary>
-    public void Initialize(IReadOnlyList<ActionFrame> frames)
-    {
-        _frames = new List<ActionFrame>(frames);   // private copy
-    }
+	#region Public properties
+	public bool IsReplaying => _isReplaying;
+	public int FrameCount => _frames.Count;
 
-    /// <summary>Rewinds to t=0. The Room calls this at the start of every loop.</summary>
-    public void StartReplay()
-    {
-        _nextFrameIndex = 0;
-        _isReplaying = _frames.Count > 0;
-        if (_isReplaying) WorldPosition = _frames[0].Position;
-    }
-    #endregion
+	/// <summary>True: the window repeats for as long as the Echo exists (Level 3's "it repeats
+	/// your recording on a loop"). False: it plays once and then stands still, which is what lets
+	/// an Echo hold a pressure plate in Room01/Room02. The room sets this when it spawns the Echo.</summary>
+	[Export] public bool LoopReplay { get => _loopReplay; set => _loopReplay = value; }
 
-    #region Update (polymorphism)
-    public override void Update(float delta)
-    {
-        base.Update(delta);
-        if (!_isReplaying || CurrentRoom == null) return;
+	/// <summary>How long the projection lasts before it decays and the room reclaims it. 0 = it
+	/// lasts until the run ends. The room sets this when it spawns the Echo, the same way it sets
+	/// LoopReplay, so a level can tune how long its puzzle has to be solved in.</summary>
+	[Export] public float LifetimeSeconds { get => _lifetimeSeconds; set => _lifetimeSeconds = Mathf.Max(0f, value); }
 
-        float now = CurrentRoom.LoopClock;
-        if (now < 0f) return;   // the loop was just reset; wait for tick 0
+	public bool IsExpired => _expired;
 
-        // 1) Fire every frame that is due (usually zero or one per tick).
-        while (_nextFrameIndex < _frames.Count && _frames[_nextFrameIndex].Timestamp <= now)
-        {
-            ActionFrame frame = _frames[_nextFrameIndex];
-            WorldPosition = frame.Position;        // snap: removes any drift
-            Perform(frame.Action);
-            _nextFrameIndex++;
-        }
+	/// <summary>Seconds before this projection decays; infinity when it has no lifetime.</summary>
+	public float SecondsLeft => _lifetimeSeconds > 0f ? Mathf.Max(0f, _lifeRemaining) : float.PositiveInfinity;
 
-        // 2) Replay finished: stand still at the final position (can keep holding a plate).
-        if (_nextFrameIndex >= _frames.Count)
-        {
-            _isReplaying = false;
-            return;
-        }
+	public float LifetimeRatio =>
+		_lifetimeSeconds > 0f ? Mathf.Clamp(_lifeRemaining / _lifetimeSeconds, 0f, 1f) : 1f;
+	protected override Color BodyColor => new Color(0.4f, 0.95f, 1f, 0.55f);
+	#endregion
 
-        // 3) Nothing has fired yet, because the window opens later than this moment: hold at
-        //    the anchor position. There is no "previous" frame to glide from.
-        if (_nextFrameIndex == 0)
-        {
-            WorldPosition = _frames[0].Position;
-            return;
-        }
+	#region Setup
+	public void Initialize(IReadOnlyList<ActionFrame> frames)
+	{
+		_frames = new List<ActionFrame>(frames);   // private copy
+	}
 
-<<<<<<< Updated upstream
-        // 4) Glide between the last fired frame and the next one.
-        ActionFrame previous = _frames[_nextFrameIndex - 1];
-        ActionFrame next = _frames[_nextFrameIndex];
-        float span = next.Timestamp - previous.Timestamp;
-        float t = span > 0f ? Mathf.Clamp((now - previous.Timestamp) / span, 0f, 1f) : 1f;
-        WorldPosition = previous.Position.Lerp(next.Position, t);
-=======
 	public void StartReplay()
 	{
 		_nextFrameIndex = 0;
@@ -120,40 +56,21 @@ public partial class Echo : Entity
 		if (_isReplaying) WorldPosition = _frames[0].Position;
 	}
 	#endregion
->>>>>>> Stashed changes
 
-        Vector2 heading = next.Position - previous.Position;
-        if (heading != Vector2.Zero) FacingDirection = heading.Normalized();
-    }
+	#region Update (polymorphism)
+	public override void Update(float delta)
+	{
+		base.Update(delta);
 
-    /// <summary>Only world-affecting actions are re-performed.</summary>
-    private void Perform(PlayerAction action)
-    {
-        switch (action)
-        {
-            case PlayerAction.Interact: Interact(); break;
-            case PlayerAction.Attack: Attack(); break;
-            default: break;   // movement/idle: position comes from the frames, not from input
-        }
-    }
-    #endregion
+		// The projection is not permanent: the micro-loop decays and the room takes the Echo back.
+		if (!TickLifetime(delta)) return;
 
-    #region Polymorphic overrides
-    /// <summary>Echoes are memories: they cannot be hurt.</summary>
-    public override void TakeDamage(int amount) { }
+		if (!_isReplaying || CurrentRoom == null) return;
 
-    public override void Die() { }
+		// Express "now" in the recording's own timeline: the window's first frame fires the
+		// moment this Echo was projected, and every later frame keeps its original spacing.
+		float now = CurrentRoom.LoopClock - _replayStartClock + _frames[0].Timestamp;
 
-<<<<<<< Updated upstream
-    /// <summary>Same world effect as the player's Interact, but without any player-only side effects.</summary>
-    public override void Interact()
-    {
-        TryInteractWithNearby();
-    }
-
-    protected override bool IsHostileTo(Entity other) => other is Enemy;
-    #endregion
-=======
 		// 1) Fire every frame that is due (usually zero or one per tick).
 		while (_nextFrameIndex < _frames.Count && _frames[_nextFrameIndex].Timestamp <= now)
 		{
@@ -270,5 +187,4 @@ public partial class Echo : Entity
 		TryInteractWithNearby();
 	}
 	#endregion
->>>>>>> Stashed changes
 }

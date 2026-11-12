@@ -1,26 +1,6 @@
 using System.Collections.Generic;
 using Godot;
 
-/// <summary>
-/// The player character. INHERITS Entity (health, damage, movement, drawing).
-///
-/// OOP roles:
-///  - INHERITANCE:   Player : Entity.
-///  - POLYMORPHISM:  overrides Update(), TakeDamage(), Die(), Interact(); IsHostileTo().
-///  - ENCAPSULATION: lives, inventory, recorder and input are private; exposed via properties.
-///  - COMPOSITION:   Player HAS-A PlayerInput and HAS-A EchoRecorder.
-///
-/// TIME-LOOP LIFECYCLE
-///   BeginTimeLoop()  -> a new loop opens. Capture does NOT start by itself: the player
-///                       presses the capture key, so they choose when the Echo starts.
-///   StartCapture() / StopCapture() -> open and close that window. Closing it appends an
-///                       Idle frame, so the Echo stops replaying exactly where you stopped.
-///   ResetTimeLoop()  -> recorder stops, an Echo is spawned from the captured window, the
-///                       Room restarts (puzzles reset, echoes replay from t=0), player
-///                       returns to the start and BeginTimeLoop() runs again.
-///   Die() -> Respawn() -> costs a life, then runs ResetTimeLoop() (the failed attempt
-///                       becomes an Echo too).
-/// </summary>
 public partial class Player : Entity
 {
     #region Signals
@@ -39,12 +19,12 @@ public partial class Player : Entity
     private readonly List<string> _inventory = new();
     private readonly PlayerInput _input = new();            // composition
     private readonly EchoRecorder _recorder = new();        // composition
+    private float _captureStartClock;                       // LoopClock value when the window opened
     #endregion
 
     #region Public properties
     [Export] public int StartingLives { get => _startingLives; set => _startingLives = Mathf.Max(1, value); }
 
-    /// <summary>Scene used to spawn Echoes. If left empty, a plain Echo node is created in code.</summary>
     [Export] public PackedScene EchoScene { get; set; }
 
     public int Lives => _lives;
@@ -52,8 +32,20 @@ public partial class Player : Entity
     public bool IsRecording => _recorder.IsRecording;
     public IReadOnlyList<string> Inventory => _inventory;
 
-    /// <summary>How many frames the current - or already frozen - capture window holds.</summary>
+    // The Echo is an ability of the pendant, not of Aionia: until she picks it up the capture
+    // and projection keys do nothing at all (silently - no hint, no rejection line). The flag
+    // is the single source of truth, so a full flag reset takes the ability away again - and
+    // the Pendant node reappears to match (see Pendant.ListenForReset).
+    public bool HasPendant => GameStateManager.Instance?.GetFlag("touched_pendant") ?? false;
+
     public int CapturedFrameCount => _recorder.FrameCount;
+
+    /// <summary>Seconds left in the open capture window; 0 when nothing is being recorded.
+    /// The HUD bar drains against this.</summary>
+    public float CaptureSecondsLeft =>
+        !_recorder.IsRecording || CurrentRoom == null
+            ? 0f
+            : Mathf.Max(0f, CurrentRoom.MaxCaptureSeconds - (CurrentRoom.LoopClock - _captureStartClock));
 
     protected override Color BodyColor => new Color(0.25f, 0.55f, 1f);
     #endregion
@@ -74,7 +66,6 @@ public partial class Player : Entity
         SyncLivesToState();
     }
 
-    /// <summary>The Room calls this once the player is inside it: place at start and start recording.</summary>
     public override void EnterRoom(Room room)
     {
         base.EnterRoom(room);
@@ -90,14 +81,15 @@ public partial class Player : Entity
 
         if (_isGameOver)
         {
-            if (_input.IsResetPressed()) RestartRun();   // after game over, R starts a new run
+            if (_input.IsProjectEchoPressed()) RestartRun();   // after game over, R starts a new run
             return;
         }
         if (!IsAlive || CurrentRoom == null) return;
 
         // Read the capture key before the action, so a window opened this tick still records
-        // this tick as its first frame.
-        if (_input.IsCaptureTogglePressed()) ToggleCapture();
+        // this tick as its first frame. Without the pendant the key is ignored outright.
+        if (HasPendant && _input.IsCaptureTogglePressed()) ToggleCapture();
+        AutoStopCaptureAtLimit();
 
         PlayerAction intended = _input.ReadAction();
         Vector2 positionBeforeMove = WorldPosition;
@@ -110,13 +102,11 @@ public partial class Player : Entity
         if (_recorder.IsRecording)
             _recorder.Tick(CurrentRoom.LoopClock, effective, positionBeforeMove);
 
-        if (_input.IsResetPressed()) ResetTimeLoop(CurrentRoom);
+        // R projects the captured window as an Echo, in place. The run keeps going: no clock
+        // rewind, no puzzle reset, and the player is not moved.
+        if (HasPendant && _input.IsProjectEchoPressed()) ProjectEcho();
     }
 
-    /// <summary>
-    /// Performs one action. Returns the action that REALLY happened: a move that was blocked
-    /// by a wall is reported as Idle, so the recording matches reality.
-    /// </summary>
     private PlayerAction ExecuteAction(PlayerAction action, float delta)
     {
         switch (action)
@@ -131,6 +121,10 @@ public partial class Player : Entity
 
             case PlayerAction.Attack:
                 Attack();
+                return action;
+
+            case PlayerAction.Jump:
+                Jump();
                 return action;
 
             case PlayerAction.Idle:
@@ -153,25 +147,22 @@ public partial class Player : Entity
         base.TakeDamage(amount);
     }
 
-<<<<<<< Updated upstream
-    /// <summary>Death: announce it, then resolve it AFTER the current tick (see ResolveDeath).</summary>
-=======
     /// <summary>Timing hazards cost one scratch but cannot end a run at zero health.</summary>
     public void TakeScratch()
     {
         if (Health > 1) TakeDamage(1);
     }
 
->>>>>>> Stashed changes
     public override void Die()
     {
         base.Die();   // IsAlive = false, Died signal
         EmitSignal(SignalName.PlayerDied);
         GameStateManager.Instance?.NotifyPlayerDied();
 
-        // Deferred on purpose: Die() is usually called from inside an enemy's Update().
-        // Changing the Room (spawning an Echo) in the middle of that tick could break
-        // loops that are still running. CallDeferred waits until the tick is finished.
+        // Deferred on purpose: Die() can be called from inside another entity's Update() - the
+        // Atrium's blue tiles damage whoever is standing on them. Changing the Room (spawning an
+        // Echo) in the middle of that tick could break loops that are still running. CallDeferred
+        // waits until the tick is finished.
         Callable.From(ResolveDeath).CallDeferred();
     }
 
@@ -180,8 +171,6 @@ public partial class Player : Entity
         bool used = TryInteractWithNearby();
         EmitSignal(SignalName.PlayerInteracted, used);
     }
-
-    protected override bool IsHostileTo(Entity other) => other is Enemy;
     #endregion
 
     #region Lives and respawn
@@ -190,10 +179,6 @@ public partial class Player : Entity
         Respawn();
     }
 
-    /// <summary>
-    /// Respawn after death: costs one life. With lives left, the failed attempt becomes an
-    /// Echo and the player restarts at the room's start; with none left it is game over.
-    /// </summary>
     public void Respawn()
     {
         _lives--;
@@ -209,10 +194,10 @@ public partial class Player : Entity
             return;
         }
 
-        ResetTimeLoop(CurrentRoom);   // restores position + health as part of the reset
+        ProjectEcho();                              // the failed attempt leaves an Echo behind
+        if (CurrentRoom != null) ReturnToStart(CurrentRoom);   // full health + back to the start
     }
 
-    /// <summary>Full restart after game over: fresh lives, no echoes, flags cleared.</summary>
     public void RestartRun()
     {
         Room room = CurrentRoom;
@@ -222,6 +207,13 @@ public partial class Player : Entity
         _isGameOver = false;
         _inventory.Clear();
         GameStateManager.Instance?.ResetFlags();
+
+        // The Echo is an ability of the pendant, so the flag reset takes it away - and in Room01
+        // the pendant goes back on the floor at the same moment, ready to be picked up again.
+        // Anywhere else there is no pendant to find, and a game-over restart would delete the
+        // ability for good: a level that cannot hand the pendant back keeps it instead.
+        if (!room.HasPendantOnTheFloor) GameStateManager.Instance?.SetFlag("touched_pendant", true);
+
         SyncLivesToState();
         room.ClearEchoes();
         room.StartNewLoop();
@@ -232,64 +224,54 @@ public partial class Player : Entity
     #endregion
 
     #region Time loop
-    /// <summary>
-    /// Opens a new loop. Capture no longer starts on its own: the player presses the capture
-    /// key, so the Echo replays the window they chose instead of the whole loop.
-    /// </summary>
     public void BeginTimeLoop()
     {
         EmitSignal(SignalName.LoopStarted);
     }
 
-    /// <summary>Opens a fresh capture window at the player's current position.</summary>
     public void StartCapture()
     {
         _recorder.StartRecording();   // pressing the key again starts a new window
+        _captureStartClock = CurrentRoom != null ? CurrentRoom.LoopClock : 0f;
     }
 
-    /// <summary>Closes the window where the player is standing right now.</summary>
     public void StopCapture()
     {
         if (!_recorder.IsRecording) return;
         _recorder.StopRecording(CurrentRoom != null ? CurrentRoom.LoopClock : 0f, WorldPosition);
     }
 
-    /// <summary>The capture key: the first press opens a window, the next one closes it.</summary>
     public void ToggleCapture()
     {
         if (_recorder.IsRecording) StopCapture();
         else StartCapture();
     }
 
-    /// <summary>
-    /// Ends the current loop: stop recording -> spawn an Echo that replays it -> restart the
-    /// room -> put the player back at the start -> begin recording a new loop.
-    /// </summary>
-    public void ResetTimeLoop(Room room)
+    /// <summary>The capture window is capped per room ([Export] MaxCaptureSeconds), so the recorded
+    /// past can never grow past what the puzzle needs. The window closes itself once the cap is hit.</summary>
+    private void AutoStopCaptureAtLimit()
     {
-        if (room == null) return;
-
-        // The loop ends one tick after the last recorded tick.
-        float endTime = room.LoopClock + room.StepSeconds;
-        IReadOnlyList<ActionFrame> frames = _recorder.StopRecording(endTime, WorldPosition);
-        EmitSignal(SignalName.LoopEnded, frames.Count);
-
-        if (frames.Count > 0)
-        {
-            Echo echo = EchoScene != null ? EchoScene.Instantiate<Echo>() : new Echo();
-            echo.Initialize(frames);
-            room.AddEcho(echo);
-        }
-
-        room.StartNewLoop();     // puzzles reset, enemies reset, ALL echoes restart at t=0
-        ReturnToStart(room);
-        BeginTimeLoop();
+        if (!_recorder.IsRecording || CurrentRoom == null) return;
+        if (CurrentRoom.LoopClock - _captureStartClock < CurrentRoom.MaxCaptureSeconds) return;
+        StopCapture();
     }
 
-    /// <summary>
-    /// Mirrors the current lives into the singleton so that the next level (which builds a
-    /// new Player node) starts with the same number of lives.
-    /// </summary>
+    public void ProjectEcho()
+    {
+        Room room = CurrentRoom;
+        if (room == null) return;
+
+        IReadOnlyList<ActionFrame> frames = _recorder.StopRecording(room.LoopClock, WorldPosition);
+        _recorder.Clear();                        // the window is consumed once it is projected
+        EmitSignal(SignalName.LoopEnded, frames.Count);
+
+        if (frames.Count == 0) return;
+
+        Echo echo = EchoScene != null ? EchoScene.Instantiate<Echo>() : new Echo();
+        echo.Initialize(frames);
+        room.AddEcho(echo);                        // AddEcho anchors the replay and starts it now
+    }
+
     private void SyncLivesToState()
     {
         if (GameStateManager.Instance != null) GameStateManager.Instance.CarriedLives = _lives;

@@ -1,18 +1,6 @@
 using System.Collections.Generic;
 using Godot;
 
-/// <summary>
-/// Plays DialogueData: shows lines one by one, presents choices, applies each choice's
-/// outcome to the GameStateManager flags, and unlocks memory fragments when their flags
-/// are set. Pauses gameplay while a conversation is active.
-///
-/// OOP roles: ENCAPSULATION (all state private; public API = StartDialogue/Advance/
-/// SelectChoice), SIGNALS (a real UI can listen to LineChanged / ChoicesPresented...),
-/// loose coupling to the story through GameStateManager flags only.
-///
-/// A tiny placeholder overlay is built in code so the system is testable without any
-/// UI scenes. Controls: Enter/Space = next line, 1/2/3 = choose.
-/// </summary>
 public partial class DialogueManager : Node
 {
 	#region Signals
@@ -35,20 +23,39 @@ public partial class DialogueManager : Node
 	private int _lineIndex;
 	private bool _isActive;
 	private bool _awaitingChoice;
+	private float _choiceTimeout;
+	private float _choiceTimer;
 
 	// placeholder UI
 	private CanvasLayer _layer;
+	private TextureRect _memoryImage;
+	private TextureRect _portrait;
 	private ColorRect _panel;
+	private Label _speakerLabel;
 	private Label _dialogueLabel;
 	private Label _toastLabel;
+
+	private string _currentObjective = "";
+	private string _platePath = "";
 	#endregion
+
+	private const string ObjectiveSpeaker = "Objective";
+	private const string PortraitFolder = "res://Assets/Portraits/";
+
+	// The one CG image the repo ships. The pendant's flash is drawn with it, and any node that
+	// declares a plate of its own (the Atrium's window) draws it too - the gallery keeps the CGs
+	// apart by flag even while they share a placeholder picture.
+	private const string MemoryCgPath = "res://Assets/blue_light_memory.jpg";
 
 	#region Public properties
 	[Export] public bool ShowDebugOverlay { get; set; } = true;
 	public bool IsActive => _isActive;
 	public IReadOnlyList<MemoryFragment> UnlockedFragments => _unlockedFragments;
 
-	/// <summary>How many memory fragments exist in total, so the HUD can show "2/4".</summary>
+	/// <summary>The last Objective line shown, kept on screen by the HUD until the next one
+	/// replaces it. Empty until an Objective has been read in this run.</summary>
+	public string CurrentObjective => _currentObjective;
+
 	public int FragmentCount => _fragments.Count;
 	#endregion
 
@@ -74,6 +81,20 @@ public partial class DialogueManager : Node
 		}
 	}
 
+	public override void _Process(double delta)
+	{
+		if (!_isActive || !_awaitingChoice || _choiceTimeout <= 0f) return;
+
+		// A timed choice: when the clock runs out she takes the option that was left last.
+		_choiceTimer -= (float)delta;
+		if (_choiceTimer <= 0f)
+		{
+			SelectChoice(_visibleChoices.Count - 1);
+			return;
+		}
+		RefreshOverlay();
+	}
+
 	public override void _UnhandledInput(InputEvent @event)
 	{
 		if (!_isActive || _currentNode == null) return;
@@ -94,13 +115,10 @@ public partial class DialogueManager : Node
 	#endregion
 
 	#region Public API
-	/// <summary>Adds a conversation so it can be started by id.</summary>
 	public void RegisterDialogue(DialogueData data) { _library[data.Id] = data; }
 
-	/// <summary>Adds a memory fragment that unlocks when its flag becomes true.</summary>
 	public void RegisterFragment(MemoryFragment fragment) { _fragments.Add(fragment); }
 
-	/// <summary>Starts a conversation. Returns false if one is already running or the id is unknown.</summary>
 	public bool StartDialogue(string dialogueId)
 	{
 		if (_isActive || !_library.TryGetValue(dialogueId, out DialogueData data)) return false;
@@ -113,7 +131,6 @@ public partial class DialogueManager : Node
 		return true;
 	}
 
-	/// <summary>Next line, or next node / end when the lines run out. Ignored while a choice is pending.</summary>
 	public void Advance()
 	{
 		if (!_isActive || _awaitingChoice) return;
@@ -129,7 +146,6 @@ public partial class DialogueManager : Node
 		else EndDialogue();
 	}
 
-	/// <summary>Picks a visible choice (0-based), applies its flag outcome and follows its link.</summary>
 	public void SelectChoice(int index)
 	{
 		if (!_isActive || !_awaitingChoice || index < 0 || index >= _visibleChoices.Count) return;
@@ -141,15 +157,12 @@ public partial class DialogueManager : Node
 		if (!string.IsNullOrEmpty(choice.FlagToSet))
 			GameStateManager.Instance?.SetFlag(choice.FlagToSet, choice.FlagValue);
 
-<<<<<<< Updated upstream
-=======
 		// Choices move the relationship counters as well as the flags.
 		if (!string.IsNullOrEmpty(choice.AffectionCharacter))
 			GameStateManager.Instance?.AddAffection(choice.AffectionCharacter, choice.AffectionDelta);
 		foreach (KeyValuePair<string, float> change in choice.AdditionalAffectionChanges)
 			GameStateManager.Instance?.AddAffection(change.Key, change.Value);
 
->>>>>>> Stashed changes
 		if (!string.IsNullOrEmpty(choice.NextNodeId)) EnterNode(choice.NextNodeId);
 		else EndDialogue();
 	}
@@ -163,6 +176,10 @@ public partial class DialogueManager : Node
 
 		_currentNode = node;
 		_lineIndex = 0;
+
+		if (!string.IsNullOrEmpty(node.FlagOnEnter))
+			GameStateManager.Instance?.SetFlag(node.FlagOnEnter, node.FlagOnEnterValue);
+
 		ShowCurrentLine();
 	}
 
@@ -170,8 +187,14 @@ public partial class DialogueManager : Node
 	{
 		EmitSignal(SignalName.LineChanged, _currentNode.Speaker, _currentNode.Lines[_lineIndex]);
 
+		// An Objective line is also the HUD's "Current objective": it replaces the previous one
+		// and stays on screen long after this dialogue box has closed.
+		if (_currentNode.Speaker == ObjectiveSpeaker) _currentObjective = _currentNode.Lines[_lineIndex];
+
 		_awaitingChoice = false;
 		_visibleChoices.Clear();
+		_choiceTimeout = 0f;
+		_choiceTimer = 0f;
 
 		// Choices appear together with the LAST line of the node.
 		if (_lineIndex == _currentNode.Lines.Count - 1)
@@ -182,6 +205,8 @@ public partial class DialogueManager : Node
 			if (_visibleChoices.Count > 0)
 			{
 				_awaitingChoice = true;
+				_choiceTimeout = _currentNode.ChoiceTimeoutSeconds;
+				_choiceTimer = _choiceTimeout;
 				var texts = new Godot.Collections.Array<string>();
 				foreach (DialogueChoice choice in _visibleChoices) texts.Add(choice.Text);
 				EmitSignal(SignalName.ChoicesPresented, texts);
@@ -213,7 +238,6 @@ public partial class DialogueManager : Node
 		_unlockedFragments.Clear();
 	}
 
-	/// <summary>Unlocks every fragment whose required flag is set and that is not unlocked yet.</summary>
 	private void CheckMemoryFragments()
 	{
 		GameStateManager state = GameStateManager.Instance;
@@ -237,8 +261,45 @@ public partial class DialogueManager : Node
 	{
 		_layer = new CanvasLayer { Layer = 10 };
 
+		_memoryImage = new TextureRect
+		{
+			Texture = GD.Load<Texture2D>(MemoryCgPath),
+			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+			StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
+			MouseFilter = Control.MouseFilterEnum.Ignore,
+			Visible = false
+		};
+		_memoryImage.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+		_layer.AddChild(_memoryImage);
+
+		// Portrait slot: filled from res://Assets/Portraits/<speaker>.png when that file exists,
+		// and simply left hidden when it does not - so the game runs with no portrait art at all.
+		_portrait = new TextureRect
+		{
+			Position = new Vector2(20f, 210f),
+			Size = new Vector2(200f, 230f),
+			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+			StretchMode = TextureRect.StretchModeEnum.KeepAspect,
+			MouseFilter = Control.MouseFilterEnum.Ignore,
+			Visible = false
+		};
+
 		_panel = new ColorRect { Color = new Color(0f, 0f, 0f, 0.78f), Position = new Vector2(20f, 450f), Size = new Vector2(1112f, 180f), Visible = false };
-		_dialogueLabel = new Label { Position = new Vector2(16f, 12f), Size = new Vector2(1080f, 156f), AutowrapMode = TextServer.AutowrapMode.WordSmart };
+
+		// The speaker's name is its own label sitting above the box (not a "Name:" prefix on the
+		// line), tinted with that speaker's colour.
+		_speakerLabel = new Label
+		{
+			Position = new Vector2(24f, -32f),
+			Size = new Vector2(1064f, 30f),
+			MouseFilter = Control.MouseFilterEnum.Ignore
+		};
+		_speakerLabel.AddThemeFontSizeOverride("font_size", 21);
+		_speakerLabel.AddThemeColorOverride("font_outline_color", Colors.Black);
+		_speakerLabel.AddThemeConstantOverride("outline_size", 5);
+		_panel.AddChild(_speakerLabel);
+
+		_dialogueLabel = new Label { Position = new Vector2(16f, 26f), Size = new Vector2(1080f, 146f), AutowrapMode = TextServer.AutowrapMode.WordSmart };
 		_dialogueLabel.AddThemeFontSizeOverride("font_size", 20);
 		_panel.AddChild(_dialogueLabel);
 
@@ -247,6 +308,7 @@ public partial class DialogueManager : Node
 		_toastLabel.AddThemeColorOverride("font_outline_color", Colors.Black);
 		_toastLabel.AddThemeConstantOverride("outline_size", 4);
 
+		_layer.AddChild(_portrait);
 		_layer.AddChild(_panel);
 		_layer.AddChild(_toastLabel);
 		AddChild(_layer);
@@ -254,22 +316,93 @@ public partial class DialogueManager : Node
 
 	private void RefreshOverlay()
 	{
+		RefreshPlate();
+
 		if (_panel == null) return;
 		_panel.Visible = _isActive;
-		if (!_isActive || _currentNode == null) return;
+		if (!_isActive || _currentNode == null)
+		{
+			if (_portrait != null) _portrait.Visible = false;
+			return;
+		}
 
-		string text = _currentNode.Speaker + ":  " + _currentNode.Lines[_lineIndex];
+		string speaker = _currentNode.Speaker;
+		Color colour = SpeakerColor(speaker);
+
+		_speakerLabel.Text = speaker;
+		_speakerLabel.AddThemeColorOverride("font_color", colour);
+		RefreshPortrait(speaker);
+
+		string text = _currentNode.Lines[_lineIndex];
 		if (_awaitingChoice)
 		{
 			text += "\n";
 			for (int i = 0; i < _visibleChoices.Count; i++)
 				text += "\n  [" + (i + 1) + "]  " + _visibleChoices[i].Text;
+
+			if (_choiceTimeout > 0f)
+				text += "\n\n  " + Mathf.Max(0f, _choiceTimer).ToString("0.0") + "s";
 		}
 		else
 		{
 			text += "\n\n  [Enter] continue";
 		}
 		_dialogueLabel.Text = text;
+	}
+
+	/// <summary>The CG plate behind the box. Two things can put a picture there: the pendant's
+	/// flash, which is the memory the whole game opens with, and any node that declares one of its
+	/// own - the Atrium's window shows its CG while she is remembering and drops it for the beats
+	/// that are back in the room.</summary>
+	private void RefreshPlate()
+	{
+		if (_memoryImage == null) return;
+
+		bool flash = _isActive && _currentData?.Id == "pendant_flash"
+		             && _currentNode?.Id != "headache";   // the headache is the pain, not the memory
+
+		string declared = _isActive ? _currentNode?.PlateImagePath ?? "" : "";
+		string path = declared != "" ? declared : flash ? MemoryCgPath : "";
+
+		if (path != _platePath)
+		{
+			_platePath = path;
+			_memoryImage.Texture = path == "" || !ResourceLoader.Exists(path) ? null : GD.Load<Texture2D>(path);
+		}
+
+		_memoryImage.Visible = path != "";
+	}
+
+	/// <summary>Fills the portrait slot from res://Assets/Portraits/&lt;speaker&gt;.png when that
+	/// file exists, and hides the slot otherwise. Missing art is not an error.</summary>
+	private void RefreshPortrait(string speaker)
+	{
+		if (_portrait == null) return;
+
+		string path = PortraitFolder + speaker.Replace(' ', '_') + ".png";
+		Texture2D texture = ResourceLoader.Exists(path) ? GD.Load<Texture2D>(path) : null;
+
+		_portrait.Texture = texture;
+		_portrait.Visible = texture != null;
+	}
+
+	/// <summary>One colour per speaker. The five named characters are eye/hair-coded; the
+	/// Narrator, Instructions and Objective voices read as caption styles, not as people.
+	/// (The doc's profile pages do not specify colours, so these are chosen to be distinct.)</summary>
+	private static Color SpeakerColor(string speaker)
+	{
+		switch (speaker)
+		{
+			case "Aionia Avgerinos": return new Color(0.63f, 0.87f, 1f);     // cold blue of the pendant
+			case "Mochizuki Yoruka": return new Color(1f, 0.66f, 0.82f);     // jirai-kei pink
+			case "Felix Lasarewitch": return new Color(1f, 0.85f, 0.45f);    // the institute's golden boy
+			case "Adellaine Moriarty": return new Color(0.66f, 1f, 0.78f);   // medicine green
+			case "Hesiod Moriarty": return new Color(0.85f, 0.78f, 1f);      // photography violet
+			case ObjectiveSpeaker: return new Color(1f, 0.86f, 0.45f);
+			case "Instructions": return new Color(0.87f, 0.93f, 0.62f);
+			case "Narrator": return new Color(0.72f, 0.76f, 0.84f);
+			default: return new Color(0.9f, 0.9f, 0.9f);
+		}
 	}
 
 	private void ShowToast(string message)
@@ -296,96 +429,123 @@ public partial class DialogueManager : Node
 			.AddNode(new DialogueNode("wake", "Narrator")
 				.AddLine("The space around you looks like it has been abandoned. You find scattered papers, broken machines, and broken glasses.")
 				.AddLine("You should look around and find out what happened.")
-				.AddLine("(Move with WASD, examine things with E. T opens a capture window for your Echo; R ends the loop.)")));
+				.SetNext("move"))
+			.AddNode(new DialogueNode("move", "Instructions")
+				.AddLine("Use W,A,S,D to move.")));
 
 		// --- Scene 2-3: the report log, page by page, ending on the burnt photo ---
 		RegisterDialogue(new DialogueData("report_log")
-			.AddNode(new DialogueNode("p1", "Aionia Avgerinos")
-				.AddLine("A dusty report log, half-buried under the debris.")
-				.AddLine("Project Hyperion, to traverse time and space... Interesting.")
-				.AddChoice(new DialogueChoice("Turn the page", "p2")))
-			.AddNode(new DialogueNode("p2", "Narrator")
-				.AddLine("Dense engineering notes. Spatial trajectories, override frequencies, and a schedule of tests that never stopped.")
-				.AddChoice(new DialogueChoice("Turn the page", "p3")))
-			.AddNode(new DialogueNode("p3", "Narrator")
-				.AddLine("The last page is different. It was written by hand, quickly: \"Anchor her position. Do not let the trajectory take her.\"")
+			.AddNode(new DialogueNode("start", "Aionia Avgerinos")
+				.AddLine("Project Hyperion, to traverse time and space…Interesting")
 				.AddChoice(new DialogueChoice("Turn the page", "photo", "saw_burnt_photo")))
 			.AddNode(new DialogueNode("photo", "Narrator")
-				.AddLine("Tucked into the final page: a half-burned photo. A figure of you, and another person facing away, looking towards a machine in the same room you are standing in right now.")
-				.SetNext("photo2"))
-			.AddNode(new DialogueNode("photo2", "Aionia Avgerinos")
-				.AddLine("That looks like me, and someone else... But why do I not remember who that is?")
-				.AddLine("I should keep this.")));
+				.AddLine("In the picture, it shows a figure of you and another person facing away, looking towards a machine in the same room that you’re standing in right now.")
+				.SetNext("photo_reaction"))
+			.AddNode(new DialogueNode("photo_reaction", "Aionia Avgerinos")
+				.AddLine("That looks like me, and someone else…But why do I not remember who that is?")
+				.AddLine("I should keep this.")
+				.AddLine("I should check around, maybe that will help me find clues")));
 
 		RegisterDialogue(new DialogueData("report_log_again")
-			.AddNode(new DialogueNode("start", "Narrator")
-				.AddLine("The rest of the log is ash and water damage. The burnt photo is still folded into the last page.")));
+			.AddNode(new DialogueNode("start", "Aionia Avgerinos")
+				.AddLine("I should check around, maybe that will help me find clues")));
 
 		// --- Scene 3: everything else worth examining ---
 		RegisterDialogue(new DialogueData("drawers")
 			.AddNode(new DialogueNode("start", "Aionia Avgerinos")
-				.AddLine("Papers, a stack of papers, and nothing worth noting...")));
+				.AddLine("Folders, stack of papers, and nothing worth to note..")));
 
 		RegisterDialogue(new DialogueData("time_machine")
 			.AddNode(new DialogueNode("start", "Aionia Avgerinos")
-				.AddLine("Probably the machine that is supposed to traverse time.")
-				.AddLine("It is in pieces. Whatever happened here, it happened fast.")));
+				.AddLine("Probably a machine to churn out data.")));
 
 		RegisterDialogue(new DialogueData("cabinet")
 			.AddNode(new DialogueNode("start", "Aionia Avgerinos")
-				.AddLine("A broken cabinet. Empty shelves, and the smell of scorched wiring.")));
+				.AddLine("Just some mechanical parts.")));
 
 		RegisterDialogue(new DialogueData("broken_machinery")
 			.AddNode(new DialogueNode("start", "Aionia Avgerinos")
 				.AddLine("Just some mechanical parts.")));
 
+		// Scene 3 interactables straight from the doc: the boxes and the loose photos.
+		RegisterDialogue(new DialogueData("boxes")
+			.AddNode(new DialogueNode("start", "Aionia Avgerinos")
+				.AddLine("Just some mechanical parts.")));
+
+		RegisterDialogue(new DialogueData("photos")
+			.AddNode(new DialogueNode("start", "Aionia Avgerinos")
+				.AddLine("Pictures of the room, the students working on it, and mostly just documentation. You can’t seem to identify who these students are though.")));
+
 		// --- Scene 4-5: the pendant, and the memory it drags up with it ---
 		RegisterDialogue(new DialogueData("pendant_flash")
-			.AddNode(new DialogueNode("start", "Aionia Avgerinos")
+			.AddNode(new DialogueNode("pickup", "Narrator")
+				.AddLine("After looking around the room, you notice a shining, blue light, on the floor. You picked it up.")
+				.SetNext("pickup_question"))
+			.AddNode(new DialogueNode("pickup_question", "Aionia Avgerinos")
 				.AddLine("What is this?")
-				.SetNext("react"))
-			.AddNode(new DialogueNode("react", "Narrator")
-				.AddLine("The moment your fingers brush against it, the blue glow intensifies - a chime, a distortion in the air, and then a memory that is not yours to keep yet.")
-				.SetNext("felix"))
-			.AddNode(new DialogueNode("felix", "Felix")
+				.SetNext("buttons"))
+			.AddNode(new DialogueNode("buttons", "Narrator")
+				.AddLine("You tried pushing the buttons of the pendant.")
+				.AddLine("It somehow reminded you of a memory from a long time ago. You remember talking to a blonde person, and he seems very important to you.")
+				.SetNext("felix_offer"))
+			.AddNode(new DialogueNode("felix_offer", "Felix Lasarewitch")
 				.AddLine("Hey, I want to give something to you.")
-				.AddLine("Since our study project is time, I figured you need a proper physical failsafe.")
-				.AddLine("Consider it a specialized remote controller for the Hyperion core mainframe. If the spatial trajectory fluctuates while we are testing, use this override frequency to anchor your position and recalibrate the system.")
+				.SetNext("aionia_question"))
+			.AddNode(new DialogueNode("aionia_question", "Aionia Avgerinos")
+				.AddLine("And this is?")
+				.SetNext("felix_explain"))
+			.AddNode(new DialogueNode("felix_explain", "Felix Lasarewitch")
+				.AddLine("Since our study—project, rather—is time. I figured you need a proper physical failsafe.")
+				.AddLine("Consider it a specialized remote controller for the Hyperion core mainframe. If the spatial trajectory fluctuates while we're testing, use this override frequency to anchor your position and recalibrate the system.")
 				.AddLine("Make sure you keep it close, alright? No matter where the data takes us... I need you to be safe.")
-				.SetNext("after"))
-			.AddNode(new DialogueNode("after", "Aionia Avgerinos")
+				.SetNext("headache"))
+			.AddNode(new DialogueNode("headache", "Aionia Avgerinos")
 				.AddLine("Argh! What just happened?!")
-				.AddLine("Who is that person who gave me this?")
-				.SetNext("hint"))
-			.AddNode(new DialogueNode("hint", "Narrator")
-				.AddLine("(Hint: press T to open a capture window, walk onto the pressure switch, then press R. Your Echo replays exactly that window.)")));
+				.AddLine("Why did I suddenly remember someone?")
+				.SetFlagOnEnter("saw_headache")
+				.SetNext("echo_reveal"))
+			.AddNode(new DialogueNode("echo_reveal", "Narrator")
+				.AddLine("While trying to relive the memory, a blue light appeared in front of you.")
+				.AddLine("It is a figure of you—a projection of yourself. It touched its head in pain, mimicking your action earlier.")
+				.SetNext("echo_first_reaction"))
+			.AddNode(new DialogueNode("echo_first_reaction", "Aionia Avgerinos")
+				.AddLine("Wha…It copies my movements?")
+				.AddLine("I need to test this out.")
+				.SetNext("echo_instruction"))
+			.AddNode(new DialogueNode("echo_instruction", "Narrator")
+				.AddLine("Press T to start recording movement. Press T again to stop. Press R to project the Echo.")
+				.SetNext("echo_reaction"))
+			.AddNode(new DialogueNode("echo_reaction", "Aionia Avgerinos")
+				.AddLine("Hah…Amazing")
+				.AddLine("I can use this to get out of here.")));
 
-		// --- Scene 6-7: the Echo is what gets you through the security door ---
+		// Scene 7 opener: the line above used to be duplicated into the flash, so the beat where
+		// she connects the Echo to the sealed door lives here instead - it fires the first time
+		// the player walks up to the security door or its pressure plate (see Door.ApproachDialogueId).
+		RegisterDialogue(new DialogueData("room01_plate")
+			.AddNode(new DialogueNode("start", "Aionia Avgerinos")
+				.AddLine("The security door is sealed, and this plate needs weight to stay down.")
+				.AddLine("I can use the pendant to get out of here.")));
+
+				// --- Scene 6-7: the Echo is what gets you through the security door ---
 		RegisterDialogue(new DialogueData("room01_clear")
-			.AddNode(new DialogueNode("start", "Pendant")
-				.AddLine("The door yielded because a version of you held it open.")
-				.AddLine("You are not alone in this loop.")
-				.AddChoice(new DialogueChoice("Ask the pendant who you are", "who", "asked_identity", true, "touched_pendant"))
-				.AddChoice(new DialogueChoice("Move on", null)))
-			.AddNode(new DialogueNode("who", "Pendant")
-				.AddLine("Not yet. But you left something behind in the earlier loops.")));
+			.AddNode(new DialogueNode("start", "Narrator")
+				.AddLine("You’ve made it out, with only the burnt photo on your hand and the pendant someone you knew gave to you.")
+				.AddLine("You should check outside.")));
 
-		// --- Room02: deeper into the institute ---
+		// Level 2: the library bridgeway, archives and Yoruka encounter.
 		RegisterDialogue(new DialogueData("room02_intro")
-			.AddNode(new DialogueNode("start", "Pendant")
-				.AddLine("Deeper into the Aetherion Institute. Two doors this time, and the far one is the way out.")
-				.AddLine("(Hint: one Echo can only hold one plate. Capture on the first plate with T, press R, then capture on the second plate and press R again.)")));
+			.AddNode(new DialogueNode("start", "Aionia Avgerinos")
+				.AddLine("I need to cross this hallway, but the doors are closed.")
+				.AddLine("There should be a way to open the doors.")
+				.AddLine("!!!!")
+				.AddLine("Those plates can be a way to open those doors.")
+				.SetNext("objective"))
+			.AddNode(new DialogueNode("objective", "Objective")
+				.AddLine("Use your Echo to find a way to open the door.")));
 
+		// Level 2 Scene 1 ends here: the hallway is the last stretch before the Archives.
 		RegisterDialogue(new DialogueData("room02_clear")
-<<<<<<< Updated upstream
-			.AddNode(new DialogueNode("start", "Pendant")
-				.AddLine("Two of them now, standing exactly where you once stood.")
-				.AddLine("The corridor remembers a little more of you each time.")
-				.AddChoice(new DialogueChoice("Ask what happens when it remembers everything", "full", "asked_corridor"))
-				.AddChoice(new DialogueChoice("Say nothing", null)))
-			.AddNode(new DialogueNode("full", "Pendant")
-				.AddLine("Then there will be no room left in it for you.")));
-=======
 			.AddNode(new DialogueNode("start", "Narrator")
 				.AddLine("The plates hold the last door open long enough for you to slip through.")
 				.AddLine("Beyond it the corridor widens, and the smell of dust gives way to old paper.")
@@ -689,7 +849,6 @@ public partial class DialogueManager : Node
 				.SetNext("objective"))
 			.AddNode(new DialogueNode("objective", "Objective")
 				.AddLine("Align the reflections in the window.")));
->>>>>>> Stashed changes
 
 		// --- Memory fragments: the pieces of Aionia's past she recovers ---
 		RegisterFragment(new MemoryFragment("pendant", "Fragment I - The Pendant",
@@ -699,9 +858,6 @@ public partial class DialogueManager : Node
 		RegisterFragment(new MemoryFragment("name", "Fragment III - A Name",
 			"Aionia Avgerinos. It is your own name, and it fits back into place like a key.", "asked_identity"));
 		RegisterFragment(new MemoryFragment("corridor", "Fragment IV - The Fractured Campus",
-<<<<<<< Updated upstream
-			"The overgrown, shattered corridors of the Aetherion Institute. Every parallel timeline has collided into one unstable present.", "room02_complete"));
-=======
 			"The overgrown, shattered corridors of the Aetherion Institute. Every parallel timeline has collided into one unstable present.", "library_complete"));
 		RegisterFragment(new MemoryFragment("window", "Fragment F3 - The Window",
 			"Standing at the glass, next to someone whose face the glass won't show. A sunset that was never one sunset.", "atrium_window_seen"));
@@ -928,7 +1084,6 @@ public partial class DialogueManager : Node
 			.AddNode(new DialogueNode("choice", "Hesiod Moriarty").AddChoice(new DialogueChoice("Yes.", "end")))
 			.AddNode(new DialogueNode("end", "Hesiod Moriarty").AddLine("Excellent, lead the way ladies, I’ll watch our backs.").SetNext("yoruka2"))
 			.AddNode(new DialogueNode("yoruka2", "Mochizuki Yoruka").AddLine("He talks like my oshi, too. Why does he talk like my oshi?").SetFlagOnEnter("level6_return_ready")));
->>>>>>> Stashed changes
 	}
 	#endregion
 }

@@ -1,13 +1,5 @@
 using Godot;
 
-/// <summary>
-/// A labelled patch of floor. Purely visual: it never blocks movement and cannot be
-/// interacted with. Used to lay the room out like the blueprint - the wake-up spot, the
-/// spatial anomaly, the Echo recording zone, and the piles of debris.
-///
-/// OOP role: the simplest Room part after Obstacle - data plus one drawing method. The Room
-/// does not even need to know about it, because it neither collides nor reacts to input.
-/// </summary>
 public partial class FloorMarker : Node2D
 {
     #region Private state
@@ -16,12 +8,9 @@ public partial class FloorMarker : Node2D
     private Color _fill = new Color(0.8f, 0.85f, 0.9f, 0.08f);
     private Color _outline = new Color(0.75f, 0.8f, 0.85f, 0.45f);
     private string _visibleFlag = "";
-<<<<<<< Updated upstream
-=======
     private bool _dottedRing;
     private bool _dashed;
     private bool _drawBox = true;
->>>>>>> Stashed changes
     #endregion
 
     #region Public properties
@@ -30,15 +19,8 @@ public partial class FloorMarker : Node2D
     [Export] public Color Fill { get => _fill; set { _fill = value; QueueRedraw(); } }
     [Export] public Color Outline { get => _outline; set { _outline = value; QueueRedraw(); } }
 
-    /// <summary>
-    /// When set, the marker only becomes visible once this GameStateManager flag is true.
-    /// That is how the burnt photo "appears on the final page" of the report log.
-    /// </summary>
     [Export] public string VisibleFlag { get => _visibleFlag; set => _visibleFlag = value ?? ""; }
 
-<<<<<<< Updated upstream
-    /// <summary>Rectangle in room coordinates (used only for documentation/debugging).</summary>
-=======
     /// <summary>Draws a dotted ring instead of a box. Both blueprints mark an "Echo stand spot"
     /// that way, so a plate the Echo is meant to hold can say so on the floor.</summary>
     [Export] public bool DottedRing { get => _dottedRing; set { _dottedRing = value; QueueRedraw(); } }
@@ -51,7 +33,6 @@ public partial class FloorMarker : Node2D
     /// not drawn, because the room's painted backdrop already shows what is there.</summary>
     [Export] public bool DrawBox { get => _drawBox; set { _drawBox = value; QueueRedraw(); } }
 
->>>>>>> Stashed changes
     public Rect2 Bounds => new Rect2(Position, _size);
     #endregion
 
@@ -79,7 +60,6 @@ public partial class FloorMarker : Node2D
         if (_visibleFlag != "") RefreshVisibility();
     }
 
-    /// <summary>Hidden until its flag is set; visible straight away when it has no flag.</summary>
     private void RefreshVisibility()
     {
         bool unlocked = _visibleFlag == "" || (GameStateManager.Instance?.GetFlag(_visibleFlag) ?? false);
@@ -90,10 +70,6 @@ public partial class FloorMarker : Node2D
     #region Drawing
     public override void _Draw()
     {
-<<<<<<< Updated upstream
-        DrawRect(new Rect2(Vector2.Zero, _size), _fill);
-        DrawRect(new Rect2(Vector2.Zero, _size), _outline, false, 1f);
-=======
         if (!_drawBox) return;
         Rect2 box = new Rect2(Vector2.Zero, _size);
 
@@ -139,7 +115,6 @@ public partial class FloorMarker : Node2D
             float end = Mathf.Min(travelled + dash, length);
             DrawLine(from + step * travelled, from + step * end, colour, width);
         }
->>>>>>> Stashed changes
     }
     #endregion
 }

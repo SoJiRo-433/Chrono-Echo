@@ -1,13 +1,5 @@
 using Godot;
 
-/// <summary>
-/// The glowing pendant on the floor: Aionia's key story item and the source of the Echo
-/// ability. Implements IInteractable, so picking it up goes through the same
-/// Entity.Interact() path as a switch or a door.
-///
-/// Picking it up puts it in the Player's inventory, sets the story flag, plays the memory
-/// flash and then removes it from the floor. It pulses so the player can spot it.
-/// </summary>
 public partial class Pendant : Node2D, IInteractable
 {
     #region Private state
@@ -19,23 +11,41 @@ public partial class Pendant : Node2D, IInteractable
     #endregion
 
     #region Public properties
-    /// <summary>Conversation played when the pendant is picked up (the memory flash).</summary>
     [Export] public string DialogueId { get => _dialogueId; set => _dialogueId = value ?? ""; }
 
-    /// <summary>Story flag set when the pendant is taken.</summary>
     [Export] public string FlagToSet { get => _flagToSet; set => _flagToSet = value ?? ""; }
 
-    /// <summary>Name it is stored under in the Player's inventory.</summary>
     [Export] public string ItemName { get => _itemName; set => _itemName = value ?? ""; }
 
     public bool IsTaken => _taken;
 
-    /// <summary>The pendant is a small circle lying on the floor.</summary>
     public float DistanceTo(Vector2 from) => from.DistanceTo(Position);
     #endregion
 
     #region Lifecycle
-    public override void _Ready() { QueueRedraw(); }
+    public override void _Ready()
+    {
+        QueueRedraw();
+        GameStateManager state = GameStateManager.Instance;
+        if (state != null) state.FlagsReset += ResetPickup;
+    }
+
+    public override void _ExitTree()
+    {
+        GameStateManager state = GameStateManager.Instance;
+        if (state != null) state.FlagsReset -= ResetPickup;
+    }
+
+    /// <summary>A full flag reset (Player.RestartRun) puts the pendant back on the floor, so the
+    /// Echo ability that reset just took away can be earned again instead of being gone for good.
+    /// The flags and this node now agree on whether the pendant is in the world.</summary>
+    private void ResetPickup()
+    {
+        if (!_taken) return;
+        _taken = false;
+        Show();
+        QueueRedraw();
+    }
 
     public override void _Process(double delta)
     {
