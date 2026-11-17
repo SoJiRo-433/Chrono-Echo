@@ -54,3 +54,129 @@ The coordinate list names every gameplay object represented by the blueprint; ex
 3. Built the three room scripts/scenes from the blueprint transforms and connected `RoomAtrium -> RoomMedical -> RoomObservation -> RoomBusiness`, leaving Level 6's `NextLevelPath` empty.
 4. Added PDF-derived dialogue registrations, choice branches, flags, objectives, and F4-F6 fragment rewards in `DialogueManager.BuildDemoContent()`; updated README and this plan with chosen capture windows.
 5. `dotnet build` succeeds with no warnings or errors. Scene resource paths and exported scene values were inspected textually; Godot editor validation and playtesting remain to be done.
+
+## Level 2 rebuild - the Archives sheet
+
+### Phase 0 recon
+
+The supplied Level 2 map is 640x360 and is the level's art as well as its plan. It is drawn at twice
+its own resolution (`RoomLibrary.MapScale`) - a whole-number upscale, so its pixels stay square, and
+wide enough in the aisles and doorways it draws for the player's 28-unit body - which makes the room
+1280x720. Nothing else is painted: one unit in `RoomLibrary.BuildMap` is one pixel of the map, and
+every rectangle below is quoted in those pixels.
+
+What the sheet shows, room by room: a small room at the top left with debris and one hazard-striped
+panel; the Archives filling the west, a wide brick room with ranks of shelving, loose furniture
+against its west wall and a stack that has come down in the middle; the archives' east wall has one
+opening, a connector to the room on the right; that room is floored in grey tile, with a wide lit
+panel across its north wall, a large machine and a crate below it; the bottom of the sheet is one
+long brick corridor running its whole width, hung with cabling and roots and lined with benches,
+machines and crates along its north wall.
+
+### Layout
+
+| Sheet rectangle | What it is | Notes |
+|---|---|---|
+| `(6,6,184,56)` | Reading room | the level's start; door in its south wall at `x=101..152` |
+| `(16,12,44,30)` `(70,10,34,26)` `(112,14,30,24)` | Cork board, computer, drawers | the Archives' front desk, each with its own line |
+| `(150,8,20,50)` | Service door | the striped panel on the sheet: sealed, and leads nowhere |
+| `(6,68,374,194)` | The Archives | ranks of shelving at `y=120/168/216`, the rank along `y=68`, the vertical spine at `(306,204,16,58)` |
+| `(216,80,46,40)` | Collapsed stack | blocks; the way east runs round it |
+| `(170,228,66,18)` | Toppled shelf | blocks too: it is a shelf lying across the aisle, not a rug |
+| `(150,134,24,34)` | Yoruka | in the first aisle the way on runs through, a few steps from the doorway; the pan lands on her, and she does not block the aisle |
+| `(380,142,6,40)` | Archive east opening | the only way out of the Archives |
+| `(386,142,49,40)` | Collapsed shelves door | the block filling the connector; `library_collapsed_shelves` on approach |
+| `(348,120,30,30)` `(348,186,30,30)` | Rubble piles | flanking `(363,168)`, the latch the Echo holds; dotted ring on the stand spot |
+| `(435,78,199,172)` | Terminal room | grey tile; opening to the corridor at `x=545..585` in its south wall |
+| `(487,88,73,40)` | The terminal | invisible over the mainframe the map draws; plays `library_terminal` |
+| `(552,150,50,60)` `(558,214,44,28)` | Server rack, spares | |
+| `(600,112,24,34)` | Yoruka waiting | shown once the fallen shelves are open and the player is through them |
+| `(500,250,40,42)` | Drop into the corridor | the sheet's vertical connector, at the x the map draws it - clear of the rack and the spares, so the way down is the way it looks |
+| `(110,292,524,62)` | Root-webbed corridor | the walk-and-talk trigger at its east end |
+| `(200,292,14,62)` | Heavy library doors | open when `library_to_atrium` ends |
+| `(224,292,52,22)` `(330,292,46,28)` `(450,292,42,24)` `(590,292,34,26)` | Bench, conduit, workbench, spares | along the north wall, so the walking floor stays clear |
+| `(112,296,40,54)` | Exit | beyond the heavy doors, to the Atrium |
+
+### Classes
+
+| Treatment | Classes |
+|---|---|
+| Reuse | `Room`, `Door`, `Switch` (the latch), `Inspectable`, `FloorMarker`, `Obstacle`, `DialogueManager`, and a `Sprite2D` for the map itself |
+| Extend | `Obstacle` gains `DrawBox`: the map draws the walls, the shelving and the furniture, so the shapes that block them must not also draw. `FloorMarker` and `Inspectable` already carried that switch |
+| Add | nothing at all. The map draws every shelf, the terminal, the roots and the furniture, so the level needs no drawing nodes - only collision and the overlays the map does not have (the plates, the rings and the captions) |
+
+`RoomLibrary` keeps every beat it had and every dialogue id it used. What changed is where the level
+lives: its rooms are the map's rooms, so the collapsed shelves are the connector between the Archives
+and the terminal room - the one opening between them, so the block cannot be walked around - and the
+scene file holds nothing but the room script, the dialogue manager and the player.
+
+The map has to be imported before the room can load it (`<exe> --headless --path <project> --import`),
+which is also what `dotnet build` plus a first run would do in the editor.
+
+### Validation
+
+`_check_library.gd` runs headless (`--headless --fixed-fps 60 --script res://_check_library.gd`) and
+stages the level the way it is played - everything shut, then the fallen shelves open, then the
+library doors - flood-filling the floor from the player's start at each stage on a 6-unit grid with
+the player's own 28x28 body. It asserts that the latch is reachable while the terminal room is not,
+that the corridor opens with the shelves and the exit stays shut until the heavy doors do, that every
+interactable has somewhere to stand, and - driven with synthetic input - that walking down into the
+Archives starts the scene 2 pan and zooms the camera.
+
+`_shot_library.gd` renders four screenshots of the level - the whole map, the Archives, the terminal
+room and the corridor - with the room's own camera held still, for eyeballing the map against the
+sheet. It must run without `--headless`, which has no renderer.
+
+## Level 3 rebuild - the Atrium map
+
+### Phase 0 recon
+
+The supplied Atrium map is 640x360 and is the level's art as well as its plan, so the same treatment
+applies: drawn at twice its own resolution (`RoomAtrium.MapScale`) to 1280x720, one unit in
+`RoomAtrium.BuildMap` to one pixel of the map, every rectangle below quoted in those pixels.
+
+Read off the map, room by room: the observation deck is the lit band across the top; the broken
+stairway comes down the west side as a narrow lit tube with the broken treads drawn in it; the
+glitched terminal is the room at the bottom of that tube, its two consoles drawn as the two lit
+screens in its south wall; the glass skybridge is the band across the middle, drawn as a row of dark
+panels with their blue glow; the lower walkway is the band directly under it; and the entry hall is
+the lit room at the bottom left, with the corridor running east out of it.
+
+### Layout
+
+| Map rectangle | What it is | Notes |
+|---|---|---|
+| `(104,16,496,54)` | Observation deck | the three window spots at `x=200/330/460`, `y=44`; the deck's south wall opens at `x=160..216` onto the stairway |
+| `(600,16,6,54)` | Deck east wall | the heavy door set into it at `y=24..51`; the Level 4 threshold beyond |
+| `(160,76,56,68)` | Broken stairway | `TimeStainStep`s at `y=118/92/76`, the jump line at `y=112`, and the stairway gate at `y=138` |
+| `(80,144,150,66)` | Glitched terminal | consoles at `(110,186)` and `(170,186)`; north wall opens onto the stairway, south wall onto the bridge |
+| `(88,216,462,34)` | Glass skybridge | six `FluctuatingTile` panels, 77 px each, 2.5 s solid of every 4 s, phases `0,3,2,1,0,3` |
+| `(88,256,432,30)` | Lower walkway | the checkpoint at `(290,256)`; the wall above it opens at `x=300..380` onto the bridge, the wall below at `x=264..368` and `464..520` onto the corridor |
+| `(8,292,512,60)` | Corridor and entry hall | the gate wall at `x=184`; six blue tiles in two rows of three across the hall |
+| `(26,322)` | Start | the entry hall's west end |
+
+### Classes
+
+| Treatment | Classes |
+|---|---|
+| Reuse | `Room`, `Door`, `Switch`, `FluctuatingTile` (both kinds), `TimeStainStep`, `FloorMarker`, `Obstacle`, and a `Sprite2D` for the map |
+| Extend | `FluctuatingTile`'s drawing: a gap-when-absent tile is now a translucent pane rather than an opaque slab, because on this level the bridge's glass is drawn by the map and a fill would paint it out |
+| Add | nothing: as with the Archives, the map draws the rooms, so the level needs collision and overlays only |
+
+`RoomAtrium` keeps every beat, flag and dialogue id it had. The logic - the consoles matching, the
+reveal, the falls, the window, the exit - is the same code as before the rebuild; what changed is
+that it reads nodes built from the map instead of scene-authored ones, and that the world is the
+map's 1280x720 rather than the old portrait 932x1043.
+
+### Validation
+
+`_check_atrium.gd` runs headless and stages the level the way it is played - everything shut, then
+the entry gate open, then the stairway gate, then the exit door - flood-filling the floor at each
+stage. It freezes the room and takes the phasing tiles out of the collision test first: the phases
+would otherwise make every answer depend on the tick, and what it is checking is the walls. It asserts
+that each room is sealed until its own key opens it, that every interactable has somewhere to stand,
+and that the dark outside the rooms cannot be walked into.
+
+`_shot_atrium.gd` renders five screenshots (whole, entry, bridge, stairs, deck) with the camera held
+still; it reads the level's opening conversation through first, or the panel would cover every shot.
+Both need the map imported first (`<exe> --headless --path <project> --import`).

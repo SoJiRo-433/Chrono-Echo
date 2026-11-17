@@ -91,6 +91,12 @@ time-stain 3 s, jump airtime 0.6 s) follow those sheets, with the small skybridg
 noted below; the Atrium's four-symbol console codes
 and the stairway's missing step come off the Level 3 sheet's scenes 3 and 4.
 
+The Archives (`RoomLibrary`) is built on its own map: `Assets/level2_archives_map.png`, a 640x360 plan
+of the whole level, drawn at twice its resolution so its pixels stay square and the aisles it draws
+are wide enough to walk. Nothing else is painted - every wall, rank of shelving and fixture is
+invisible collision over the map (`Obstacle.DrawBox`), and everything the player interacts with is an
+overlay on it.
+
 `Room01 -> Room02 -> RoomLibrary -> RoomAtrium -> Room04Medical -> Room05Observation -> Room06Business`.
 Each room declares its `LevelNumber` and `NextLevelPath`; Level 6 leaves the path empty and shows
 **LEVEL 6 CLEAR - to be continued**.
@@ -127,41 +133,69 @@ to the door. The `HOLD BOTH PLATES AT ONCE` marker sits over the pair, and a dot
 stand spot" mark, which Level 3's deck uses for the same purpose.
 
 ### RoomLibrary - the Archives to the heavy doors (Level 2, scenes 2-5)
-1. **The Archives.** Walking in pans the camera off Aionia and onto **Yoruka** - the doc's Scene 2
-   beat - and only then does she think about approaching her, which is where the "Approach the
-   student" objective comes from. **Yoruka** is an interactable among the shelves; **E** starts `library_yoruka`,
+The level's art is the level's own map (`Assets/level2_archives_map.png`): one 640x360 plan holding the
+reading room at the top left, the Archives with their ranks of shelving, the connector where the
+shelves have come down, the lit terminal room on the right, and the root-webbed corridor along the
+bottom to the heavy library doors. It is drawn at twice its resolution - a whole-number upscale, so
+its pixels stay square, and wide enough in its aisles and doorways for the player's 28-unit body -
+which makes the room 1280x720. **Nothing in the map moves, so everything the level does is an overlay
+on it**: the walls, the ranks and the furniture are `Obstacle`s with their boxes off, so the map's own
+rooms are what she walks inside; everything E answers to is an `Inspectable` with its box off too, so
+the caption and the interaction land on the object the map drew; and what the map does not draw - the
+plates, the Echo's dotted stand spot, the two doors and the captions - is drawn. `RoomLibrary.BuildMap`
+is the only place the level's geometry exists, and one unit in it is one pixel of the map.
+1. **The Archives.** The reading room holds the **cork board**, the **computer** and the **drawers**,
+   each with its own line, and the striped **service door** back to the bridgeway - the one door in
+   the level that leads nowhere, because the hallway side of it is buried. Walking down through it
+   into the Archives pans the camera off Aionia and onto **Yoruka** - the doc's Scene 2 beat - and
+   only then does she think about approaching her, which is where the "Approach the student"
+   objective comes from. **Yoruka** is an interactable among the shelves; **E** starts `library_yoruka`,
    and when it ends she runs off - the node hides, and a hidden interactable is skipped, so she
-   stops being examinable in the same moment. The cork board, computer, bookshelves and drawers each
-   have their own line. **She also leaves something behind**: the moment she runs, a hidden
-   `Inspectable` appears on the exact spot she stood on (`RoomLibrary.DropYorukaItem`), so the
-   blueprint's "leaving behind an item" is a thing you can walk over and pick up. It plays the line
-   `library_item_taken` and sets a flag of the same name, and until she runs it is hidden - a hidden
-   interactable is skipped, so it does not exist for the player either.
-2. **Collapsed Shelves.** The fallen shelves are the block between the collapsed-shelves room and
-   the Terminal: a `Door` filling the divider (`CollapsedShelvesDoor`, at x = 650). Inside the room
-   the **safety latch** has to be held by an Echo while the player slips through, exactly like
-   Room01's door, with the collapse narrated by `library_collapsed_shelves`. The latch is flanked by
-   **two rubble piles** - rubble on both sides of it, as the blueprint draws - with the gap between
-   them wide enough to stand in and the route past them left open, and a dotted blue ring marks it
-   as the Echo's stand spot. The latch is on the *near* side of the block on purpose: the Echo has
-   to reach it before the door opens, not after.
-3. **Terminal.** Past the shelves Yoruka is waiting (`library_yoruka_followup`), and the surviving
-   terminal plays `library_terminal`, pointing the two of them at the medical wing.
-4. **Root-webbed Corridor.** Dropping into the corridor starts the walk-and-talk
-   (`library_to_atrium`) with its three conversation beats. When it is over the heavy library doors
+   stops being examinable in the same moment. **She also leaves something behind**: the moment she
+   runs, a hidden `Inspectable` appears on the exact spot she stood on (`RoomLibrary.DropYorukaItem`),
+   so the blueprint's "leaving behind an item" is a thing you can walk over and pick up. It plays the
+   line `library_item_taken` and sets a flag of the same name, and until she runs it is hidden - a
+   hidden interactable is skipped, so it does not exist for the player either. The ranks themselves
+   are invisible collision laid over the shelving the map draws, and the stack that came down across
+   the north aisle is why the way east runs round it.
+2. **Collapsed Shelves.** The fallen shelves are the block between the Archives and the Terminal: a
+   `Door` filling the connector in the middle of the Archives' east wall (`CollapsedShelvesDoor`) -
+   the one opening between the two rooms, so there is no way round it. Beside it the **safety latch**
+   has to be held by an Echo while the player slips through, exactly like Room01's door, with the
+   collapse narrated by `library_collapsed_shelves`. The latch is flanked by **two rubble piles** -
+   one on each side of it, with the gap between them wide enough to stand in and the route past them
+   left open - and a dotted blue ring marks it as the Echo's stand spot. The
+   latch is on the *near* side of the block on purpose: the Echo has to reach it before the door
+   opens, not after.
+3. **Terminal.** Past the fallen shelves Yoruka is waiting in the lit room (`library_yoruka_followup`),
+   and the surviving **terminal** - the mainframe the map draws burning in the dark - plays
+   `library_terminal`, pointing the two of them at the medical wing.
+4. **Root-webbed Corridor.** The drop under the terminal room puts her in the corridor, and that
+   starts the walk-and-talk (`library_to_atrium`) with its three conversation beats. The corridor's
+   fittings - the bench, the conduit, the workbench, the spares - are along its north wall, and its
+   floor is the one the map webs with roots. When the conversation is over the heavy library doors
    open, and the doorway beyond them loads the Atrium.
 
 ### RoomAtrium - the Atrium (Level 3, scenes 1-5)
-The room uses the portrait layout in the Level 3 blueprint: Entry Hall at the bottom, the lower
-walkway and glass bridge across the middle, the terminal and stairway on the west side, and the
-Observation Deck across the top. Its logical `WorldSize` is 932x1043 before the global 1.5 scale.
+The level's art is its own map (`Assets/level3_atrium_map.png`): one 640x360 plan holding the
+observation deck across the top, the broken stairway coming down the west side, the glitched terminal
+under it, the glass skybridge across the middle with the lower walkway directly beneath it, and the
+entry hall at the bottom left with the corridor running east out of it. It is drawn at twice its
+resolution, which makes the room 1280x720, and - as in the Archives - nothing is painted twice: the
+walls, the stair tube and every part of the map that is not a room are invisible collision over the
+art, and what the map cannot draw is laid on top of it: the six blue tiles, the six skybridge panels,
+the three stair steps and the jump line between them, the plates and their dotted stand spots, the
+three doors and the captions. `RoomAtrium.BuildMap` is the only place the level's geometry exists, and
+one unit in it is one pixel of the map. Every beat, flag and dialogue id is the level's own, unchanged
+- the rooms are simply the map's rooms now.
 1. **Entry Hall.** The hall is bounded by continuous walls that tie into the surrounding room
    barriers; its timed east gate is the only route into the connector, so the gate puzzle cannot be
    bypassed around a wall corner. Six blue `FluctuatingTile`s (deadly on contact) phase in and out on the room's
    shared `LoopClock`, two rows of three across the hall, so the only way to the gate is *through*
-   them - timed to when each one is gone, with the 44-pixel gaps between them as the places to
-   wait. The gate on the right wall is a **timed door** (`CloseDelaySeconds = 5`), and its plate
-   sits at the west end, so the Echo has to be what holds it down while Aionia crosses.
+   them - timed to when each one is gone, with the lanes between the columns as the places to
+   wait. The gate is a **timed door** (`CloseDelaySeconds = 5`) set into a wall across the corridor
+   at the hall's east end, and its plate sits at the far end of the hall, so the Echo has to be what
+   holds it down while Aionia crosses.
 2. **Lower Walkway, then the Glass Skybridge.** The six bridge panels are
    `FluctuatingTile`s of the *gap-when-absent* kind - floor that is there for 2.5 seconds of every 4
    and gone the rest, never a wall. You walk straight onto a panel while it is there, and a panel
@@ -429,8 +463,9 @@ Also not implemented:
   `GapWhenAbsent`, and both are present for 2 s of every 4 s offset by `PhaseSeconds`, so a row
   ripples rather than blinking in unison. Because they read the room's shared `LoopClock`, an
   Echo's replay crosses them on exactly the rhythm the player did. The blue tiles' "no walk" is the
-  blueprint's own legend wording; the Level 2 collapsed-shelves room and Level 3's walls were both
-  adjusted so the timing cannot be walked around instead of through.
+  blueprint's own legend wording; the Level 3 walls were adjusted so the timing cannot be walked
+  around instead of through, and the Level 2 collapse fills the only opening between the Archives and
+  the terminal room for the same reason - there is no way round it, only through it.
 - **The stairway's falls are the puzzle, not a fail state.** An unstained `TimeStainStep` drops her
   back to the foot of the stairs for one point of damage, and the recording keeps running through
   the fall - so a failed attempt is still a useful one: it stains every step it managed to touch,

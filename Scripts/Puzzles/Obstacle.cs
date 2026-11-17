@@ -23,8 +23,22 @@ public partial class Obstacle : Node2D
 
     public Rect2 Bounds => new Rect2(Position, _size);
 
+    // A room whose art is a painted map needs its walls and its furniture to block without being
+    // drawn a second time on top of the painting. This is the same switch FloorMarker and
+    // Inspectable already carry; here it is collision with nothing to look at.
+    private bool _drawBox = true;
+
+    [Export]
+    public bool DrawBox
+    {
+        get => _drawBox;
+        set { _drawBox = value; QueueRedraw(); }
+    }
+
     public override void _Draw()
     {
+        if (!_drawBox) return;
+
         Color fill = _isSolid ? new Color(0.35f, 0.35f, 0.4f) : new Color(0.35f, 0.35f, 0.4f, 0.22f);
         DrawRect(new Rect2(Vector2.Zero, _size), fill);
         DrawRect(new Rect2(Vector2.Zero, _size), new Color(0.6f, 0.6f, 0.7f), false, 2f);

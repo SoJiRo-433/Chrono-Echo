@@ -40,8 +40,7 @@ public partial class Player : Entity
 
     public int CapturedFrameCount => _recorder.FrameCount;
 
-    /// <summary>Seconds left in the open capture window; 0 when nothing is being recorded.
-    /// The HUD bar drains against this.</summary>
+    /// <summary>Seconds left in the open capture window; 0 when nothing is being recorded.</summary>
     public float CaptureSecondsLeft =>
         !_recorder.IsRecording || CurrentRoom == null
             ? 0f

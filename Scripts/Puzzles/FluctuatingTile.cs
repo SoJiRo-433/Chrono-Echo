@@ -130,11 +130,17 @@ public partial class FluctuatingTile : Obstacle
             return;
         }
 
+        // A gap-when-absent tile is a pane over the room's own art rather than a slab of its own:
+        // the Atrium's bridge is drawn on the level's map, and a solid fill would paint the map's
+        // glass out. What it has to say - "there is floor here right now" - is said by the brightness
+        // of the pane and its outline.
         Color fill = _deadly
-            ? new Color(0.18f, 0.45f, 0.85f, 0.9f)      // the blue tile from a room with no floor
-            : new Color(0.75f, 0.78f, 0.8f, 0.85f);     // a normal marble slab
+            ? new Color(0.18f, 0.45f, 0.85f, 0.9f)          // the blue tile from a room with no floor
+            : GapWhenAbsent
+                ? new Color(0.80f, 0.90f, 1f, 0.18f)        // a pane of the bridge's glass
+                : new Color(0.75f, 0.78f, 0.8f, 0.85f);     // a normal marble slab
         DrawRect(box, fill);
-        DrawRect(box, new Color(0.85f, 0.9f, 1f, 0.9f), false, 2f);
+        DrawRect(box, new Color(0.85f, 0.9f, 1f, _deadly ? 0.9f : 0.55f), false, 2f);
     }
     #endregion
 }

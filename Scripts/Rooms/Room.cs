@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Text;
 using Godot;
 
 public partial class Room : Node2D
@@ -9,6 +8,9 @@ public partial class Room : Node2D
 
     /// <summary>How far a scripted camera pan zooms in while it holds.</summary>
     private const float PanZoom = 1.35f;
+
+    // Screen-fixed HUD layout, in the 1152x648 viewport's own units.
+    private static readonly Vector2 HeartsOrigin = new(14f, 12f);
     #region Signals
     [Signal] public delegate void LoopStartedEventHandler(int loopNumber);
     [Signal] public delegate void RoomCompletedEventHandler();
@@ -35,7 +37,6 @@ public partial class Room : Node2D
     private string _introDialogueId = "intro";
     private string _clearDialogueId = "room01_clear";
     private string _completionFlag = "room01_complete";
-    private bool _showDebugHud = true;
     private int _levelNumber = 1;
     private string _nextLevelPath = "";
     private string _exitLockedHint = "";
@@ -51,13 +52,9 @@ public partial class Room : Node2D
     private Vector2 _cameraPanTarget;
     private float _cameraPanSecondsLeft;
     private Pendant _pendant;
-    private ColorRect _hudPanel;         // F3-toggled debug readout
-    private Label _hudLabel;
-    private Label _controlsLabel;
     private Label _bannerLabel;          // always on: GAME OVER / ROOM CLEAR
-    private Label _recordLabel;          // always on while a capture window is open
-    private ColorRect _recordBarBg;
-    private ColorRect _recordBarFill;
+    private Control _hearts;             // always on: one heart per point of health left
+    private TextureRect[] _heartIcons;
     private Label _objectiveLabel;       // always on once an Objective has been read
     private Label _echoTimerLabel;       // always on while any Echo is still alive
     #endregion
@@ -86,8 +83,6 @@ public partial class Room : Node2D
     [Export] public string IntroDialogueId { get => _introDialogueId; set => _introDialogueId = value ?? ""; }
     [Export] public string ClearDialogueId { get => _clearDialogueId; set => _clearDialogueId = value ?? ""; }
     [Export] public string CompletionFlag { get => _completionFlag; set => _completionFlag = value ?? ""; }
-    [Export] public bool ShowDebugHud { get => _showDebugHud; set => _showDebugHud = value; }
-
     [Export] public int LevelNumber { get => _levelNumber; set => _levelNumber = Mathf.Max(1, value); }
 
     [Export] public string NextLevelPath { get => _nextLevelPath; set => _nextLevelPath = value ?? ""; }
@@ -217,9 +212,7 @@ public partial class Room : Node2D
     {
         UpdateRoomCamera((float)delta);
         RefreshExitLocked();
-        if (_hudLabel != null) _hudLabel.Text = BuildHudText();
         RefreshBanner();
-        RefreshRecordBar();
         RefreshEchoTimer();
         RefreshObjective();
     }
@@ -269,20 +262,6 @@ public partial class Room : Node2D
     public override void _EnterTree()
     {
         Scale = Vector2.One * SCALE_FACTOR;
-    }
-
-    public override void _UnhandledInput(InputEvent @event)
-    {
-        if (_hudPanel == null) return;
-        if (!(@event is InputEventKey key) || !key.Pressed || key.IsEcho() || key.Keycode != Key.F3) return;
-
-        // F3 hides the DEBUG readout only. The recording bar and the banner are player-facing
-        // and stay on screen whatever F3 is set to.
-        bool show = !_hudPanel.Visible;
-        _hudPanel.Visible = show;
-        _controlsLabel.Visible = show;
-        RefreshBanner();
-        GetViewport()?.SetInputAsHandled();
     }
 
     public override void _Draw()
@@ -462,40 +441,33 @@ public partial class Room : Node2D
     }
     #endregion
 
-    #region Placeholder HUD (built in code, no assets)
+    #region HUD (screen-fixed; the hearts are the one piece drawn from Assets/UI)
     private void BuildHud()
     {
-        CanvasLayer layer = new CanvasLayer { Layer = 5 };
+        CanvasLayer layer = new CanvasLayer { Name = "HudLayer", Layer = 5 };
 
-        // --- recording bar: drains while a capture window is open, F3 or no F3 ---
-        _recordBarBg = new ColorRect
+        // --- hearts: how much of this life is left, one drawing per point of Entity.MaxHealth ---
+        _hearts = new Control { Position = HeartsOrigin, MouseFilter = Control.MouseFilterEnum.Ignore };
+        _heartIcons = new TextureRect[UiSkin.HeartCount];
+        for (int i = 0; i < UiSkin.HeartCount; i++)
         {
-            Color = new Color(0.04f, 0.05f, 0.08f, 0.8f),
-            Position = new Vector2(14f, 592f),
-            Size = new Vector2(300f, 20f),
-            MouseFilter = Control.MouseFilterEnum.Ignore,
-            Visible = false
-        };
-        _recordBarFill = new ColorRect
+            var heart = new TextureRect
+            {
+                Texture = UiSkin.Heart(i),
+                Position = new Vector2(i * UiSkin.HeartStride, 0f),
+                Size = UiSkin.HeartSize,
+                ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+                StretchMode = TextureRect.StretchModeEnum.Scale,
+                MouseFilter = Control.MouseFilterEnum.Ignore
+            };
+            _heartIcons[i] = heart;
+            _hearts.AddChild(heart);
+        }
+        if (Player != null)
         {
-            Color = new Color(0.35f, 0.95f, 1f, 0.9f),
-            Position = new Vector2(2f, 2f),
-            Size = new Vector2(296f, 16f),
-            MouseFilter = Control.MouseFilterEnum.Ignore
-        };
-        _recordBarBg.AddChild(_recordBarFill);
-
-        _recordLabel = new Label
-        {
-            Position = new Vector2(324f, 590f),
-            Size = new Vector2(460f, 24f),
-            MouseFilter = Control.MouseFilterEnum.Ignore,
-            Visible = false
-        };
-        _recordLabel.AddThemeFontSizeOverride("font_size", 13);
-        _recordLabel.AddThemeColorOverride("font_color", new Color(0.75f, 0.97f, 1f));
-        _recordLabel.AddThemeColorOverride("font_outline_color", Colors.Black);
-        _recordLabel.AddThemeConstantOverride("outline_size", 4);
+            Player.HealthChanged += RefreshHearts;
+            RefreshHearts(Player.Health, Player.MaxHealth);
+        }
 
         // --- echo timer: the soonest projection to decay, so the room's clock stays legible ---
         _echoTimerLabel = new Label
@@ -537,47 +509,10 @@ public partial class Room : Node2D
         _bannerLabel.AddThemeColorOverride("font_outline_color", Colors.Black);
         _bannerLabel.AddThemeConstantOverride("outline_size", 5);
 
-        layer.AddChild(_recordBarBg);
-        layer.AddChild(_recordLabel);
+        layer.AddChild(_hearts);
         layer.AddChild(_echoTimerLabel);
         layer.AddChild(_objectiveLabel);
         layer.AddChild(_bannerLabel);
-
-        // --- the debug readout is the only part F3 hides ---
-        if (_showDebugHud)
-        {
-            _hudPanel = new ColorRect
-            {
-                Color = new Color(0.04f, 0.05f, 0.08f, 0.62f),
-                Position = new Vector2(14f, 12f),
-                Size = new Vector2(360f, 128f)
-            };
-
-            _hudLabel = new Label
-            {
-                Position = new Vector2(12f, 9f),
-                Size = new Vector2(336f, 112f),
-                MouseFilter = Control.MouseFilterEnum.Ignore
-            };
-            _hudLabel.AddThemeFontSizeOverride("font_size", 13);
-            _hudLabel.AddThemeColorOverride("font_color", new Color(0.82f, 0.87f, 0.93f));
-            _hudPanel.AddChild(_hudLabel);
-
-            _controlsLabel = new Label
-            {
-                Position = new Vector2(14f, 618f),
-                Size = new Vector2(1124f, 22f),
-                MouseFilter = Control.MouseFilterEnum.Ignore
-            };
-            _controlsLabel.Text = "WASD move   ·   Space jump   ·   T record/stop   ·   E interact   ·   J attack   ·   R project echo   ·   Enter dialogue   ·   1/2 choose   ·   F3 hide HUD   ·   F11 fullscreen";
-            _controlsLabel.AddThemeFontSizeOverride("font_size", 12);
-            _controlsLabel.AddThemeColorOverride("font_color", new Color(0.62f, 0.66f, 0.72f));
-            _controlsLabel.AddThemeColorOverride("font_outline_color", new Color(0f, 0f, 0f, 0.8f));
-            _controlsLabel.AddThemeConstantOverride("outline_size", 3);
-
-            layer.AddChild(_hudPanel);
-            layer.AddChild(_controlsLabel);
-        }
 
         AddChild(layer);
     }
@@ -595,24 +530,18 @@ public partial class Room : Node2D
         _bannerLabel.Visible = text != "";
     }
 
-    private void RefreshRecordBar()
+    /// <summary>Hearts spent are tinted, not swapped: the sheet draws one heart and a lost point
+    /// should read as that same heart gone cold. MaxHealth is three, which is what the sheet
+    /// carries; a higher value would want a second row rather than more hearts here.</summary>
+    private void RefreshHearts(int current, int max)
     {
-        if (_recordBarBg == null) return;
+        if (_heartIcons == null) return;
 
-        bool recording = Player != null && Player.IsRecording;
-        _recordBarBg.Visible = recording;
-        _recordLabel.Visible = recording;
-        if (!recording) return;
-
-        float window = Mathf.Max(0.01f, _maxCaptureSeconds);
-        float left = Player.CaptureSecondsLeft;
-        float ratio = Mathf.Clamp(left / window, 0f, 1f);
-
-        _recordBarFill.Size = new Vector2(296f * ratio, 16f);
-        _recordBarFill.Color = ratio < 0.25f
-            ? new Color(1f, 0.5f, 0.4f, 0.95f)
-            : new Color(0.35f, 0.95f, 1f, 0.9f);
-        _recordLabel.Text = "REC   " + left.ToString("0.0") + "s left of " + window.ToString("0.#") + "s";
+        for (int i = 0; i < _heartIcons.Length; i++)
+        {
+            _heartIcons[i].Visible = i < max;
+            _heartIcons[i].Modulate = i < current ? Colors.White : UiSkin.SpentHeart;
+        }
     }
 
     private void RefreshEchoTimer()
@@ -650,99 +579,5 @@ public partial class Room : Node2D
         _objectiveLabel.Text = objective == "" ? "" : "OBJECTIVE:   " + objective;
     }
 
-    private string BuildHudText()
-    {
-        if (Player == null) return "";
-
-        var sb = new StringBuilder();
-        sb.AppendLine("AIONIA AVGERINOS  ·  LEVEL " + _levelNumber + (IsFinalLevel ? " (FINAL)" : ""));
-        sb.AppendLine("HP " + Player.Health + "/" + Player.MaxHealth +
-                      "  ·  Lives " + Player.Lives +
-                      "  ·  Loop " + _loopNumber +
-                      "  ·  Echoes " + _echoes.Count + "/" + _maxEchoes + DescribeEchoTimers());
-        sb.AppendLine(DescribeCapture() + "  ·  " + Mathf.Max(0f, _loopClock).ToString("0.0") + "s");
-        sb.AppendLine("Plates " + CountActiveSwitches() + "/" + _switches.Count +
-                      "  ·  Doors " + CountOpenDoors() + "/" + _doors.Count +
-                      "  ·  Memories " + UnlockedFragmentCount + "/" + TotalFragmentCount);
-        sb.AppendLine(DescribeAffection());
-        sb.AppendLine("Flags: " + ShortenList(ActiveFlags(), 42));
-        return sb.ToString();
-    }
-
-    private string DescribeCapture()
-    {
-        if (!Player.HasPendant) return "No pendant - Echo locked";
-        if (Player.IsRecording) return "Capture ON - " + Player.CaptureSecondsLeft.ToString("0.0") + "s left";
-        if (Player.CapturedFrameCount > 0) return "Captured " + Player.CapturedFrameCount + " frames - R to project";
-        return "Capture off - press T to record";
-    }
-
-    // Debug readout: the romance counters the dialogue choices move.
-    private static string DescribeAffection()
-    {
-        GameStateManager state = GameStateManager.Instance;
-        if (state == null) return "Affection: -";
-
-        return "Affection: Yoruka " + state.GetAffection(GameStateManager.Yoruka) +
-               "  ·  Adellaine " + state.GetAffection(GameStateManager.Adellaine) +
-               "  ·  Hesiod " + state.GetAffection(GameStateManager.Hesiod) +
-               "  ·  Felix " + state.GetAffection(GameStateManager.Felix);
-    }
-
-    // Debug readout: how long the room will keep each projection.
-    private string DescribeEchoTimers()
-    {
-        if (_echoes.Count == 0 || _echoLifetimeSeconds <= 0f) return "";
-        return " (next out " + SoonestEchoSeconds().ToString("0.0") + "s)";
-    }
-
-    private int CountActiveSwitches()
-    {
-        int count = 0;
-        foreach (Switch sw in _switches) if (sw.IsActivated) count++;
-        return count;
-    }
-
-    private int CountOpenDoors()
-    {
-        int count = 0;
-        foreach (Door door in _doors) if (door.IsOpen) count++;
-        return count;
-    }
-
-    private int UnlockedFragmentCount => _dialogue != null ? _dialogue.UnlockedFragments.Count : 0;
-    private int TotalFragmentCount => _dialogue != null ? _dialogue.FragmentCount : 0;
-
-    private List<string> ActiveFlags()
-    {
-        var flags = new List<string>();
-        if (GameStateManager.Instance == null) return flags;
-
-        foreach (KeyValuePair<string, bool> pair in GameStateManager.Instance.Flags)
-            if (pair.Value) flags.Add(pair.Key);
-        return flags;
-    }
-
-    private static string ShortenList(List<string> items, int budget)
-    {
-        if (items.Count == 0) return "-";
-
-        var sb = new StringBuilder();
-        int shown = 0;
-        for (int i = 0; i < items.Count; i++)
-        {
-            string piece = (i == 0 ? "" : ", ") + items[i];
-            int hidden = items.Count - i - 1;
-            string tail = hidden > 0 ? " +" + hidden : "";
-            if (sb.Length + piece.Length + tail.Length > budget) break;
-
-            sb.Append(piece);
-            shown++;
-        }
-
-        if (shown == 0) return "+" + items.Count;
-        if (shown < items.Count) sb.Append(" +").Append(items.Count - shown);
-        return sb.ToString();
-    }
     #endregion
 }

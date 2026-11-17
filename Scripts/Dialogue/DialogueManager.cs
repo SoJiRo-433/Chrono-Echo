@@ -26,11 +26,12 @@ public partial class DialogueManager : Node
 	private float _choiceTimeout;
 	private float _choiceTimer;
 
-	// placeholder UI
+	// Dialogue UI - the frame, its speaker tab and the portrait plate are drawn from Assets/UI.
 	private CanvasLayer _layer;
 	private TextureRect _memoryImage;
+	private TextureRect _portraitFrame;
 	private TextureRect _portrait;
-	private ColorRect _panel;
+	private TextureRect _panel;
 	private Label _speakerLabel;
 	private Label _dialogueLabel;
 	private Label _toastLabel;
@@ -47,6 +48,15 @@ public partial class DialogueManager : Node
 	// apart by flag even while they share a placeholder picture.
 	private const string MemoryCgPath = "res://Assets/blue_light_memory.jpg";
 
+	// The dialogue frame is drawn whole, at the proportions it is drawn at, and pinned near the
+	// bottom of the screen. The speaker tab, the text block and the portrait window are all placed
+	// from the sheets' own rectangles scaled to these two sizes (see UiSkin), so the drawing keeps
+	// its proportions whatever the frame is sized to.
+	private static readonly Vector2 DialogueFrameSize = new(957f, 294f);
+	private static readonly Vector2 DialogueFrameOrigin = new(20f, 316f);
+	private static readonly Vector2 PortraitPlateSize = new(240f, 240f / UiSkin.PortraitAspect);
+	private static readonly Vector2 PortraitPlateOrigin = new(20f, 70f);
+
 	#region Public properties
 	[Export] public bool ShowDebugOverlay { get; set; } = true;
 	public bool IsActive => _isActive;
@@ -55,6 +65,13 @@ public partial class DialogueManager : Node
 	/// <summary>The last Objective line shown, kept on screen by the HUD until the next one
 	/// replaces it. Empty until an Objective has been read in this run.</summary>
 	public string CurrentObjective => _currentObjective;
+
+	/// <summary>Sets the objective without a conversation - for a level whose goal changes when
+	/// the player reaches a place, where no one is around to say it.</summary>
+	public void SetObjective(string objective)
+	{
+		_currentObjective = objective ?? "";
+	}
 
 	public int FragmentCount => _fragments.Count;
 	#endregion
@@ -273,25 +290,36 @@ public partial class DialogueManager : Node
 		_layer.AddChild(_memoryImage);
 
 		// Portrait slot: filled from res://Assets/Portraits/<speaker>.png when that file exists,
-		// and simply left hidden when it does not - so the game runs with no portrait art at all.
+		// and left hidden - plate and all - when it does not, so the game runs with no portrait
+		// art at all rather than showing an empty frame for every line.
+		_portraitFrame = UiSkin.PortraitPlate(PortraitPlateSize);
+		_portraitFrame.Position = PortraitPlateOrigin;
+		_portraitFrame.Visible = false;
+
+		Rect2 window = UiSkin.PortraitWindow(PortraitPlateSize);
 		_portrait = new TextureRect
 		{
-			Position = new Vector2(20f, 210f),
-			Size = new Vector2(200f, 230f),
+			Position = window.Position,
+			Size = window.Size,
 			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
-			StretchMode = TextureRect.StretchModeEnum.KeepAspect,
+			StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
 			MouseFilter = Control.MouseFilterEnum.Ignore,
 			Visible = false
 		};
+		_portraitFrame.AddChild(_portrait);
 
-		_panel = new ColorRect { Color = new Color(0f, 0f, 0f, 0.78f), Position = new Vector2(20f, 450f), Size = new Vector2(1112f, 180f), Visible = false };
+		_panel = UiSkin.DialoguePlate(DialogueFrameSize);
+		_panel.Position = DialogueFrameOrigin;
+		_panel.Visible = false;
 
-		// The speaker's name is its own label sitting above the box (not a "Name:" prefix on the
-		// line), tinted with that speaker's colour.
+		// The speaker's name goes in the tab the frame draws for it, which the sheet hangs over the
+		// box's own top-left corner - not above the box, where it used to float.
+		Rect2 tab = UiSkin.DialogueLocal(UiSkin.DialogueTabRegion, DialogueFrameSize);
 		_speakerLabel = new Label
 		{
-			Position = new Vector2(24f, -32f),
-			Size = new Vector2(1064f, 30f),
+			Position = tab.Position + new Vector2(18f, 10f),
+			Size = tab.Size - new Vector2(36f, 20f),
+			VerticalAlignment = VerticalAlignment.Center,
 			MouseFilter = Control.MouseFilterEnum.Ignore
 		};
 		_speakerLabel.AddThemeFontSizeOverride("font_size", 21);
@@ -299,16 +327,24 @@ public partial class DialogueManager : Node
 		_speakerLabel.AddThemeConstantOverride("outline_size", 5);
 		_panel.AddChild(_speakerLabel);
 
-		_dialogueLabel = new Label { Position = new Vector2(16f, 26f), Size = new Vector2(1080f, 146f), AutowrapMode = TextServer.AutowrapMode.WordSmart };
+		Rect2 text = UiSkin.DialogueLocal(UiSkin.DialogueTextRegion, DialogueFrameSize);
+		_dialogueLabel = new Label
+		{
+			Position = text.Position,
+			Size = text.Size,
+			AutowrapMode = TextServer.AutowrapMode.WordSmart,
+			MouseFilter = Control.MouseFilterEnum.Ignore
+		};
 		_dialogueLabel.AddThemeFontSizeOverride("font_size", 20);
 		_panel.AddChild(_dialogueLabel);
 
-		_toastLabel = new Label { Position = new Vector2(20f, 380f), Size = new Vector2(1100f, 60f), AutowrapMode = TextServer.AutowrapMode.WordSmart, Visible = false };
+		// The toast sits above the frame, clear of the portrait plate beside it.
+		_toastLabel = new Label { Position = new Vector2(280f, 258f), Size = new Vector2(852f, 44f), HorizontalAlignment = HorizontalAlignment.Right, AutowrapMode = TextServer.AutowrapMode.WordSmart, Visible = false };
 		_toastLabel.AddThemeColorOverride("font_color", new Color(1f, 0.9f, 0.4f));
 		_toastLabel.AddThemeColorOverride("font_outline_color", Colors.Black);
 		_toastLabel.AddThemeConstantOverride("outline_size", 4);
 
-		_layer.AddChild(_portrait);
+		_layer.AddChild(_portraitFrame);
 		_layer.AddChild(_panel);
 		_layer.AddChild(_toastLabel);
 		AddChild(_layer);
@@ -322,7 +358,7 @@ public partial class DialogueManager : Node
 		_panel.Visible = _isActive;
 		if (!_isActive || _currentNode == null)
 		{
-			if (_portrait != null) _portrait.Visible = false;
+			HidePortrait();
 			return;
 		}
 
@@ -359,7 +395,7 @@ public partial class DialogueManager : Node
 		if (_memoryImage == null) return;
 
 		bool flash = _isActive && _currentData?.Id == "pendant_flash"
-		             && _currentNode?.Id != "headache";   // the headache is the pain, not the memory
+					 && _currentNode?.Id != "headache";   // the headache is the pain, not the memory
 
 		string declared = _isActive ? _currentNode?.PlateImagePath ?? "" : "";
 		string path = declared != "" ? declared : flash ? MemoryCgPath : "";
@@ -384,6 +420,13 @@ public partial class DialogueManager : Node
 
 		_portrait.Texture = texture;
 		_portrait.Visible = texture != null;
+		_portraitFrame.Visible = texture != null;   // the plate is only there to hold a picture
+	}
+
+	private void HidePortrait()
+	{
+		if (_portrait != null) _portrait.Visible = false;
+		if (_portraitFrame != null) _portraitFrame.Visible = false;
 	}
 
 	/// <summary>One colour per speaker. The five named characters are eye/hair-coded; the
@@ -634,6 +677,24 @@ public partial class DialogueManager : Node
 		RegisterDialogue(new DialogueData("library_drawers")
 			.AddNode(new DialogueNode("start", "Aionia Avgerinos")
 				.AddLine("Scattered folders and stacks of dusty papers. Nothing of real importance here.")));
+		RegisterDialogue(new DialogueData("library_sealed_door")
+			.AddNode(new DialogueNode("start", "Aionia Avgerinos")
+				.AddLine("The service door back to the bridgeway. Whatever came down on the other side of it has jammed it solid.")));
+		RegisterDialogue(new DialogueData("library_server_rack")
+			.AddNode(new DialogueNode("start", "Aionia Avgerinos")
+				.AddLine("Racks of storage, still warm. Whatever the archives kept, this is where it was kept.")));
+		RegisterDialogue(new DialogueData("library_bench")
+			.AddNode(new DialogueNode("start", "Aionia Avgerinos")
+				.AddLine("A bench of cut cable and empty spools. Somebody has been re-wiring this corridor by hand, and recently.")));
+		RegisterDialogue(new DialogueData("library_conduit")
+			.AddNode(new DialogueNode("start", "Aionia Avgerinos")
+				.AddLine("The building's pipes, bundled and labelled. One of them is still ticking.")));
+		RegisterDialogue(new DialogueData("library_workbench")
+			.AddNode(new DialogueNode("start", "Mochizuki Yoruka")
+				.AddLine("Don't touch anything down here, senior. Half of it is still live.")));
+		RegisterDialogue(new DialogueData("library_spares")
+			.AddNode(new DialogueNode("start", "Aionia Avgerinos")
+				.AddLine("Crates of spares, every one of them stamped with the Hyperion project number.")));
 		RegisterDialogue(new DialogueData("library_collapsed_shelves")
 			.AddNode(new DialogueNode("start", "Aionia Avgerinos")
 				.AddLine("She moved fast... The main route is completely blocked by these fallen shelves. I'll need to bypass it.")
