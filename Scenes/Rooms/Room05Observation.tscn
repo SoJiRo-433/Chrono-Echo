@@ -6,11 +6,11 @@
 
 [node name="Room05Observation" type="Node2D"]
 script = ExtResource("1_room")
-RoomSize = Vector2(667, 747)
-WorldSize = Vector2(667, 747)
-PlayerStartPosition = Vector2(493, 620)
-ExitPosition = Vector2(280, 630)
-ExitSize = Vector2(56, 70)
+RoomSize = Vector2(1280, 720)
+WorldSize = Vector2(1280, 720)
+PlayerStartPosition = Vector2(924, 638)
+ExitPosition = Vector2(484, 684)
+ExitSize = Vector2(52, 34)
 MaxEchoes = 3
 MaxCaptureSeconds = 8.0
 LevelNumber = 5
@@ -25,4 +25,4 @@ CompletionFlag = "level5_complete"
 script = ExtResource("2_dialogue")
 
 [node name="Player" parent="." instance=ExtResource("3_player")]
-position = Vector2(493, 620)
+position = Vector2(924, 638)

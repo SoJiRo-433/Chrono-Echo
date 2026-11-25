@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using Godot;
 
 /// <summary>Level 6: lobby with the revolving doors, executive office, audit archive, Atrium
@@ -29,7 +29,7 @@ public partial class RoomBusiness : Room
         RoomSize = new Vector2(667, 747);
         PlayerStartPosition = new Vector2(123, 634);
         ExitPosition = new Vector2(192, 108); ExitSize = new Vector2(72, 50);
-        LevelNumber = 6; NextLevelPath = ""; MaxCaptureSeconds = 15f; EchoLifetimeSeconds = 15f; LoopReplay = false;
+        LevelNumber = 6; NextLevelPath = "res://Scenes/Rooms/Room07Atrium.tscn"; MaxCaptureSeconds = 15f; EchoLifetimeSeconds = 15f; LoopReplay = false;
         ExitLockedHint = "STILL SHUT - TALK TO HESIOD, YORUKA AND ADELLAINE AT THE BORDER";
         GameStateManager.Instance?.SetFlag("felix_left", true);
         base._Ready();
@@ -73,7 +73,7 @@ public partial class RoomBusiness : Room
         Add(new Inspectable { Caption = "JK", Size = new Vector2(34, 28), FirstDialogueId = "level6_jacket" }, "HesiodJacket", new Vector2(72, 236));
         Add(new Inspectable { Caption = "DK", Size = new Vector2(38, 30), FirstDialogueId = "level6_desk" }, "Desk", new Vector2(133, 300));
         Add(new Inspectable { Caption = "PO", Size = new Vector2(34, 28), FirstDialogueId = "level6_poster" }, "Poster", new Vector2(172, 226));
-        Add(new Inspectable { Caption = "YORUKA", Size = new Vector2(42, 38), FirstDialogueId = "level6_yoruka_poster" }, "Yoruka", new Vector2(218, 261));
+        Add(new Inspectable { Caption = "YORUKA", Size = new Vector2(42, 38), DrawBox = false, FirstDialogueId = "level6_yoruka_poster", CharacterSheetPath = CharacterSprite.FrontSpritePath(GameStateManager.Yoruka) }, "Yoruka", new Vector2(218, 261));
 
         // --- the archive connector and the audit archive ---
         Floor("Archive connector", new Vector2(312, 262), new Vector2(90, 54), new Color(0.73f, 0.75f, 0.79f));
@@ -117,13 +117,14 @@ public partial class RoomBusiness : Room
             for (int col = 0; col < 3; col++)
                 _decayTiles.Add(Add(new TimeDecayTile { Size = new Vector2(39, 28) }, $"DecayTile{row * 3 + col + 1}", new Vector2(505 + col * 39, 88 + row * 28)));
 
-        _hesiod = Add(new Inspectable { Caption = "HESIOD", Size = new Vector2(44, 42), FirstDialogueId = "level6_hesiod_overlook" }, "Hesiod", new Vector2(330, 112));
+        _hesiod = Add(new Inspectable { Caption = "HESIOD", Size = new Vector2(44, 42), DrawBox = false, FirstDialogueId = "level6_hesiod_overlook", CharacterSheetPath = CharacterSprite.FrontSpritePath(GameStateManager.Hesiod) }, "Hesiod", new Vector2(330, 112));
         _hesiod.Hide();
         // The three at the border stand in a row with a gap each, so E picks the one she is facing
         // rather than whichever of them happens to be nearest.
-        _hesiodAtExit = Add(new Inspectable { Caption = "HESIOD", Size = new Vector2(24, 24), FlagToSet = "level6_talk_hesiod" }, "HesiodAtExit", new Vector2(200, 116));
-        _yorukaAtExit = Add(new Inspectable { Caption = "YORUKA", Size = new Vector2(24, 24), FlagToSet = "level6_talk_yoruka" }, "YorukaAtExit", new Vector2(240, 116));
-        _adellaineAtExit = Add(new Inspectable { Caption = "ADELLAINE", Size = new Vector2(24, 24), FlagToSet = "level6_talk_adellaine" }, "AdellaineAtExit", new Vector2(280, 116));
+        _hesiodAtExit = Add(new Inspectable { Caption = "HESIOD", Size = new Vector2(24, 24), DrawBox = false, FlagToSet = "level6_talk_hesiod", CharacterSheetPath = CharacterSprite.FrontSpritePath(GameStateManager.Hesiod) }, "HesiodAtExit", new Vector2(200, 116));
+        _yorukaAtExit = Add(new Inspectable { Caption = "YORUKA", Size = new Vector2(24, 24), DrawBox = false, FlagToSet = "level6_talk_yoruka",
+            CharacterSheetPath = CharacterSprite.FrontSpritePath(GameStateManager.Yoruka) }, "YorukaAtExit", new Vector2(240, 116));
+        _adellaineAtExit = Add(new Inspectable { Caption = "ADELLAINE", Size = new Vector2(24, 24), DrawBox = false, FlagToSet = "level6_talk_adellaine", CharacterSheetPath = CharacterSprite.FrontSpritePath(GameStateManager.Adellaine) }, "AdellaineAtExit", new Vector2(280, 116));
         _hesiodAtExit.Hide(); _yorukaAtExit.Hide(); _adellaineAtExit.Hide();
     }
 

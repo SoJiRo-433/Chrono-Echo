@@ -52,6 +52,16 @@ public partial class FluctuatingTile : Obstacle
     /// falls on the tiles that opt in here.</summary>
     [Export] public bool GapWhenAbsent { get; set; }
 
+    /// <summary>An inert tile: it stays put, blocks nothing and hurts nobody. Level 7 reuses the
+    /// Atrium's map, whose painted blue tiles would otherwise look like a live hazard in a hub
+    /// where the doc says nothing is trying to kill anyone.</summary>
+    [Export] public bool Harmless { get; set; }
+
+    /// <summary>The tile only phases while this flag is set; without the flag it simply sits
+    /// there. Level 7's Atrium is calm until nightfall, when the flag goes up and the skybridge
+    /// panels start to fade again.</summary>
+    [Export] public string PhaseFlag { get; set; } = "";
+
     public bool IsPresent => _isPresent;
     #endregion
 
@@ -67,10 +77,25 @@ public partial class FluctuatingTile : Obstacle
     {
         if (GameStateManager.Instance != null && GameStateManager.Instance.IsPaused) return;
 
+        if (Harmless)
+        {
+            // An inert tile is simply a painted floor square: it never blocks and never bites.
+            if (!_phaseKnown || !_isPresent)
+            {
+                _phaseKnown = true;
+                _isPresent = true;
+                IsSolid = false;
+            }
+            return;
+        }
+
         bool held = _holdSwitch != null
             ? _holdSwitch.IsActivated
             : _holdOpenFlag != "" && (GameStateManager.Instance?.GetFlag(_holdOpenFlag) ?? false);
         bool present = held || IsPresentAt(Clock);
+
+        // A tile that only phases under a flag sits solid until the flag goes up.
+        if (PhaseFlag != "" && !(GameStateManager.Instance?.GetFlag(PhaseFlag) ?? false)) present = true;
 
         // The first tick has to apply the phase even when it matches the default, or a tile that
         // starts in its "gone" half would keep the Obstacle default and block forever.

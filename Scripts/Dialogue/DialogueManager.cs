@@ -29,12 +29,12 @@ public partial class DialogueManager : Node
 	// Dialogue UI - the frame, its speaker tab and the portrait plate are drawn from Assets/UI.
 	private CanvasLayer _layer;
 	private TextureRect _memoryImage;
-	private TextureRect _portraitFrame;
 	private TextureRect _portrait;
 	private TextureRect _panel;
 	private Label _speakerLabel;
 	private Label _dialogueLabel;
 	private Label _toastLabel;
+	private SceneTreeTimer _toastTimer;
 
 	private string _currentObjective = "";
 	private string _platePath = "";
@@ -47,6 +47,7 @@ public partial class DialogueManager : Node
 	// declares a plate of its own (the Atrium's window) draws it too - the gallery keeps the CGs
 	// apart by flag even while they share a placeholder picture.
 	private const string MemoryCgPath = "res://Assets/blue_light_memory.jpg";
+	private const string PendantMemoryCgPath = "res://Assets/memoryPendant.PNG";
 
 	// The dialogue frame is drawn whole, at the proportions it is drawn at, and pinned near the
 	// bottom of the screen. The speaker tab, the text block and the portrait window are all placed
@@ -54,8 +55,18 @@ public partial class DialogueManager : Node
 	// its proportions whatever the frame is sized to.
 	private static readonly Vector2 DialogueFrameSize = new(957f, 294f);
 	private static readonly Vector2 DialogueFrameOrigin = new(20f, 316f);
-	private static readonly Vector2 PortraitPlateSize = new(240f, 240f / UiSkin.PortraitAspect);
-	private static readonly Vector2 PortraitPlateOrigin = new(20f, 70f);
+	private static readonly Vector2 PortraitFigureSize = new(1320f, 1720f);
+	private static readonly Vector2 PortraitFigureOrigin = new(160f, 75f);
+	private static readonly Vector2 FragmentToastPosition = new(20f, 190f);
+	private static readonly Vector2 FragmentToastSize = new(652f, 44f); /*original size: 852f, 44f*/
+	private static readonly Dictionary<string, Vector2> PortraitOrigins = new()
+	{
+		["Aionia Avgerinos"] = PortraitFigureOrigin,
+		["Mochizuki Yoruka"] = new(225f, 55f),
+		["Adellaine Moriarty"] = PortraitFigureOrigin,
+		["Hesiod Moriarty"] = PortraitFigureOrigin,
+		["Felix Lasarewitch"] = PortraitFigureOrigin
+	};
 
 	#region Public properties
 	[Export] public bool ShowDebugOverlay { get; set; } = true;
@@ -289,24 +300,17 @@ public partial class DialogueManager : Node
 		_memoryImage.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
 		_layer.AddChild(_memoryImage);
 
-		// Portrait slot: filled from res://Assets/Portraits/<speaker>.png when that file exists,
-		// and left hidden - plate and all - when it does not, so the game runs with no portrait
-		// art at all rather than showing an empty frame for every line.
-		_portraitFrame = UiSkin.PortraitPlate(PortraitPlateSize);
-		_portraitFrame.Position = PortraitPlateOrigin;
-		_portraitFrame.Visible = false;
-
-		Rect2 window = UiSkin.PortraitWindow(PortraitPlateSize);
+		// Full-body character art sits to the left of the dialogue and extends behind its
+		// translucent panel, like a visual-novel speaker illustration.
 		_portrait = new TextureRect
 		{
-			Position = window.Position,
-			Size = window.Size,
+			Position = PortraitFigureOrigin,
+			Size = PortraitFigureSize,
 			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
-			StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
+			StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
 			MouseFilter = Control.MouseFilterEnum.Ignore,
 			Visible = false
 		};
-		_portraitFrame.AddChild(_portrait);
 
 		_panel = UiSkin.DialoguePlate(DialogueFrameSize);
 		_panel.Position = DialogueFrameOrigin;
@@ -339,12 +343,12 @@ public partial class DialogueManager : Node
 		_panel.AddChild(_dialogueLabel);
 
 		// The toast sits above the frame, clear of the portrait plate beside it.
-		_toastLabel = new Label { Position = new Vector2(280f, 258f), Size = new Vector2(852f, 44f), HorizontalAlignment = HorizontalAlignment.Right, AutowrapMode = TextServer.AutowrapMode.WordSmart, Visible = false };
+		_toastLabel = new Label { Position = FragmentToastPosition, Size = FragmentToastSize, HorizontalAlignment = HorizontalAlignment.Left, AutowrapMode = TextServer.AutowrapMode.WordSmart, Visible = false };
 		_toastLabel.AddThemeColorOverride("font_color", new Color(1f, 0.9f, 0.4f));
 		_toastLabel.AddThemeColorOverride("font_outline_color", Colors.Black);
 		_toastLabel.AddThemeConstantOverride("outline_size", 4);
 
-		_layer.AddChild(_portraitFrame);
+		_layer.AddChild(_portrait);
 		_layer.AddChild(_panel);
 		_layer.AddChild(_toastLabel);
 		AddChild(_layer);
@@ -398,7 +402,7 @@ public partial class DialogueManager : Node
 					 && _currentNode?.Id != "headache";   // the headache is the pain, not the memory
 
 		string declared = _isActive ? _currentNode?.PlateImagePath ?? "" : "";
-		string path = declared != "" ? declared : flash ? MemoryCgPath : "";
+		string path = declared != "" ? declared : flash ? PendantMemoryCgPath : "";
 
 		if (path != _platePath)
 		{
@@ -409,8 +413,8 @@ public partial class DialogueManager : Node
 		_memoryImage.Visible = path != "";
 	}
 
-	/// <summary>Fills the portrait slot from res://Assets/Portraits/&lt;speaker&gt;.png when that
-	/// file exists, and hides the slot otherwise. Missing art is not an error.</summary>
+	/// <summary>Shows the speaker's full-body art from res://Assets/Portraits when present.
+	/// Missing art is not an error.</summary>
 	private void RefreshPortrait(string speaker)
 	{
 		if (_portrait == null) return;
@@ -418,15 +422,14 @@ public partial class DialogueManager : Node
 		string path = PortraitFolder + speaker.Replace(' ', '_') + ".png";
 		Texture2D texture = ResourceLoader.Exists(path) ? GD.Load<Texture2D>(path) : null;
 
+		_portrait.Position = PortraitOrigins.TryGetValue(speaker, out Vector2 origin) ? origin : PortraitFigureOrigin;
 		_portrait.Texture = texture;
 		_portrait.Visible = texture != null;
-		_portraitFrame.Visible = texture != null;   // the plate is only there to hold a picture
 	}
 
 	private void HidePortrait()
 	{
 		if (_portrait != null) _portrait.Visible = false;
-		if (_portraitFrame != null) _portraitFrame.Visible = false;
 	}
 
 	/// <summary>One colour per speaker. The five named characters are eye/hair-coded; the
@@ -454,7 +457,12 @@ public partial class DialogueManager : Node
 		if (_toastLabel == null) return;
 		_toastLabel.Text = message;
 		_toastLabel.Visible = true;
-		GetTree().CreateTimer(6.0).Timeout += () => { if (IsInstanceValid(_toastLabel)) _toastLabel.Visible = false; };
+		_toastTimer = GetTree().CreateTimer(6.0);
+		_toastTimer.Timeout += () =>
+		{
+			if (IsInstanceValid(_toastLabel) && _toastTimer != null && !_toastTimer.TimeLeft.Equals(0f)) return;
+			if (IsInstanceValid(_toastLabel)) _toastLabel.Visible = false;
+		};
 	}
 	#endregion
 
@@ -556,7 +564,7 @@ public partial class DialogueManager : Node
 				.AddLine("I need to test this out.")
 				.SetNext("echo_instruction"))
 			.AddNode(new DialogueNode("echo_instruction", "Narrator")
-				.AddLine("Press T to start recording movement. Press T again to stop. Press R to project the Echo.")
+				.AddLine("Press R to start recording movement. Press R again to stop and project your Echo. (Show a 5-second recording bar.)")
 				.SetNext("echo_reaction"))
 			.AddNode(new DialogueNode("echo_reaction", "Aionia Avgerinos")
 				.AddLine("Hah…Amazing")
@@ -772,7 +780,7 @@ public partial class DialogueManager : Node
 				.AddLine("It is a specific problem! Ugh, why do I have to explain this to you?")
 				.SetNext("instr"))
 			.AddNode(new DialogueNode("instr", "Instructions")
-				.AddLine("Press T to record, then R to project your Echo. It replays your recording.")
+				.AddLine("Press R to record. Your Echo repeats your recording on a loop. (Show a 5-second recording bar.)")
 				.SetNext("yoruka3"))
 			.AddNode(new DialogueNode("yoruka3", "Mochizuki Yoruka")
 				.AddLine("Just so we're clear, I'm not standing on the plate. The pendant copies you, remember?")
@@ -796,7 +804,7 @@ public partial class DialogueManager : Node
 				.SetChoiceTimeout(8f)   // the bridge is collapsing: not deciding is its own answer
 				.AddChoice(new DialogueChoice("Grab her hand.", "a_hand", "bridge_rescued_yoruka", true, null, null, GameStateManager.Yoruka, 2))
 				.AddChoice(new DialogueChoice("Tell her to jump onto your Echo's platform.", "b_jump", "bridge_rescued_yoruka", true, null, null, GameStateManager.Yoruka, 1))
-				.AddChoice(new DialogueChoice("Keep moving. She'll catch up.", "c_go", "bridge_abandoned_yoruka", true, null, null, GameStateManager.Yoruka, -1)))
+				.AddChoice(new DialogueChoice("Keep moving. She'll catch up.", "c_go", "bridge_abandoned_yoruka", true, null, null, GameStateManager.Yoruka, -3)))
 			.AddNode(new DialogueNode("a_hand", "Aionia Avgerinos")
 				.AddLine("I've got you.")
 				.SetNext("a_react"))
@@ -830,7 +838,7 @@ public partial class DialogueManager : Node
 				.AddLine("In front of you is a terminal. You can solve this puzzle by using an Echo or let Yoruka solve it by herself.")
 				.AddLine("*Either way, the terminal opens a path to the stairway.")
 				.AddChoice(new DialogueChoice("Let Yoruka decode it.", "let_yoruka", "yoruka_solved_terminal", hiddenIfFlag: "yoruka_solved_terminal", affectionCharacter: GameStateManager.Yoruka, affectionDelta: 2))
-				.AddChoice(new DialogueChoice("Decode it by yourself.", "self", "atrium_terminal_self", hiddenIfFlag: "atrium_terminal_self", affectionCharacter: GameStateManager.Yoruka, affectionDelta: 1)))
+				.AddChoice(new DialogueChoice("Decode it by yourself.", "self", "atrium_terminal_self", hiddenIfFlag: "atrium_terminal_self", affectionCharacter: GameStateManager.Yoruka, affectionDelta: 0)))
 			.AddNode(new DialogueNode("let_yoruka", "Mochizuki Yoruka")
 				.AddLine("Heh! The pattern isn't random. It's a Fibonacci offset with a time delay. Of course they hid a lock in my favorite kind of problem.")
 				.SetNext("enjoy"))
@@ -926,20 +934,217 @@ public partial class DialogueManager : Node
 		RegisterFragment(new MemoryFragment("scan", "Fragment F4 - The Scan", "Your temporal signature is thinning across timelines. The pendant is an anchor.", "F4_scan"));
 		RegisterFragment(new MemoryFragment("footage", "Fragment F5 - The Footage", "Aionia at the Hyperion prototype, the pendant falling, and a second shadow reaching for her.", "F5_footage"));
 		RegisterFragment(new MemoryFragment("ledger", "Fragment F6 - The Ledger", "A hidden containment account and Hesiod's note about Lasarewitch money.", "F6_ledger"));
+		RegisterFragment(new MemoryFragment("resonance", "Fragment F9 - Resonance", "Every timeline ends unless the variable that built the machine is absent. That variable is Aionia.", "F9_resonance"));
+		RegisterFragment(new MemoryFragment("divergence", "Fragment F10 - The Divergence", "An override bearing Aionia's credentials was logged four minutes before the explosion, while she was somewhere else.", "F10_divergence"));
 		RegisterLevelsFourToSix();
+		RegisterLevelSeven();
+		RegisterLevelEight();
+		RegisterLevelNine();
+		RegisterLevelTen();
+	}
+
+	// Level 8 dialogue is kept separate from the Atrium hub so its clues and choices remain local.
+	private void RegisterLevelEight()
+	{
+		RegisterDialogue(new DialogueData("level8_intro").AddNode(new DialogueNode("start", "Narrator")
+			.AddLine("The time research facility flickers between the day it was built and the night it fell silent.")
+			.AddLine("Pale students walk the same paths through the classrooms, unaware of you.").SetNext("objective"))
+			.AddNode(new DialogueNode("objective", "Objective").AddLine("Explore the classroom hallway, then find a way into the record archive.")));
+		RegisterDialogue(new DialogueData("level8_chalkboard").AddNode(new DialogueNode("start", "Aionia Avgerinos")
+			.AddLine("Look at the board. Whoever wrote that equation, they were scared.").SetNext("hesiod"))
+			.AddNode(new DialogueNode("hesiod", "Hesiod Moriarty").AddLine("Or very excited. In this field, they look the same.")));
+		RegisterDialogue(new DialogueData("level8_yoruka").AddNode(new DialogueNode("start", "Mochizuki Yoruka")
+			.AddLine("...You were so patient with me. I forgot that.")
+			.AddChoice(new DialogueChoice("You were worth being patient with.", "warm", affectionCharacter: GameStateManager.Yoruka, affectionDelta: 1.5f))
+			.AddChoice(new DialogueChoice("I wish I could remember it.", "remember", affectionCharacter: GameStateManager.Yoruka, affectionDelta: 1.5f))
+			.AddChoice(new DialogueChoice("Keep moving. We can’t linger here.", "cold", affectionCharacter: GameStateManager.Yoruka, affectionDelta: -1.5f)))
+			.AddNode(new DialogueNode("warm", "Mochizuki Yoruka").AddLine("Then let’s make a new memory.").SetFlagOnEnter("level8_yoruka_kind"))
+			.AddNode(new DialogueNode("remember", "Mochizuki Yoruka").AddLine("Maybe this time, we can keep it.").SetFlagOnEnter("level8_yoruka_kind"))
+			.AddNode(new DialogueNode("cold", "Mochizuki Yoruka").AddLine("Right. We should keep going.").SetFlagOnEnter("level8_yoruka_cold")));
+		RegisterDialogue(new DialogueData("level8_classroom").AddNode(new DialogueNode("start", "Narrator")
+			.AddLine("The pale outline turns toward you, then dissolves into the classroom's old light.")));
+		RegisterDialogue(new DialogueData("level8_whiteboard").AddNode(new DialogueNode("start", "Narrator").AddLine("2. Hyperion safety margins. Someone has circled ‘unacceptable’ three times.")));
+		RegisterDialogue(new DialogueData("level8_minutes").AddNode(new DialogueNode("start", "Narrator").AddLine("Board notes. Felix wanted the project shut down. The professors refused.")));
+		RegisterDialogue(new DialogueData("level8_desk").AddNode(new DialogueNode("start", "Narrator").AddLine("A faculty desk. It belongs to someone named Sasha Ackerman.")));
+		RegisterDialogue(new DialogueData("level8_locker").AddNode(new DialogueNode("start", "Narrator").AddLine("A faculty locker. It belongs to someone named Enialle Cetnavares.")));
+		RegisterDialogue(new DialogueData("level8_envelope").AddNode(new DialogueNode("start", "Narrator").AddLine("An envelope addressed to Felix. Read it publicly or keep it private?")
+			.AddChoice(new DialogueChoice("Read it aloud.", "public", affectionCharacter: GameStateManager.Yoruka, affectionDelta: -1).AddAffection(GameStateManager.Adellaine, -1).AddAffection(GameStateManager.Hesiod, 0.5f))
+			.AddChoice(new DialogueChoice("Keep it private.", "private")))
+			.AddNode(new DialogueNode("public", "Aionia Avgerinos").AddLine("By the time you read this, I’ll be gone from every timeline. Don’t look for me. I’m sorry I never told you. —A.").SetFlagOnEnter("READ_LETTER_PUBLIC"))
+			.AddNode(new DialogueNode("private", "Narrator").AddLine("You fold the letter and keep its words to yourself.").SetFlagOnEnter("READ_LETTER_PRIVATE")));
+		RegisterDialogue(new DialogueData("level8_resonance").AddNode(new DialogueNode("start", "Recording")
+			.AddLine("If you’re hearing this, then it worked, and I’ve forgotten. I’m sorry. I found something in the data I couldn’t un-see.")
+			.AddLine("Every timeline ends. Everyone. Unless the variable that built the machine isn’t there to build it. That variable is me.")
+			.AddLine("Don’t let anyone stop you from remembering. And please... don’t let him hold on too tightly.").SetNext("fragment"))
+			.AddNode(new DialogueNode("fragment", "Narrator").AddLine("FRAGMENT F9 ACQUIRED: Resonance.").SetNext("decision"))
+			.AddNode(new DialogueNode("decision", "Aionia Avgerinos").AddLine("She wants to erase herself to save everyone. What do we do?")
+				.AddChoice(new DialogueChoice("I’m not going to disappear. I’ll find another way.", "reject", affectionCharacter: GameStateManager.Felix, affectionDelta: 2)
+					.AddAffection(GameStateManager.Hesiod, 1).AddAffection(GameStateManager.Adellaine, 1).AddAffection(GameStateManager.Yoruka, 1))
+				.AddChoice(new DialogueChoice("If it saves everyone, maybe she was right.", "accept", affectionCharacter: GameStateManager.Felix, affectionDelta: -4)
+					.AddAffection(GameStateManager.Hesiod, -4).AddAffection(GameStateManager.Adellaine, -4).AddAffection(GameStateManager.Yoruka, -4))
+				.AddChoice(new DialogueChoice("I don’t know what to believe yet.", "uncertain")))
+			.AddNode(new DialogueNode("reject", "Hesiod Moriarty").AddLine("Then we keep looking. We won’t give up on you.").SetFlagOnEnter("REJECT_ERASURE").SetNext("done"))
+			.AddNode(new DialogueNode("accept", "Mochizuki Yoruka").AddLine("I understand why she chose it. I hate that she had to.").SetFlagOnEnter("ACCEPT_ERASURE").SetNext("done"))
+			.AddNode(new DialogueNode("uncertain", "Adellaine Moriarty").AddLine("We can decide when we know more.").SetNext("done"))
+			.AddNode(new DialogueNode("done", "Narrator").AddLine("The recording fades. The security mechanism waits ahead.")));
+		RegisterDialogue(new DialogueData("level8_hesiod").AddNode(new DialogueNode("start", "Hesiod Moriarty").AddLine("You want me to trust the machine with your future? Then tell me what you learned in that recording.").SetNext("end"))
+			.AddNode(new DialogueNode("end", "Hesiod Moriarty").AddLine("I trust you. I’ll stand with you.").SetFlagOnEnter("level8_hesiod_trusted")));
+		RegisterDialogue(new DialogueData("level8_adellaine").AddNode(new DialogueNode("start", "Adellaine Moriarty").AddLine("I’m not stepping through unless we’re honest about what this could cost.").SetNext("end"))
+			.AddNode(new DialogueNode("end", "Adellaine Moriarty").AddLine("All right. You have my trust.").SetFlagOnEnter("level8_adellaine_trusted")));
+		RegisterDialogue(new DialogueData("level8_yoruka_trust").AddNode(new DialogueNode("start", "Mochizuki Yoruka").AddLine("I’m scared, but I believe you. Let’s face the next door together.").SetFlagOnEnter("level8_yoruka_trusted")));
+		RegisterDialogue(new DialogueData("level8_clear").AddNode(new DialogueNode("start", "Narrator").AddLine("The security mechanism accepts the party. Sector Alpha opens beyond the time research facility.")));
+	}
+
+	// Level 9 follows the PDF's Sector Alpha sequence: chess lock, shared office, divergence
+	// simulation, damaged prototype, then the confrontation at the inner core.
+	private void RegisterLevelNine()
+	{
+		RegisterDialogue(new DialogueData("level9_intro").AddNode(new DialogueNode("start", "Narrator")
+			.AddLine("Sector Alpha's inner door is a chess lock. Beyond it, the facility keeps the memories it was built to contain.")
+			.AddLine("Felix's voice crackles over the intercom. Hesiod hears him and quietly photographs the speaker.").SetNext("objective"))
+			.AddNode(new DialogueNode("objective", "Objective").AddLine("Cross the chessboard to the opposing king. An Echo can draw the pieces away.")));
+		RegisterDialogue(new DialogueData("level9_intercom").AddNode(new DialogueNode("start", "Felix Lasarewitch")
+			.AddLine("You've come far. Faster than I expected. ...I'm glad. I would like you to do the puzzle for me, Aionia. You always won this one.")
+			.AddChoice(new DialogueChoice("Stay there. We'll catch up to you.", "answer", affectionCharacter: GameStateManager.Felix, affectionDelta: 1))
+			.AddChoice(new DialogueChoice("Ignore the intercom and solve the lock.", "quiet"))
+			.AddChoice(new DialogueChoice("Stop watching and help us!", "answer_cold", affectionCharacter: GameStateManager.Felix, affectionDelta: -1)))
+			.AddNode(new DialogueNode("answer", "Felix Lasarewitch").AddLine("Of course. I'll wait.").SetFlagOnEnter("level9_intercom_answered"))
+			.AddNode(new DialogueNode("quiet", "Felix Lasarewitch").AddLine("You're quiet. I remember that.").SetFlagOnEnter("level9_intercom_ignored"))
+			.AddNode(new DialogueNode("answer_cold", "Felix Lasarewitch").AddLine("No. You have to do this by yourself.").SetFlagOnEnter("level9_intercom_rebuffed")));
+		RegisterDialogue(new DialogueData("level9_whiteboard").AddNode(new DialogueNode("start", "Narrator").AddLine("Two handwritings. His corrects mine. Mine corrects his. We were never alone in this equation.")));
+		RegisterDialogue(new DialogueData("level9_mugs").AddNode(new DialogueNode("start", "Aionia Avgerinos").AddLine("One is chipped. I think I did that. He kept it anyway.")));
+		RegisterDialogue(new DialogueData("level9_chair").AddNode(new DialogueNode("start", "Aionia Avgerinos").AddLine("It's still warm. How is it still warm?").SetNext("memory"))
+			.AddNode(new DialogueNode("memory", "Felix Lasarewitch").AddLine("You keep working as if the sun is going to apologize for setting.").SetNext("answer"))
+			.AddNode(new DialogueNode("answer", "Aionia Avgerinos").AddLine("Do you ever not follow me?").SetNext("felix"))
+			.AddNode(new DialogueNode("felix", "Felix Lasarewitch").AddLine("I tried once. It lasted four minutes.").SetNext("narrator"))
+			.AddNode(new DialogueNode("narrator", "Narrator").AddLine("They were so close. You envy both of them.")));
+		RegisterDialogue(new DialogueData("level9_drawer").AddNode(new DialogueNode("start", "Narrator").AddLine("A dried flower. A ticket stub. A note: 'For when you remember.'").SetFlagOnEnter("level9_drawer_found")));
+		RegisterDialogue(new DialogueData("level9_gear_wound").AddNode(new DialogueNode("start", "Narrator").AddLine("You force the gear forward. Its teeth catch with a dull metallic clunk. Record the motion, then send an Echo back to unwind it.")));
+		RegisterDialogue(new DialogueData("level9_machine_restored").AddNode(new DialogueNode("start", "Narrator")
+			.AddLine("The machine begins to hum. You remember this sound from somewhere that isn't here.")
+			.AddLine("A memory returns: Felix stopped you from stepping into the prototype by triggering the explosion with your pendant.")
+			.AddLine("The memory fades. You tell your companions what you remembered. There must be another way.").SetNext("objective"))
+			.AddNode(new DialogueNode("objective", "Objective").AddLine("Confront Felix at the inner core.")));
+		RegisterDialogue(new DialogueData("level9_variable_one").AddNode(new DialogueNode("start", "Narrator").AddLine("The simulation lays out the timeline where you explored other possibilities for Project Hyperion.")));
+		RegisterDialogue(new DialogueData("level9_variable_two").AddNode(new DialogueNode("start", "Narrator").AddLine("Your professors and investors kept the project moving despite its vanishingly small chance of success.")));
+		RegisterDialogue(new DialogueData("level9_variable_three").AddNode(new DialogueNode("start", "Narrator").AddLine("OVERRIDE: A.A. // 4 MIN PRIOR. You were in another room. The signature is yours.").SetNext("aionia"))
+			.AddNode(new DialogueNode("aionia", "Aionia Avgerinos").AddLine("Someone used my name. Or someone was me.")));
+		RegisterDialogue(new DialogueData("level9_terminal_read").AddNode(new DialogueNode("start", "Narrator")
+			.AddLine("Every line without you survives. Every line with you collapses.").SetNext("reaction"))
+			.AddNode(new DialogueNode("reaction", "Hesiod Moriarty").AddLine("Convenient. That doesn't make it right.").SetNext("fragment"))
+			.AddNode(new DialogueNode("fragment", "Narrator").AddLine("FRAGMENT F10 ACQUIRED: The Divergence.")));
+		RegisterDialogue(new DialogueData("level9_felix").AddNode(new DialogueNode("start", "Hesiod Moriarty")
+			.AddLine("Lasarewitch. Keep your camera pointed elsewhere. I have eleven photographs of you at the explosion.").SetNext("adellaine"))
+			.AddNode(new DialogueNode("adellaine", "Adellaine Moriarty").AddLine("You hurt people, Felix. People died.").SetNext("felix"))
+			.AddNode(new DialogueNode("felix", "Felix Lasarewitch").AddLine("I'm aware. I'm not here for them. I stopped time for you. Every second I'm not with you is wasted. Stay. Please. Don't go through that door.")
+				.AddChoice(new DialogueChoice("I can't stay like this. You can come with us.", "reject", affectionCharacter: GameStateManager.Felix, affectionDelta: 1))
+				.AddChoice(new DialogueChoice("Okay. I'll stay with you.", "fed", flagToSet: "FELIX_BAD_FED", affectionCharacter: GameStateManager.Felix, affectionDelta: 3))
+				.AddChoice(new DialogueChoice("I'll stay only if you let time start again.", "bargain", flagToSet: "FELIX_GOOD_PATH", affectionCharacter: GameStateManager.Felix, affectionDelta: 2))
+				.AddChoice(new DialogueChoice("Show him the letter.", "letter", flagToSet: "REJECT_ERASURE_CONFRONTED", requiredFlag: "REJECT_ERASURE")))
+			.AddNode(new DialogueNode("reject", "Felix Lasarewitch").AddLine("Then let me come with you.").SetFlagOnEnter("level9_felix_choice").SetNext("end"))
+			.AddNode(new DialogueNode("fed", "Felix Lasarewitch").AddLine("Thank you.").SetFlagOnEnter("level9_felix_choice").SetNext("end"))
+			.AddNode(new DialogueNode("bargain", "Felix Lasarewitch").AddLine("That is a harder bargain than I'd like.").SetFlagOnEnter("level9_felix_choice").SetNext("end"))
+			.AddNode(new DialogueNode("letter", "Felix Lasarewitch").AddLine("You meant to leave without telling me.").SetFlagOnEnter("level9_felix_choice").SetNext("end"))
+			.AddNode(new DialogueNode("end", "Narrator").AddLine("The inner core door waits. The next step is yours.")));
+		RegisterDialogue(new DialogueData("level9_clear").AddNode(new DialogueNode("start", "Narrator").AddLine("The threshold of Sector Alpha's inner core falls silent. The machine, the override, and Felix's choice are no longer hidden from you.")));
+	}
+
+	// Level 10 is the final rooftop: walk to the last Echo, hear the companions' answer, and make
+	// the timeline choice at the central console.
+	private void RegisterLevelTen()
+	{
+		RegisterDialogue(new DialogueData("level10_intro").AddNode(new DialogueNode("start", "Narrator")
+			.AddLine("You step onto a rooftop beneath every sky at once. The companions appear around you as translucent echoes of themselves.")
+			.AddLine("The rings of light converge on a console at the center of the roof.").SetNext("objective"))
+			.AddNode(new DialogueNode("objective", "Objective").AddLine("Reach the last Echo of Aionia at the console.")));
+		RegisterDialogue(new DialogueData("level10_echo_many").AddNode(new DialogueNode("start", "??? Aionia")
+			.AddLine("You made it. Good. I wasn't sure you would.").SetNext("memory"))
+			.AddNode(new DialogueNode("memory", "??? Aionia").AddLine("You collected them all. ...Then you know what I know. And you still hesitate.").SetNext("plan"))
+			.AddNode(new DialogueNode("plan", "??? Aionia").AddLine("One button, one sacrifice, one saved universe. That's what I believed when I planned to erase myself.").SetNext("end"))
+			.AddNode(new DialogueNode("end", "Aionia Avgerinos").AddLine("I won't leave them without an answer.").SetFlagOnEnter("level10_echo_spoken")));
+		RegisterDialogue(new DialogueData("level10_echo_standard").AddNode(new DialogueNode("start", "??? Aionia")
+			.AddLine("You made it. Good. I wasn't sure you would.").SetNext("memory"))
+			.AddNode(new DialogueNode("memory", "??? Aionia").AddLine("I was going to save them. It's the same thing, from where I stood.").SetNext("plan"))
+			.AddNode(new DialogueNode("plan", "??? Aionia").AddLine("One button, one sacrifice, one saved universe. That was my plan.").SetNext("end"))
+			.AddNode(new DialogueNode("end", "Aionia Avgerinos").AddLine("I won't leave them without an answer.").SetFlagOnEnter("level10_echo_spoken")));
+		RegisterDialogue(new DialogueData("level10_echo_few").AddNode(new DialogueNode("start", "??? Aionia")
+			.AddLine("You don't remember enough to choose. ...That's the saddest outcome. Not death. Not knowing.").SetNext("end"))
+			.AddNode(new DialogueNode("end", "Aionia Avgerinos").AddLine("The answer stays beyond reach.").SetFlagOnEnter("level10_echo_spoken")));
+		RegisterDialogue(new DialogueData("level10_echo_repeat").AddNode(new DialogueNode("start", "??? Aionia").AddLine("You've heard what I have to say. The choice is yours now.")));
+
+		RegisterDialogue(new DialogueData("level10_companion_repeat").AddNode(new DialogueNode("start", "Narrator").AddLine("The echo fades. You have already heard what they needed to say.")));
+		RegisterDialogue(new DialogueData("level10_companion_yoruka_short").AddNode(new DialogueNode("start", "Mochizuki Yoruka").AddLine("Whatever you choose, I want you to know that I'm here. I won't ask you to be someone else.")));
+		RegisterDialogue(new DialogueData("level10_companion_adellaine_short").AddNode(new DialogueNode("start", "Adellaine Moriarty").AddLine("I want one thing that's mine: to stand beside you while you decide.")));
+		RegisterDialogue(new DialogueData("level10_companion_hesiod_short").AddNode(new DialogueNode("start", "Hesiod Moriarty").AddLine("No matter what happens, I'll remember this moment clearly.")));
+		RegisterDialogue(new DialogueData("level10_companion_felix_short").AddNode(new DialogueNode("start", "Felix Lasarewitch").AddLine("I need you, Aionia. But I won't speak for the others.")));
+
+		RegisterDialogue(new DialogueData("level10_companion_yoruka_route").AddNode(new DialogueNode("start", "Mochizuki Yoruka")
+			.AddLine("I used to need people to tell me I was enough. I just need you to stay.")
+			.AddChoice(new DialogueChoice("You were always enough. Heal for yourself, not for me.", "good", flagToSet: "level10_yoruka_good", affectionCharacter: GameStateManager.Yoruka, affectionDelta: 1))
+			.AddChoice(new DialogueChoice("Stay with me, always.", "bad", flagToSet: "level10_yoruka_bad", affectionCharacter: GameStateManager.Yoruka, affectionDelta: 1))
+			.AddChoice(new DialogueChoice("Don't follow me.", "bad", flagToSet: "level10_yoruka_bad", affectionCharacter: GameStateManager.Yoruka, affectionDelta: -2)))
+			.AddNode(new DialogueNode("good", "Mochizuki Yoruka").AddLine("Then I'll choose my own way forward.").SetNext("end"))
+			.AddNode(new DialogueNode("bad", "Mochizuki Yoruka").AddLine("I don't know if I can let go.").SetNext("end"))
+			.AddNode(new DialogueNode("end", "Narrator").AddLine("Yoruka returns to the circle of echoes.")));
+		RegisterDialogue(new DialogueData("level10_companion_adellaine_route").AddNode(new DialogueNode("start", "Adellaine Moriarty")
+			.AddLine("I've lived for other people's approval my entire life. I want one thing that's mine. I want you.")
+			.AddChoice(new DialogueChoice("Let's build a life where you choose it.", "good", flagToSet: "level10_adellaine_good", affectionCharacter: GameStateManager.Adellaine, affectionDelta: 1))
+			.AddChoice(new DialogueChoice("I need you for the mission.", "bad", flagToSet: "level10_adellaine_bad", affectionCharacter: GameStateManager.Adellaine, affectionDelta: -1)))
+			.AddNode(new DialogueNode("good", "Adellaine Moriarty").AddLine("Then I'll choose it for myself.").SetNext("end"))
+			.AddNode(new DialogueNode("bad", "Adellaine Moriarty").AddLine("I thought you understood.").SetNext("end"))
+			.AddNode(new DialogueNode("end", "Narrator").AddLine("Adellaine returns to the circle of echoes.")));
+		RegisterDialogue(new DialogueData("level10_companion_hesiod_route").AddNode(new DialogueNode("start", "Hesiod Moriarty")
+			.AddLine("I never let anyone take my photo. But I'd take yours every day for the rest of my life.")
+			.AddChoice(new DialogueChoice("Then let's have that life.", "good", flagToSet: "level10_hesiod_good", affectionCharacter: GameStateManager.Hesiod, affectionDelta: 1))
+			.AddChoice(new DialogueChoice("Use my fragments if you have to.", "bad", flagToSet: "level10_hesiod_bad", affectionCharacter: GameStateManager.Hesiod, affectionDelta: -1)))
+			.AddNode(new DialogueNode("good", "Hesiod Moriarty").AddLine("I'll take care of them. And of you.").SetNext("end"))
+			.AddNode(new DialogueNode("bad", "Hesiod Moriarty").AddLine("I hoped you'd trust me more than that.").SetNext("end"))
+			.AddNode(new DialogueNode("end", "Narrator").AddLine("Hesiod returns to the circle of echoes.")));
+		RegisterDialogue(new DialogueData("level10_companion_felix_route").AddNode(new DialogueNode("start", "Felix Lasarewitch")
+			.AddLine("I need you, Aionia.")
+			.AddChoice(new DialogueChoice("Let go, and I'll stay.", "good", flagToSet: "level10_felix_good", affectionCharacter: GameStateManager.Felix, affectionDelta: 1))
+			.AddChoice(new DialogueChoice("Hold on. I'll stay forever.", "bad", flagToSet: "level10_felix_bad", affectionCharacter: GameStateManager.Felix, affectionDelta: 1))
+			.AddChoice(new DialogueChoice("Then we go together.", "together", flagToSet: "level10_felix_together", affectionCharacter: GameStateManager.Felix, affectionDelta: 1)))
+			.AddNode(new DialogueNode("good", "Felix Lasarewitch").AddLine("I'll try. I don't know how, but I'll try.").SetNext("end"))
+			.AddNode(new DialogueNode("bad", "Felix Lasarewitch").AddLine("Then I never have to lose you again.").SetNext("end"))
+			.AddNode(new DialogueNode("together", "Felix Lasarewitch").AddLine("Together, then. Always.").SetNext("end"))
+			.AddNode(new DialogueNode("end", "Narrator").AddLine("Felix returns to the circle of echoes.")));
+
+		RegisterDialogue(new DialogueData("level10_final_choice").AddNode(new DialogueNode("start", "Narrator")
+			.AddLine("One button says ERASE. A second says REPAIR. You can also leave the console untouched.")
+			.AddChoice(new DialogueChoice("ERASE. Complete the original plan.", "erase"))
+			.AddChoice(new DialogueChoice("REPAIR. Fix the timeline and remain.", "repair"))
+			.AddChoice(new DialogueChoice("Do nothing.", "wait")))
+		.AddNode(new DialogueNode("erase", "Aionia Avgerinos").AddLine("Then let my absence be the thing that saves them.").SetFlagOnEnter("final_choice_erase"))
+		.AddNode(new DialogueNode("repair", "Aionia Avgerinos").AddLine("There has to be another way. I'll repair the timeline and stay.").SetFlagOnEnter("final_choice_repair"))
+			.AddNode(new DialogueNode("wait", "Narrator").AddLine("The console dims. The answer remains beyond reach.").SetFlagOnEnter("final_choice_do_nothing")));
+		RegisterDialogue(new DialogueData("level10_final_choice_replay").AddNode(new DialogueNode("start", "Narrator")
+			.AddLine("One button says ERASE. A second says REPAIR. You can also open the Project Theia Containment Vault.")
+			.AddChoice(new DialogueChoice("ERASE. Complete the original plan.", "erase"))
+			.AddChoice(new DialogueChoice("REPAIR. Fix the timeline and remain.", "repair"))
+			.AddChoice(new DialogueChoice("Do nothing.", "wait"))
+			.AddChoice(new DialogueChoice("Open the Project Theia Containment Vault.", "true_ending", requiredFlag: "true_ending_unlocked")))
+		.AddNode(new DialogueNode("erase", "Aionia Avgerinos").AddLine("Then let my absence be the thing that saves them.").SetFlagOnEnter("final_choice_erase"))
+		.AddNode(new DialogueNode("repair", "Aionia Avgerinos").AddLine("There has to be another way. I'll repair the timeline and stay.").SetFlagOnEnter("final_choice_repair"))
+			.AddNode(new DialogueNode("wait", "Narrator").AddLine("The console dims. The answer remains beyond reach.").SetFlagOnEnter("final_choice_do_nothing"))
+			.AddNode(new DialogueNode("true_ending", "Narrator").AddLine("A hidden door opens onto the Project Theia Containment Vault. A way toward the truth no one could reach before.").SetFlagOnEnter("final_choice_true_ending")));
+		RegisterDialogue(new DialogueData("level10_clear").AddNode(new DialogueNode("start", "Narrator").AddLine("The rooftop light folds around you. What comes next is yours to carry.")));
 	}
 
 	private void RegisterLevelsFourToSix()
 	{
 		RegisterDialogue(new DialogueData("level4_heavy_door")
-			.AddNode(new DialogueNode("start", "Narrator").AddLine("A door caught your eye, someone is in there. Maybe you should check it out.").AddLine("Objective: Open the quarantine door.").SetNext("code"))
+			.AddNode(new DialogueNode("start", "Narrator").AddLine("A door caught your eye, someone is in there. Maybe you should check it out.").SetNext("code"))
 			.AddNode(new DialogueNode("code", "Mochizuki Yoruka").AddLine("The sign says 4, ?, 7, 3. The digits add up to 15. The missing digit is 1.").SetNext("instruction"))
 			.AddNode(new DialogueNode("instruction", "Instructions").AddLine("Enter the code, record a path to the pressure plate, then project your Echo.").SetNext("dialogue"))
 			.AddNode(new DialogueNode("dialogue", "Adellaine Moriarty").AddLine("Don't open that! Unless neither of you is phased. Are you phased?")
 				.AddChoice(new DialogueChoice("I don’t think we are.", "answer")))
 			.AddNode(new DialogueNode("answer", "Aionia Avgerinos").AddLine("Are we what ?!").SetNext("let_in"))
 			.AddNode(new DialogueNode("let_in", "Adellaine Moriarty").AddLine("Alright…I’ll let you in, but I will scan you to make sure. Got it?").SetNext("yes"))
-			.AddNode(new DialogueNode("yes", "Aionia Avgerinos").AddLine("Yes yes now come on!")));
+			.AddNode(new DialogueNode("yes", "Aionia Avgerinos").AddLine("Yes yes now come on!").SetNext("objective"))
+			// An objective of its own, so the HUD banner carries it: the level's first job is
+			// the quarantine door, and the banner is where the player looks for it.
+			.AddNode(new DialogueNode("objective", "Objective").AddLine("Open the quarantine door.")));
 
 		RegisterDialogue(new DialogueData("level4_triage_encounter")
 			.AddNode(new DialogueNode("start", "Adellaine Moriarty").AddLine("Stop right there. Both of you.").SetNext("yoruka"))
@@ -995,7 +1200,9 @@ public partial class DialogueManager : Node
 			.AddNode(new DialogueNode("trust", "Adellaine Moriarty").AddLine("Because I'm terrified, and people who are terrified don't lie well.").SetNext("f4"))
 			.AddNode(new DialogueNode("brother", "Adellaine Moriarty").AddLine("He's tall, annoyingly charming, always carrying a camera. Everyone loves him. ...And he's my brother.").SetNext("hesiod_point"))
 			.AddNode(new DialogueNode("hesiod_point", "Hesiod Moriarty").AddLine("She's kind of scary. I like her.").SetNext("f4"))
-			.AddNode(new DialogueNode("f4", "Narrator").AddLine("FRAGMENT F4 ACQUIRED: The Scan.").SetFlagOnEnter("adellaine_joined")));
+			.AddNode(new DialogueNode("f4", "Narrator").AddLine("FRAGMENT F4 ACQUIRED: The Scan.").SetFlagOnEnter("adellaine_joined").SetNext("objective"))
+			// What is left of the level: the sealed case, and the gate sign in the hall.
+			.AddNode(new DialogueNode("objective", "Objective").AddLine("Take the sealed case. Then read the gate sign.")));
 
 		RegisterDialogue(new DialogueData("level4_yoruka")
 			.AddNode(new DialogueNode("start", "Mochizuki Yoruka").AddLine("She stared at me earlier. Do you think she hates me?")
@@ -1145,6 +1352,212 @@ public partial class DialogueManager : Node
 			.AddNode(new DialogueNode("choice", "Hesiod Moriarty").AddChoice(new DialogueChoice("Yes.", "end")))
 			.AddNode(new DialogueNode("end", "Hesiod Moriarty").AddLine("Excellent, lead the way ladies, I’ll watch our backs.").SetNext("yoruka2"))
 			.AddNode(new DialogueNode("yoruka2", "Mochizuki Yoruka").AddLine("He talks like my oshi, too. Why does he talk like my oshi?").SetFlagOnEnter("level6_return_ready")));
+	}
+
+	// --- Level 7: the Atrium, revisited. The party comes back to it as a hub: three friends to
+	// talk to, a camera roll to order, and a night watch that decides whose route this run takes.
+	private void RegisterLevelSeven()
+	{
+		RegisterDialogue(new DialogueData("level7_intro")
+			.AddNode(new DialogueNode("start", "Narrator")
+				.AddLine("The party returns to the Atrium and finds it transformed. For the first time since Aionia woke up, nothing is trying to kill them.")
+				.AddLine("Hesiod is at the north railing of the Glass Skybridge, his camera aimed at the dome.")
+				.SetNext("objective"))
+			.AddNode(new DialogueNode("objective", "Objective")
+				.AddLine("Talk to Hesiod.")));
+
+		RegisterDialogue(new DialogueData("level7_hesiod")
+			.AddNode(new DialogueNode("start", "Hesiod Moriarty")
+				.AddLine("I told you I had something to share. Every photograph I took shows the same spot at a different time. Help me put them in order.")
+				.SetNext("picture"))
+			.AddNode(new DialogueNode("picture", "Narrator")
+				.AddLine("The photos fall into place. A single figure appears in several frames, always slightly turned away.")
+				.SetNext("felix"))
+			.AddNode(new DialogueNode("felix", "Hesiod Moriarty")
+				.AddLine("I think that’s Felix,")
+				.SetNext("fragment"))
+			.AddNode(new DialogueNode("fragment", "Narrator")
+				.AddLine("FRAGMENT F7 ACQUIRED: The Camera Roll.")
+				.SetNext("choice"))
+			.AddNode(new DialogueNode("choice", "Aionia Avgerinos")
+				.AddChoice(new DialogueChoice("Why are you so sure?", "sure", affectionCharacter: GameStateManager.Hesiod, affectionDelta: 1))
+				.AddChoice(new DialogueChoice("Show him the pendant.", "pendant", affectionCharacter: GameStateManager.Hesiod, affectionDelta: 0.5f))
+				.AddChoice(new DialogueChoice("Don’t mention the pendant.", "silent", affectionCharacter: GameStateManager.Hesiod, affectionDelta: 0.2f)))
+			.AddNode(new DialogueNode("sure", "Hesiod Moriarty")
+				.AddLine("How are you so sure that Felix has something to do with this?")
+				.SetNext("watched"))
+			.AddNode(new DialogueNode("watched", "Hesiod Moriarty")
+				.AddLine("Well…yes, I was partnered with the two of you to oversee the finance of project Hyperion.")
+				.AddLine("Doesn’t ring a bell?")
+				.SetNext("watched_choice"))
+			.AddNode(new DialogueNode("watched_choice", "Aionia Avgerinos")
+				.AddChoice(new DialogueChoice("No.", "no", affectionCharacter: GameStateManager.Hesiod, affectionDelta: 1)))
+			.AddNode(new DialogueNode("no", "Hesiod Moriarty")
+				.AddLine("No, unfortunately. It’s alright, you’ll remember in no time."))
+			.AddNode(new DialogueNode("pendant", "Hesiod Moriarty")
+				.AddLine("Where did you get it? It’s the first time I have seen something like that.")
+				.AddLine("Is it another project of yours and Felix?")
+				.SetNext("pendant_choice"))
+			.AddNode(new DialogueNode("pendant_choice", "Aionia Avgerinos")
+				.AddChoice(new DialogueChoice("I don’t actually remember.", "remember", affectionCharacter: GameStateManager.Hesiod, affectionDelta: 1)))
+			.AddNode(new DialogueNode("remember", "Hesiod Moriarty")
+				.AddLine("I am going to ask about it when we arrive at the facility. Sounds like a good plan."))
+			.AddNode(new DialogueNode("silent", "Hesiod Moriarty")
+				.AddLine("Something wrong?")
+				.SetNext("silent_choice"))
+			.AddNode(new DialogueNode("silent_choice", "Aionia Avgerinos")
+				.AddChoice(new DialogueChoice("Nothing. I was just lost at the moment.", "lost", affectionCharacter: GameStateManager.Hesiod, affectionDelta: 1)))
+			.AddNode(new DialogueNode("lost", "Hesiod Moriarty")
+				.AddLine("Lost. Right.")));
+
+		RegisterDialogue(new DialogueData("level7_camera_solved")
+			.AddNode(new DialogueNode("start", "Narrator")
+				.AddLine("The photos fall into place. A single figure appears in several frames, always slightly turned away.")
+				.SetNext("felix"))
+			.AddNode(new DialogueNode("felix", "Hesiod Moriarty")
+				.AddLine("I think that’s Felix,")
+				.SetNext("fragment"))
+			.AddNode(new DialogueNode("fragment", "Narrator")
+				.AddLine("FRAGMENT F7 ACQUIRED: The Camera Roll.")
+				.SetNext("done"))
+			.AddNode(new DialogueNode("done", "Hesiod Moriarty")
+				.AddLine("Well? Any idea who else is in them?")));
+
+		RegisterDialogue(new DialogueData("level7_adellaine")
+			.AddNode(new DialogueNode("start", "Adellaine Moriarty")
+				.AddLine("Hold still. …Slow response. You need sleep.")
+				.SetNext("choice"))
+			.AddNode(new DialogueNode("choice", "Aionia Avgerinos")
+				.AddChoice(new DialogueChoice("You could tell him you’re glad.", "glad", affectionCharacter: GameStateManager.Adellaine, affectionDelta: 1.2f))
+				.AddChoice(new DialogueChoice("I’ll say it for you.", "for_you", affectionCharacter: GameStateManager.Adellaine, affectionDelta: 2f)))
+			.AddNode(new DialogueNode("glad", "Adellaine Moriarty")
+				.AddLine("Absolutely not. He’d never let me forget it."))
+			.AddNode(new DialogueNode("for_you", "Adellaine Moriarty")
+				.AddLine("Don’t you dare… *she chuckled*…But thank you.")));
+
+		RegisterDialogue(new DialogueData("level7_yoruka")
+			.AddNode(new DialogueNode("start", "Mochizuki Yoruka")
+				.AddLine("Don’t say anything about my hair. The conduit ate a bow. I lost a whole bow.")
+				.SetNext("choice"))
+			.AddNode(new DialogueNode("choice", "Aionia Avgerinos")
+				.AddChoice(new DialogueChoice("I can help you fix it.", "help", affectionCharacter: GameStateManager.Yoruka, affectionDelta: 2f))
+				.AddChoice(new DialogueChoice("It still looks good.", "good", affectionCharacter: GameStateManager.Yoruka, affectionDelta: 1f)))
+			.AddNode(new DialogueNode("help", "Mochizuki Yoruka")
+				.AddLine("You? Sew? …Fine. Hold the thread. No, tighter. Don’t poke me with the needle."))
+			.AddNode(new DialogueNode("good", "Mochizuki Yoruka")
+				.AddLine("L-liar. …Thank you.")));
+
+		RegisterDialogue(new DialogueData("level7_felix_deck")
+			.AddNode(new DialogueNode("start", "Narrator")
+				.AddLine("The deck. Three reflection spots glow faintly blue on the floor. Felix stands on the second one, with his back to her.")
+				.SetNext("felix"))
+			.AddNode(new DialogueNode("felix", "Felix Lasarewitch")
+				.AddLine("You came back. I hoped you would.")
+				.SetNext("choice"))
+			.AddNode(new DialogueNode("choice", "Aionia Avgerinos")
+				.AddChoice(new DialogueChoice("You said you were going to the Time Research Facility.", "facility", affectionCharacter: GameStateManager.Felix, affectionDelta: 1f))
+				.AddChoice(new DialogueChoice("Why are you hiding?", "hiding", affectionCharacter: GameStateManager.Felix, affectionDelta: 2f))
+				.AddChoice(new DialogueChoice("Who am I to you?", "who", affectionCharacter: GameStateManager.Felix, affectionDelta: 2f))
+				.AddChoice(new DialogueChoice("Were you the one in the footage with me?", "footage", affectionCharacter: GameStateManager.Felix, affectionDelta: 0f)))
+			.AddNode(new DialogueNode("facility", "Felix Lasarewitch")
+				.AddLine("I said a great many things. The person I was avoiding is in this building. Moriarty doesn’t like me. I don’t blame him."))
+			.AddNode(new DialogueNode("hiding", "Felix Lasarewitch")
+				.AddLine("I’m not hiding. I’m standing where you saw me last."))
+			.AddNode(new DialogueNode("who", "Felix Lasarewitch")
+				.AddLine("Everything. I won’t say it again until you remember."))
+			.AddNode(new DialogueNode("footage", "Felix Lasarewitch")
+				.AddLine("…I’ll tell you everything when you remember. I can tell you I would never have hurt you.")));
+
+		RegisterDialogue(new DialogueData("level7_piano_roll")
+			.AddNode(new DialogueNode("start", "Felix Lasarewitch")
+				.AddLine("He takes a folded sheet of staff paper from his coat and puts it in your palm. Handwritten notes, in a hand you almost know.")
+				.AddLine("The song you used to hum when you worked. I wrote it down so I wouldn’t lose it.")
+				.SetNext("fragment"))
+			.AddNode(new DialogueNode("fragment", "Narrator")
+				.AddLine("FRAGMENT F8 ACQUIRED: The Piano Roll.")
+				.SetNext("end"))
+			.AddNode(new DialogueNode("end", "Felix Lasarewitch")
+				.AddLine("Go back to them. They’ll worry. I’ll be here.")));
+
+		// The night watch. The character whose affection total is highest gets the scene, and the
+		// route is locked to whoever says the right thing. The room picks the variant and sets
+		// "level7_route_locked" to the character it belongs to.
+		RegisterDialogue(new DialogueData("level7_nightwatch_yoruka")
+			.AddNode(new DialogueNode("start", "Mochizuki Yoruka")
+				.AddLine("I couldn’t sleep. …Can I sit with you? Whatever happens, promise you won’t disappear on me again.")
+				.SetNext("choice"))
+			.AddNode(new DialogueNode("choice", "Aionia Avgerinos")
+				.AddChoice(new DialogueChoice("I promise.", "promise", affectionCharacter: GameStateManager.Yoruka, affectionDelta: 2f))
+				.AddChoice(new DialogueChoice("I’ll try.", "try", affectionCharacter: GameStateManager.Yoruka, affectionDelta: 1f))
+				.AddChoice(new DialogueChoice("I can’t promise that.", "cant", affectionCharacter: GameStateManager.Yoruka, affectionDelta: -1f)))
+			.AddNode(new DialogueNode("promise", "Mochizuki Yoruka")
+				.AddLine("…Thank you.").SetFlagOnEnter("level7_route_locked_yoruka"))
+			.AddNode(new DialogueNode("try", "Mochizuki Yoruka")
+				.AddLine("…Okay."))
+			.AddNode(new DialogueNode("cant", "Mochizuki Yoruka")
+				.AddLine("That’s fair.")));
+
+		RegisterDialogue(new DialogueData("level7_nightwatch_adellaine")
+			.AddNode(new DialogueNode("start", "Adellaine Moriarty")
+				.AddLine("Your pulse is steady now. …Would you mind if I just sat with you for a minute?")
+				.SetNext("choice"))
+			.AddNode(new DialogueNode("choice", "Aionia Avgerinos")
+				.AddChoice(new DialogueChoice("Then feel it. I’m here.", "here", affectionCharacter: GameStateManager.Adellaine, affectionDelta: 2f))
+				.AddChoice(new DialogueChoice("You don’t have to carry it alone.", "alone", affectionCharacter: GameStateManager.Adellaine, affectionDelta: 1f))
+				.AddChoice(new DialogueChoice("We need to focus on the mission.", "mission", affectionCharacter: GameStateManager.Adellaine, affectionDelta: -1f)))
+			.AddNode(new DialogueNode("here", "Adellaine Moriarty")
+				.AddLine("…Good.").SetFlagOnEnter("level7_route_locked_adellaine"))
+			.AddNode(new DialogueNode("alone", "Adellaine Moriarty")
+				.AddLine("…Thank you."))
+			.AddNode(new DialogueNode("mission", "Adellaine Moriarty")
+				.AddLine("Right. Of course.")));
+
+		RegisterDialogue(new DialogueData("level7_nightwatch_hesiod")
+			.AddNode(new DialogueNode("start", "Hesiod Moriarty")
+				.AddLine("I never let anyone take my photo. But I’d take yours every day for the rest of my life.")
+				.SetNext("choice"))
+			.AddNode(new DialogueNode("choice", "Aionia Avgerinos")
+				.AddChoice(new DialogueChoice("I’d like that.", "like", affectionCharacter: GameStateManager.Hesiod, affectionDelta: 2f))
+				.AddChoice(new DialogueChoice("You’d be bored of me.", "bored", affectionCharacter: GameStateManager.Hesiod, affectionDelta: 1f))
+				.AddChoice(new DialogueChoice("I only want your information.", "info", affectionCharacter: GameStateManager.Hesiod, affectionDelta: -1f)))
+			.AddNode(new DialogueNode("like", "Hesiod Moriarty")
+				.AddLine("…Say it again.").SetFlagOnEnter("level7_route_locked_hesiod"))
+			.AddNode(new DialogueNode("bored", "Hesiod Moriarty")
+				.AddLine("Bored? Never."))
+			.AddNode(new DialogueNode("info", "Hesiod Moriarty")
+				.AddLine("…Right. That’s all you ever wanted.")));
+
+		RegisterDialogue(new DialogueData("level7_nightwatch_felix")
+			.AddNode(new DialogueNode("start", "Narrator")
+				.AddLine("They are all asleep. You hold the paper in your hand. You can hear a faint piano melody that wasn’t there before. It’s the song on the page.")
+				.SetNext("end"))
+			.AddNode(new DialogueNode("end", "Narrator")
+				.AddLine("The Felix route is locked.").SetFlagOnEnter("level7_route_locked_felix")));
+
+		RegisterDialogue(new DialogueData("level7_nightwatch_group")
+			.AddNode(new DialogueNode("start", "Narrator")
+				.AddLine("They are all asleep. Nobody comes to sit with you. The Atrium is quiet enough to hear the building settle.")
+				.SetNext("end"))
+			.AddNode(new DialogueNode("end", "Narrator")
+				.AddLine("No route is locked.")));
+
+		RegisterDialogue(new DialogueData("level7_clear")
+			.AddNode(new DialogueNode("start", "Narrator")
+				.AddLine("The hatch slides open. A narrow service lift waits below, humming in the dark.")
+				.AddLine("Somewhere beneath you, the Time Research Facility is waiting.")));
+
+		RegisterDialogue(new DialogueData("level7_rest")
+			.AddNode(new DialogueNode("start", "Narrator")
+				.AddLine("You lie on the floor and look at the ceiling. Every time you close your eyes, you see a window full of overlapping skies.")
+				.SetNext("awake"))
+			.AddNode(new DialogueNode("awake", "Narrator")
+				.AddLine("You can't sleep. You get up and go for a walk.")));
+
+		// --- Level 7's fragments ---
+		RegisterFragment(new MemoryFragment("camera", "Fragment F7 - The Camera Roll",
+			"One spot, photographed over and over at different times of day. A figure that is always slightly turned away.", "F7_camera_roll"));
+		RegisterFragment(new MemoryFragment("piano", "Fragment F8 - The Piano Roll",
+			"A song you used to hum at work, written out in a hand you almost know. Felix kept it so he would not lose it.", "F8_piano_roll"));
 	}
 	#endregion
 }

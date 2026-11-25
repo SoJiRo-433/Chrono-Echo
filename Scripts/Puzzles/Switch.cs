@@ -23,6 +23,7 @@ public partial class Switch : Node2D, IInteractable, IHeldInteractable, IUpdatab
     private float _activeRemaining;
     private float _lastHoldClock = -1f;
     private bool _requireHeldInteraction;
+    private bool _forceActivatedForTest;   // headless validation: keep plate down without an entity
     private static Font _consoleFont;
     #endregion
 
@@ -43,6 +44,10 @@ public partial class Switch : Node2D, IInteractable, IHeldInteractable, IUpdatab
     [Export] public float RequiredHoldSeconds { get => _requiredHoldSeconds; set => _requiredHoldSeconds = Mathf.Max(0f, value); }
     [Export] public float HoldActivationSeconds { get => _holdDurationSeconds; set => _holdDurationSeconds = Mathf.Max(0f, value); }
     [Export] public bool RequireHeldInteraction { get => _requireHeldInteraction; set => _requireHeldInteraction = value; }
+    [Export] public bool PersistActivation { get; set; }
+
+    /// <summary>Headless validation: force the pressure plate to stay activated without an entity standing on it.</summary>
+    [Export] public bool ForceActivatedForTest { get => _forceActivatedForTest; set => _forceActivatedForTest = value; }
 
     // A console is a switch that also displays something: E steps it to its next sequence, and the
     // room can then ask whether two consoles are showing the same one. An empty pool is a plain
@@ -77,6 +82,8 @@ public partial class Switch : Node2D, IInteractable, IHeldInteractable, IUpdatab
         _room = GetParent() as Room;
         _sequenceStartIndex = _sequenceIndex;   // the code a reset returns this console to
         if (!LinkedDoorPath.IsEmpty) LinkDoor(GetNodeOrNull<Door>(LinkedDoorPath));
+        if (PersistActivation && !string.IsNullOrEmpty(_flagToSet)
+            && GameStateManager.Instance?.GetFlag(_flagToSet) == true) SetActivated(true);
         QueueRedraw();
     }
 
@@ -117,6 +124,14 @@ public partial class Switch : Node2D, IInteractable, IHeldInteractable, IUpdatab
         }
 
         if (!_isPressurePlate) return;
+
+        // Headless validation: if forced, keep the plate activated without requiring an entity
+        if (_forceActivatedForTest)
+        {
+            SetActivated(true);
+            _linkedDoor?.NotifyApproached();
+            return;
+        }
 
         bool occupied = false;
         foreach (Entity entity in _room.Entities)
@@ -186,7 +201,8 @@ public partial class Switch : Node2D, IInteractable, IHeldInteractable, IUpdatab
         _holdElapsed = 0f;
         _lastHoldClock = -1f;
         _activeRemaining = 0f;
-        SetActivated(false);
+        SetActivated(PersistActivation && !string.IsNullOrEmpty(_flagToSet)
+            && GameStateManager.Instance?.GetFlag(_flagToSet) == true);
         QueueRedraw();
     }
     #endregion
@@ -194,7 +210,7 @@ public partial class Switch : Node2D, IInteractable, IHeldInteractable, IUpdatab
     #region Drawing
     public override void _Draw()
     {
-        Color fill = _isActivated ? new Color(0.3f, 0.9f, 0.3f) : new Color(0.85f, 0.75f, 0.2f);
+        Color fill = _isActivated ? new Color(0.62f, 1f, 0.62f) : new Color(0.85f, 0.75f, 0.2f);
         float radius = _isPressurePlate ? _plateRadius : 12f;
         DrawCircle(Vector2.Zero, radius, fill);
         DrawArc(Vector2.Zero, radius, 0f, Mathf.Tau, 32, new Color(0.2f, 0.2f, 0.2f), 2f);

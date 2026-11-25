@@ -1,4 +1,4 @@
-using System.Linq;
+﻿using System.Linq;
 using Godot;
 
 public abstract partial class Entity : Node2D, IDamageable, IUpdatable
@@ -62,6 +62,8 @@ public abstract partial class Entity : Node2D, IDamageable, IUpdatable
     public Rect2 Bounds => BoundsAt(_position);
 
     protected abstract Color BodyColor { get; }
+    protected virtual bool DrawDefaultBody => true;
+    protected virtual bool DrawFacingMarker => true;
     #endregion
 
     #region Godot lifecycle
@@ -83,8 +85,8 @@ public abstract partial class Entity : Node2D, IDamageable, IUpdatable
 
     public override void _Draw()
     {
-        DrawCircle(Vector2.Zero, BodyRadius, BodyColor);
-        DrawLine(Vector2.Zero, FacingDirection * BodyRadius, Colors.White, 2f);
+        if (DrawDefaultBody) DrawCircle(Vector2.Zero, BodyRadius, BodyColor);
+        if (DrawFacingMarker) DrawLine(Vector2.Zero, FacingDirection * BodyRadius, Colors.White, 2f);
         if (_attackFlashTimer > 0f)
             DrawArc(Vector2.Zero, _attackRange, 0f, Mathf.Tau, 32, new Color(1f, 1f, 1f, 0.6f), 2f);
 

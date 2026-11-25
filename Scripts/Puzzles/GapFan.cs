@@ -1,17 +1,31 @@
 using Godot;
 
 /// <summary>A passable fan junction with a deterministic brief gap every two seconds.</summary>
-public partial class GapFan : Node2D
+public partial class GapFan : Node2D, IInteractable
 {
     [Export] public float Radius { get; set; } = 26f;
     [Export] public float PeriodSeconds { get; set; } = 2f;
-    [Export] public float GapSeconds { get; set; } = 0.45f;
-    private Room _room; private float _lastHit = -10f;
-    public bool IsGap => _room != null && Mathf.PosMod(_room.LoopClock, PeriodSeconds) < GapSeconds;
-    public override void _Ready() { _room = GetParent() as Room; }
+    // The player needs about 0.67 s to cross the fan's reach with their body included.
+    // A 1.25 s opening gives enough time to see the gap and cross the narrow shaft.
+    [Export] public float GapSeconds { get; set; } = 1.25f;
+    [Export] public string FlagToSet { get; set; } = "";
+    private Room _room; private float _lastHit = -10f; private bool _stopped;
+    public bool IsGap => _stopped || (_room != null && Mathf.PosMod(_room.LoopClock, PeriodSeconds) < GapSeconds);
+    public float DistanceTo(Vector2 from) => Mathf.Max(0f, from.DistanceTo(Position) - Radius);
+    public override void _Ready()
+    {
+        _room = GetParent() as Room;
+        _stopped = !string.IsNullOrEmpty(FlagToSet) && GameStateManager.Instance?.GetFlag(FlagToSet) == true;
+    }
+    public void Interact(Entity interactor)
+    {
+        _stopped = true;
+        if (!string.IsNullOrEmpty(FlagToSet)) GameStateManager.Instance?.SetFlag(FlagToSet, true);
+        QueueRedraw();
+    }
     public override void _PhysicsProcess(double delta)
     {
-        if (IsGap || _room?.Player == null || _room.LoopClock - _lastHit < 0.8f) return;
+        if (_stopped || IsGap || _room?.Player == null || _room.LoopClock - _lastHit < 0.8f) return;
         if (_room.Player.WorldPosition.DistanceTo(Position) > Radius) return;
         _lastHit = _room.LoopClock; _room.Player.TakeScratch(); _room.Player.WorldPosition += Vector2.Left * 30f;
     }

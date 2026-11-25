@@ -1,11 +1,13 @@
-/// <summary>A six-second held valve that suppresses its conduit section for fifteen seconds.</summary>
+/// <summary>A tap-to-close valve that permanently suppresses its conduit section.</summary>
 public partial class ValveWheel : Switch
 {
     public override void _Ready()
     {
-        RequiredHoldSeconds = 6f;
-        HoldActivationSeconds = 15f;
-        RequireHeldInteraction = true;
+        StaysOn = true;
+        RequiredHoldSeconds = 0f;
+        HoldActivationSeconds = 0f;
+        RequireHeldInteraction = false;
+        PersistActivation = true;
         base._Ready();
     }
 }

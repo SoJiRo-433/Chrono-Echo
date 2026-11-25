@@ -1,15 +1,29 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using Godot;
 
-/// <summary>Level 4: medical quarantine corridor, triage room, diagnostic terminal and side route.
+/// <summary>Level 4: medical quarantine corridor, records room, diagnostic terminal and side route.
 ///
-/// The corridor is the only way north and it is sealed on both sides for its whole length,
-/// with the keypad and the pressure plate in the alcoves the blueprint draws. Past the
-/// shutter the triage room leads east into the connector and down to the hall, whose east
-/// end is the sealed steel gate; the side route past the hall is the way to the Level 5
+/// The level's art is its own map (<c>Assets/level4_medical_map.png</c>), 640x360, drawn at twice
+/// its own resolution - the same whole-number upscale the Atrium uses, so its pixels stay square
+/// and there is room for the player's 28-unit body in the aisles and doorways. One unit in this
+/// file is one pixel of the map, so every rectangle below can be read against the sheet.
+///
+/// Nothing in the map moves, so everything the level does is an overlay on top of it: the walls,
+/// the shelving and the furniture are <see cref="Obstacle"/>s with their boxes turned off, so the
+/// map's own rooms are what she is walking inside; everything she answers to is an
+/// <see cref="Inspectable"/> whose caption is the only thing drawn; what the map does not draw is
+/// drawn: the shutter, the plates, the scanner and the captions.
+///
+/// The corridor is the only way north and it is sealed on both sides for its whole length, with
+/// the keypad in the alcove the map draws to its west and the pressure plate in the notch to its
+/// east. Past the shutter the records room leads east into the connector and down to the hall,
+/// whose east end is the sealed steel gate; the side route past the hall is the way to the Level 5
 /// exit. Nothing here can be walked around.</summary>
 public partial class RoomMedical : Room
 {
+    /// <summary>Map pixels to world units. See the class comment.</summary>
+    private const float MapScale = 2f;
+
     private Switch _plate;
     private Door _shutter;
     private Switch _generator;
@@ -24,10 +38,11 @@ public partial class RoomMedical : Room
     public override void _Ready()
     {
         BuildMap();
-        RoomSize = new Vector2(667, 747);
-        PlayerStartPosition = new Vector2(148, 620);
-        ExitPosition = new Vector2(463, 527);
-        ExitSize = new Vector2(42, 74);
+        RoomSize = S(640f, 360f);
+        WorldSize = S(640f, 360f);
+        PlayerStartPosition = P(95f, 335f);
+        ExitPosition = P(506f, 325f);
+        ExitSize = S(28f, 20f);
         LevelNumber = 4;
         NextLevelPath = "res://Scenes/Rooms/Room05Observation.tscn";
         MaxCaptureSeconds = 9f;
@@ -39,83 +54,103 @@ public partial class RoomMedical : Room
 
     private void BuildMap()
     {
-        // --- the quarantine corridor: walled for its whole length, keypad niche west,
-        // plate niche east, and the shutter as the only way north ---
-        Floor("Quarantine corridor", new Vector2(102, 188), new Vector2(92, 416), new Color(0.82f, 0.83f, 0.85f));
-        Wall("Corridor west wall upper", new Vector2(94, 32), new Vector2(8, 268));
-        Wall("Corridor west wall lower", new Vector2(94, 360), new Vector2(8, 387));
-        Wall("Corridor east wall upper", new Vector2(194, 188), new Vector2(8, 318));
-        Wall("Corridor east wall lower", new Vector2(194, 554), new Vector2(8, 193));
+        Backdrop();
 
-        Floor("Keypad niche", new Vector2(56, 294), new Vector2(44, 72), new Color(0.78f, 0.79f, 0.82f));
-        Wall("Keypad niche north", new Vector2(56, 288), new Vector2(44, 8));
-        Wall("Keypad niche south", new Vector2(56, 364), new Vector2(44, 8));
-        Wall("Keypad niche west", new Vector2(50, 294), new Vector2(8, 74));
+        // --- the quarantine corridor: the map draws it down the west side, with the keypad
+        // alcove off it to the west and the plate notch to its east ---
+        Floor("Quarantine corridor", new Vector2(60, 118), new Vector2(72, 234));
+        Wall("Corridor west wall upper", new Vector2(54, 118), new Vector2(6, 82));
+        Wall("Corridor west wall lower", new Vector2(54, 240), new Vector2(6, 112));
+        Wall("Corridor east wall upper", new Vector2(132, 118), new Vector2(6, 162));
+        Wall("Corridor east wall lower", new Vector2(132, 320), new Vector2(6, 32));
 
-        Floor("Plate niche", new Vector2(194, 500), new Vector2(50, 60), new Color(0.78f, 0.79f, 0.82f));
-        Wall("Plate niche north", new Vector2(194, 494), new Vector2(50, 8));
-        Wall("Plate niche south", new Vector2(194, 558), new Vector2(50, 8));
-        Wall("Plate niche east", new Vector2(240, 500), new Vector2(8, 64));
+        Floor("Keypad alcove", new Vector2(16, 200), new Vector2(44, 40));
+        Wall("Keypad alcove north", new Vector2(10, 194), new Vector2(50, 6));
+        Wall("Keypad alcove south", new Vector2(10, 240), new Vector2(50, 6));
+        Wall("Keypad alcove west", new Vector2(10, 194), new Vector2(6, 52));
 
-        Add(new KeypadPanel { Code = "4173", FlagToSet = "medical_keypad_open" }, "Keypad", new Vector2(72, 330));
-        _shutter = Add(new Door { Size = new Vector2(92, 12), RequiresSwitch = true, NeedsAllLinkedSwitches = true, OpenedFlag = "medical_shutter_open" }, "QuarantineShutter", new Vector2(102, 183));
-        _plate = Add(new Switch { IsPressurePlate = true, PlateRadius = 25f }, "PressurePlate", new Vector2(218, 528));
+        Floor("Plate notch", new Vector2(132, 280), new Vector2(34, 40));
+        Wall("Plate notch north", new Vector2(132, 274), new Vector2(34, 6));
+        Wall("Plate notch south", new Vector2(132, 320), new Vector2(34, 6));
+        Wall("Plate notch east", new Vector2(160, 274), new Vector2(6, 52));
+
+        // The caption carries the sign Yoruka reads out ("4, ?, 7, 3") - otherwise she is talking
+        // about a sign that is not there.
+        Add(new KeypadPanel { Code = "4173", FlagToSet = "medical_keypad_open", Caption = "KEYPAD (E) - 4 ? 7 3" }, "Keypad", P(38f, 218f));
+        _shutter = Add(new Door { Size = S(72f, 6f), RequiresSwitch = true, NeedsAllLinkedSwitches = true, OpenedFlag = "medical_shutter_open" }, "QuarantineShutter", P(58f, 112f));
+        _plate = Add(new Switch { IsPressurePlate = true, PlateRadius = 25f }, "PressurePlate", P(148f, 300f));
         _plate.LinkDoor(_shutter);
         Add(new ScannerSweep
         {
-            Corridor = new Rect2(102, 188, 92, 416),
-            ShadowCenters = new[] { new Vector2(124, 252), new Vector2(168, 322), new Vector2(124, 420), new Vector2(164, 472) },
-            RespawnPoint = new Vector2(148, 620)
+            Corridor = new Rect2(P(60f, 118f), S(72f, 234f)),
+            ShadowCenters = new[] { P(80f, 166f), P(115f, 220f), P(85f, 286f), P(115f, 330f) },
+            RespawnPoint = P(95f, 335f)
         }, "ScannerSweep", Vector2.Zero);
 
-        // --- the triage room, and the connector east that is the only way on ---
-        Floor("Triage room", new Vector2(102, 32), new Vector2(321, 157), new Color(0.87f, 0.88f, 0.89f));
-        Wall("Triage north wall", new Vector2(94, 26), new Vector2(337, 8));
-        Wall("Triage east wall", new Vector2(423, 32), new Vector2(8, 157));
-        Wall("Triage south wall", new Vector2(202, 189), new Vector2(140, 8));
-        Floor("Triage connector", new Vector2(342, 189), new Vector2(81, 213), new Color(0.84f, 0.85f, 0.87f));
-        Wall("Connector west wall", new Vector2(336, 189), new Vector2(8, 273));
-        Wall("Connector east wall", new Vector2(423, 189), new Vector2(8, 213));
+        // --- the records room, and the connector east that is the only way on ---
+        // Every wall runs past the corner it meets, so the rooms are sealed. The space between
+        // the rooms is not part of the level: the map leaves it dark, and a gap of a few
+        // pixels at a corner was enough for the player to walk out of the building.
+        Floor("Records room", new Vector2(30, 12), new Vector2(450, 106));
+        Wall("Records north wall", new Vector2(24, 6), new Vector2(462, 6));
+        Wall("Records west wall", new Vector2(24, 6), new Vector2(6, 112));
+        Wall("Records east wall", new Vector2(480, 6), new Vector2(6, 112));
+        Wall("Records south wall west", new Vector2(30, 112), new Vector2(28, 6));
+        Wall("Records south wall east", new Vector2(130, 112), new Vector2(284, 6));
+        Wall("Records south wall far east", new Vector2(465, 112), new Vector2(15, 6));
 
-        _generator = Add(new Switch { RequiredHoldSeconds = 0f, HoldActivationSeconds = 15f, RequireHeldInteraction = true, FlagToSet = "medical_generator_active" }, "Generator", new Vector2(139, 38));
+        Floor("Triage connector", new Vector2(414, 118), new Vector2(51, 92));
+        Wall("Connector west wall", new Vector2(408, 118), new Vector2(6, 92));
+        Wall("Connector east wall", new Vector2(465, 118), new Vector2(6, 92));
+
+        // The generator, the stasis field it feeds, the case the field guards, the puddles and the
+        // terminal all sit where the map puts them: the field is the blue disc on the room's east
+        // side, the puddles are the row of small objects beside it.
+        _generator = Add(new Switch { RequiredHoldSeconds = 0f, HoldActivationSeconds = 15f, RequireHeldInteraction = true, FlagToSet = "medical_generator_active" }, "Generator", P(115f, 22f));
         // Everything in this room keeps at least one clear body-length from everything else, so E
         // always lands on the thing the player is standing in front of. The terminal used to sit
         // against the notes and the whiteboard, which meant the nearest-interactable pick never
         // chose it - and reading the scan is one of the three things this level is completed on.
-        _stasis = Add(new StasisField { Radius = 34f, GeneratorPath = new NodePath("../Generator") }, "StasisField", new Vector2(360, 141));
-        _case = Add(new Inspectable { Caption = "SEALED CASE", Size = new Vector2(54, 42), FlagToSet = "medical_case_taken", RequiredFlag = "medical_generator_active" }, "SealedCase", new Vector2(333, 120));
-        Add(new CoolantPuddleRow { Start = new Vector2(404, 51), Spacing = 26f }, "CoolantPuddles", Vector2.Zero);
+        _stasis = Add(new StasisField { Radius = 40f, GeneratorPath = new NodePath("../Generator") }, "StasisField", P(398f, 44f));
+        _case = Add(new Inspectable { Caption = "SEALED CASE", Size = S(26f, 20f), DrawBox = false, FlagToSet = "medical_case_taken", RequiredFlag = "medical_generator_active" }, "SealedCase", P(445f, 102f));
+        Add(new CoolantPuddleRow { Start = P(452f, 40f), Spacing = 28f }, "CoolantPuddles", Vector2.Zero);
         // The terminal draws its own caption now, so the room does not need one on top of it.
-        _terminal = Add(new SequenceTerminal { FlagToSet = "F4_scan", ContinueDialogueId = "level4_diagnostic_terminal" }, "DiagnosticTerminal", new Vector2(352, 58));
+        _terminal = Add(new SequenceTerminal { FlagToSet = "F4_scan", ContinueDialogueId = "level4_diagnostic_terminal" }, "DiagnosticTerminal", P(420f, 72f));
         _terminal.Hide();
 
-        // The four things worth examining: notes and whiteboard on the north wall either side of the
-        // terminal's column, the cot and the supply cabinet out on the floor below them.
-        _examines.Add(Add(new Inspectable { Caption = "STASIS COT", Size = new Vector2(46, 30), FirstDialogueId = "level4_cot", FlagToSet = "medical_exam_cot" }, "StasisCot", new Vector2(196, 110)));
-        _examines.Add(Add(new Inspectable { Caption = "SUPPLY CABINET", Size = new Vector2(46, 30), FirstDialogueId = "level4_cabinet", FlagToSet = "medical_exam_cabinet" }, "SupplyCabinet", new Vector2(296, 110)));
-        _examines.Add(Add(new Inspectable { Caption = "NOTES", Size = new Vector2(42, 30), FirstDialogueId = "level4_notes", FlagToSet = "medical_exam_notes" }, "AdellaineNotes", new Vector2(196, 44)));
-        _examines.Add(Add(new Inspectable { Caption = "WHITEBOARD", Size = new Vector2(46, 30), FirstDialogueId = "level4_whiteboard", FlagToSet = "medical_exam_whiteboard" }, "Whiteboard", new Vector2(256, 44)));
-        _adellaine = Add(new Inspectable { Caption = "ADELLAINE", Size = new Vector2(40, 40), FirstDialogueId = "level4_triage_encounter" }, "Adellaine", new Vector2(110, 148));
+        // The four things worth examining: the cot on the bed at the north-west corner, the notes
+        // on the panel along the north wall, the whiteboard on the panel below it, and the supply
+        // cabinet out on the floor among the desks.
+        _examines.Add(Add(new Inspectable { Caption = "STASIS COT", Size = S(23f, 15f), DrawBox = false, FirstDialogueId = "level4_cot", FlagToSet = "medical_exam_cot" }, "StasisCot", P(65f, 24f)));
+        _examines.Add(Add(new Inspectable { Caption = "SUPPLY CABINET", Size = S(23f, 15f), DrawBox = false, FirstDialogueId = "level4_cabinet", FlagToSet = "medical_exam_cabinet" }, "SupplyCabinet", P(135f, 104f)));
+        _examines.Add(Add(new Inspectable { Caption = "NOTES", Size = S(21f, 15f), DrawBox = false, FirstDialogueId = "level4_notes", FlagToSet = "medical_exam_notes" }, "AdellaineNotes", P(165f, 13f)));
+        _examines.Add(Add(new Inspectable { Caption = "WHITEBOARD", Size = S(23f, 15f), DrawBox = false, FirstDialogueId = "level4_whiteboard", FlagToSet = "medical_exam_whiteboard" }, "Whiteboard", P(75f, 92f)));
+        _adellaine = Add(new Inspectable { Caption = "ADELLAINE", Size = S(20f, 20f), DrawBox = false, FirstDialogueId = "level4_triage_encounter", CharacterSheetPath = CharacterSprite.FrontSpritePath(GameStateManager.Adellaine) }, "Adellaine", P(45f, 108f));
         _adellaine.Hide();
-        Add(new Inspectable { Caption = "YORUKA", Size = new Vector2(40, 40), FirstDialogueId = "level4_yoruka" }, "Yoruka", new Vector2(170, 148));
-        Add(new ScanMinigame { ContinueDialogueId = "level4_triage_scan_result" }, "ScanMinigame", new Vector2(250, 166));
+        Add(new Inspectable { Caption = "YORUKA", Size = S(20f, 20f), DrawBox = false, FirstDialogueId = "level4_yoruka",
+            CharacterSheetPath = CharacterSprite.FrontSpritePath(GameStateManager.Yoruka) }, "Yoruka", P(88f, 108f));
+        Add(new ScanMinigame { ContinueDialogueId = "level4_triage_scan_result" }, "ScanMinigame", P(125f, 108f));
 
         // --- the hall, the sealed gate at its east end, and the side route south ---
-        Floor("Business hall", new Vector2(342, 402), new Vector2(281, 60), new Color(0.76f, 0.78f, 0.81f));
-        Wall("Hall north wall", new Vector2(431, 396), new Vector2(192, 8));
-        Wall("Hall east gate", new Vector2(623, 402), new Vector2(8, 60));
-        Wall("Hall south west", new Vector2(344, 462), new Vector2(139, 8));
-        Wall("Hall south east", new Vector2(523, 462), new Vector2(100, 8));
-        Floor("Side route", new Vector2(483, 463), new Vector2(40, 80), new Color(0.82f, 0.83f, 0.85f));
-        Wall("Side route west", new Vector2(473, 470), new Vector2(8, 77));
-        Wall("Side route east", new Vector2(523, 470), new Vector2(8, 77));
+        Floor("Business hall", new Vector2(325, 205), new Vector2(295, 81));
+        Wall("Hall west wall", new Vector2(319, 205), new Vector2(6, 81));
+        Wall("Hall north wall west", new Vector2(325, 199), new Vector2(89, 6));
+        Wall("Hall north wall east", new Vector2(465, 199), new Vector2(155, 6));
+        Wall("Hall east gate", new Vector2(620, 199), new Vector2(6, 93));
+        Wall("Hall south west", new Vector2(325, 286), new Vector2(175, 6));
+        Wall("Hall south east", new Vector2(540, 286), new Vector2(80, 6));
+        Floor("Side route", new Vector2(500, 286), new Vector2(40, 66));
+        Wall("Side route west", new Vector2(494, 286), new Vector2(6, 66));
+        Wall("Side route east", new Vector2(540, 286), new Vector2(6, 66));
 
-        Add(new Inspectable { Caption = "BUSINESS GATE", Size = new Vector2(70, 24), FirstDialogueId = "level4_business_gate", FlagToSet = "medical_route_open" }, "BusinessGate", new Vector2(424, 403));
-        _yorukaHall = Add(new Inspectable { Caption = "YORUKA", Size = new Vector2(38, 38), FirstDialogueId = "level4_yoruka", FlagToSet = "medical_yoruka_talked" }, "YorukaHall", new Vector2(404, 426));
-        _adellaineHall = Add(new Inspectable { Caption = "ADELLAINE", Size = new Vector2(38, 38), FirstDialogueId = "level4_adellaine_walk", FlagToSet = "medical_adellaine_talked", RequiredFlag = "adellaine_joined" }, "AdellaineHall", new Vector2(444, 426));
+        // The business gate is the hazard tape the map paints across the hall's east end.
+        Add(new Inspectable { Caption = "BUSINESS GATE", Size = S(35f, 12f), DrawBox = false, FirstDialogueId = "level4_business_gate", FlagToSet = "medical_route_open" }, "BusinessGate", P(586f, 240f));
+        _yorukaHall = Add(new Inspectable { Caption = "YORUKA", Size = S(19f, 19f), DrawBox = false, FirstDialogueId = "level4_yoruka", FlagToSet = "medical_yoruka_talked",
+            CharacterSheetPath = CharacterSprite.FrontSpritePath(GameStateManager.Yoruka) }, "YorukaHall", P(355f, 240f));
+        _adellaineHall = Add(new Inspectable { Caption = "ADELLAINE", Size = S(19f, 19f), DrawBox = false, FirstDialogueId = "level4_adellaine_walk", FlagToSet = "medical_adellaine_talked", RequiredFlag = "adellaine_joined", CharacterSheetPath = CharacterSprite.FrontSpritePath(GameStateManager.Adellaine) }, "AdellaineHall", P(390f, 240f));
         _adellaineHall.Hide();
-        Add(new FloorMarker { Caption = "START - QUARANTINE CORRIDOR", Size = new Vector2(180, 26) }, "StartMarker", new Vector2(106, 630));
-        Add(new FloorMarker { Caption = "EXIT - OBSERVATION WING", Size = new Vector2(170, 26), Outline = new Color(0.3f, 0.5f, 1f) }, "ExitMarker", new Vector2(468, 610));
+        Add(new FloorMarker { Caption = "START - QUARANTINE", Size = S(72f, 14f), DrawBox = false }, "StartMarker", P(60f, 336f));
+        Add(new FloorMarker { Caption = "EXIT - LEVEL 5", Size = S(85f, 13f), DrawBox = false, Outline = new Color(0.3f, 0.5f, 1f) }, "ExitMarker", P(486f, 344f));
     }
 
     public override float MovementScaleAt(Vector2 worldPosition) => _stasis != null && _stasis.Contains(worldPosition) ? 0.2f : 1f;
@@ -133,7 +168,7 @@ public partial class RoomMedical : Room
             bool unlocked = state?.GetFlag("medical_keypad_open") == true;
             if (unlocked && _plate.IsActivated) _shutter.Open(); else _shutter.Close();
         }
-        if (!_triageStarted && _shutter?.IsOpen == true && Player.WorldPosition.Y < 188)
+        if (!_triageStarted && _shutter?.IsOpen == true && Player.WorldPosition.Y < 236)
         {
             _triageStarted = true; _adellaine?.Show(); Dialogue?.StartDialogue("level4_triage_encounter");
         }
@@ -154,6 +189,41 @@ public partial class RoomMedical : Room
 
     private T Add<T>(T node, string name, Vector2 position) where T : Node2D
     { node.Name = name; node.Position = position; AddChild(node); return node; }
-    private void Wall(string name, Vector2 position, Vector2 size) => Add(new Obstacle { Size = size }, name, position);
-    private void Floor(string name, Vector2 position, Vector2 size, Color color) => Add(new FloorMarker { Size = size, Caption = "", Fill = color, Outline = new Color(color, 0.8f) }, name, position);
+
+    /// <summary>A point of the map - one map pixel is one unit here, so this is where the level's
+    /// geometry is read against the sheet.</summary>
+    private static Vector2 P(float x, float y) => new(x * MapScale, y * MapScale);
+
+    /// <summary>A size off the map.</summary>
+    private static Vector2 S(float width, float height) => new(width * MapScale, height * MapScale);
+
+    /// <summary>A wall, a shelf or a piece of furniture as the map drew it: a shape that blocks,
+    /// with nothing of its own drawn - the map is the drawing.</summary>
+    private void Wall(string name, Vector2 position, Vector2 size) =>
+        Add(new Obstacle { Size = S(size.X, size.Y), DrawBox = false }, name, P(position.X, position.Y));
+
+    /// <summary>The floor a room stands on. The map paints it, so this is the room's bounds and
+    /// its caption only.</summary>
+    private void Floor(string name, Vector2 position, Vector2 size) =>
+        Add(new FloorMarker { Size = S(size.X, size.Y), Caption = "", DrawBox = false }, name, P(position.X, position.Y));
+
+    /// <summary>The painting under everything. It is the first child, so every overlay - the
+    /// shutter, the plates, the captions - lands on top of it.</summary>
+    private void Backdrop()
+    {
+        var map = ResourceLoader.Load<Texture2D>("res://Assets/level4_medical_map.png");
+        if (map == null)
+        {
+            GD.PushWarning("RoomMedical: the map image is missing - the level has no art.");
+            return;
+        }
+
+        Add(new Sprite2D
+        {
+            Texture = map,
+            Centered = false,
+            Scale = Vector2.One * MapScale,
+            TextureFilter = CanvasItem.TextureFilterEnum.Nearest   // the map is drawn in pixels
+        }, "Backdrop", Vector2.Zero);
+    }
 }

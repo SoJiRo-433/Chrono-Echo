@@ -1,0 +1,29 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://Scripts/Rooms/Room08Facility.cs" id="1_room"]
+[ext_resource type="Script" path="res://Scripts/Dialogue/DialogueManager.cs" id="2_dialogue"]
+[ext_resource type="PackedScene" path="res://Scenes/Player.tscn" id="3_player"]
+
+[node name="Room08Facility" type="Node2D"]
+script = ExtResource("1_room")
+RoomSize = Vector2(1280, 720)
+WorldSize = Vector2(1280, 720)
+PlayerStartPosition = Vector2(56, 48)
+ExitPosition = Vector2(1220, 644)
+ExitSize = Vector2(36, 68)
+MaxEchoes = 2
+MaxCaptureSeconds = 15.0
+LevelNumber = 8
+NextLevelPath = "res://Scenes/Rooms/Room09SectorAlpha.tscn"
+LoopReplay = false
+EchoLifetimeSeconds = 90.0
+IntroDialogueId = "level8_intro"
+ClearDialogueId = "level8_clear"
+CompletionFlag = "level8_complete"
+ExitLockedHint = "THE RESONANCE RECORDING AND TRUST CHECK ARE INCOMPLETE"
+
+[node name="DialogueManager" type="Node" parent="."]
+script = ExtResource("2_dialogue")
+
+[node name="Player" parent="." instance=ExtResource("3_player")]
+position = Vector2(56, 48)

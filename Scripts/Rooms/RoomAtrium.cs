@@ -240,7 +240,7 @@ public partial class RoomAtrium : Room
         {
             Size = S(6f, 44f),
             OpenedFlag = "atrium_gate_opened",
-            CloseDelaySeconds = 10f
+            CloseDelaySeconds = 5f
         }, "Gate", P(184f, 308f));
 
         // The plate sits in the same lane as the start, so the player presses it on her way east.
@@ -330,7 +330,7 @@ public partial class RoomAtrium : Room
     /// walkway, west towards the terminal. Stepping onto the bridge starts the timed conversation.</summary>
     private void BuildSkybridge()
     {
-        // Six panels of floor that are there for part of every four seconds and gone the rest,
+        // Six panels of floor that are there for part of every 12.3 seconds and gone the rest,
         // phased so that the wave of floor travels WEST, the way the level sends her - in from
         // the walkway, west towards the terminal.
         //
@@ -341,14 +341,16 @@ public partial class RoomAtrium : Room
         // twice her speed, and the west half of the bridge could not be crossed at all - the
         // panel she was standing on always went first.
         const float WaveStepSeconds = 1.95f;
+        const float BridgePeriodSeconds = 12.3f;
+        const float BridgeSolidSeconds = 9.75f;
         for (int i = 0; i < 6; i++)
         {
-            float phase = Mathf.PosMod(1f + (3 - i) * WaveStepSeconds, 4f);
+            float phase = Mathf.PosMod(1f + (3 - i) * WaveStepSeconds, BridgePeriodSeconds);
             _bridgeTiles.Add(Add(new FluctuatingTile
             {
                 Size = S(77f, 34f),
-                PeriodSeconds = 4f,
-                SolidSeconds = 2.8f,
+                PeriodSeconds = BridgePeriodSeconds,
+                SolidSeconds = BridgeSolidSeconds,
                 PhaseSeconds = phase,
                 GapWhenAbsent = true
             }, $"SkyPanel{i + 1}", P(88f + i * 77f, 216f)));
@@ -440,8 +442,8 @@ public partial class RoomAtrium : Room
             Dashed = true
         }, "JumpGap", P(160f, 112f));
 
-        // The post-jump landing holds its stain for 8 s - three is not enough time to follow it up.
-        _stairSteps.Add(Add(new TimeStainStep { Size = S(56f, 20f), StainSeconds = 8f },
+        // Each step the Echo touches turns solid for three seconds.
+        _stairSteps.Add(Add(new TimeStainStep { Size = S(56f, 20f), StainSeconds = 3f },
                             "Step2", P(160f, 92f)));
 
         _stairSteps.Add(Add(new TimeStainStep { Size = S(56f, 16f), StainSeconds = 3f },

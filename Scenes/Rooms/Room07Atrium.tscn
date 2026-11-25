@@ -1,0 +1,29 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://Scripts/Rooms/RoomAtriumHub.cs" id="1_room"]
+[ext_resource type="Script" path="res://Scripts/Dialogue/DialogueManager.cs" id="2_dialogue"]
+[ext_resource type="PackedScene" path="res://Scenes/Player.tscn" id="3_player"]
+
+[node name="Room07Atrium" type="Node2D"]
+script = ExtResource("1_room")
+RoomSize = Vector2(1280, 720)
+WorldSize = Vector2(1280, 720)
+PlayerStartPosition = Vector2(56, 640)
+ExitPosition = Vector2(220, 276)
+ExitSize = Vector2(80, 12)
+MaxEchoes = 3
+MaxCaptureSeconds = 15.0
+LevelNumber = 7
+NextLevelPath = ""
+LoopReplay = false
+EchoLifetimeSeconds = 45.0
+IntroDialogueId = "level7_intro"
+ClearDialogueId = "level7_clear"
+CompletionFlag = "level7_complete"
+ExitLockedHint = "THE SERVICE HATCH IS STILL SEALED"
+
+[node name="DialogueManager" type="Node" parent="."]
+script = ExtResource("2_dialogue")
+
+[node name="Player" parent="." instance=ExtResource("3_player")]
+position = Vector2(56, 640)

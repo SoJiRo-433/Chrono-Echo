@@ -6,11 +6,11 @@
 
 [node name="Room04Medical" type="Node2D"]
 script = ExtResource("1_room")
-RoomSize = Vector2(667, 747)
-WorldSize = Vector2(667, 747)
-PlayerStartPosition = Vector2(148, 620)
-ExitPosition = Vector2(463, 527)
-ExitSize = Vector2(42, 74)
+RoomSize = Vector2(1280, 720)
+WorldSize = Vector2(1280, 720)
+PlayerStartPosition = Vector2(190, 670)
+ExitPosition = Vector2(1012, 650)
+ExitSize = Vector2(56, 40)
 MaxEchoes = 3
 MaxCaptureSeconds = 9.0
 LevelNumber = 4
@@ -25,4 +25,4 @@ CompletionFlag = "level4_complete"
 script = ExtResource("2_dialogue")
 
 [node name="Player" parent="." instance=ExtResource("3_player")]
-position = Vector2(148, 620)
+position = Vector2(190, 670)

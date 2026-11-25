@@ -1,9 +1,6 @@
 using Godot;
 
-/// <summary>Placeholder ending screen. Nothing sends the player here yet - the levels that would
-/// trigger an ending are not built - but the scene itself is complete: it asks the singleton
-/// which ending was reached and shows that ending's title and blurb, then offers the way back to
-/// the menu. Point a room's NextLevelPath at res://Scenes/EndingScreen.tscn to use it.</summary>
+/// <summary>Displays the ending selected at Level 10 and offers the way back to the menu.</summary>
 public partial class EndingScreen : Control
 {
     private const string MainMenuScene = "res://main_menu.tscn";
@@ -17,6 +14,7 @@ public partial class EndingScreen : Control
 
         string endingId = GameStateManager.Instance?.ResolveEnding() ?? "neutral_good";
         (string title, string blurb) = Describe(endingId);
+        GameStateManager.Instance?.MarkRunCompleted();
 
         var ground = new ColorRect { Color = new Color(0.03f, 0.04f, 0.07f, 1f), MouseFilter = MouseFilterEnum.Stop };
         AddChild(ground);

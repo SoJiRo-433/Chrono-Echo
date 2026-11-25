@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using Godot;
 
 public partial class Player : Entity
@@ -13,6 +13,14 @@ public partial class Player : Entity
     #endregion
 
     #region Private state
+    private const string FrontSpritePath = "res://Assets/Characters/player_front.png";
+    private const string LeftWalkSpritePath = "res://Assets/Characters/player_walk_left.png";
+    private const int WalkFrameCount = 6;
+
+    private Sprite2D _appearance;
+    private Texture2D _frontTexture;
+    private AtlasTexture _walkAtlas;
+
     private int _startingLives = 3;
     private int _lives;
     private bool _isGameOver;
@@ -47,12 +55,15 @@ public partial class Player : Entity
             : Mathf.Max(0f, CurrentRoom.MaxCaptureSeconds - (CurrentRoom.LoopClock - _captureStartClock));
 
     protected override Color BodyColor => new Color(0.25f, 0.55f, 1f);
+    protected override bool DrawDefaultBody => _appearance == null;
+    protected override bool DrawFacingMarker => _appearance == null;
     #endregion
 
     #region Godot lifecycle
     public override void _Ready()
     {
         base._Ready();
+        SetupAppearance();
         _lives = _startingLives;
 
         // A new level instantiates a brand new Player node, so the lives are picked back up
@@ -80,14 +91,27 @@ public partial class Player : Entity
 
         if (_isGameOver)
         {
-            if (_input.IsProjectEchoPressed()) RestartRun();   // after game over, R starts a new run
+            if (_input.IsRecordEchoPressed()) RestartRun();   // after game over, R starts a new run
             return;
         }
         if (!IsAlive || CurrentRoom == null) return;
 
-        // Read the capture key before the action, so a window opened this tick still records
-        // this tick as its first frame. Without the pendant the key is ignored outright.
-        if (HasPendant && _input.IsCaptureTogglePressed()) ToggleCapture();
+        // Single R key: press to start recording, press again to stop and project Echo.
+        // Without the pendant the key is ignored outright.
+        if (HasPendant && _input.IsRecordEchoPressed())
+        {
+            if (_recorder.IsRecording)
+            {
+                // Stop recording and immediately project the Echo
+                ProjectEcho();
+            }
+            else
+            {
+                // Start a new recording window
+                StartCapture();
+            }
+        }
+
         AutoStopCaptureAtLimit();
 
         PlayerAction intended = _input.ReadAction();
@@ -95,15 +119,63 @@ public partial class Player : Entity
 
         // Do the action first so we know whether a move was blocked by a wall.
         PlayerAction effective = ExecuteAction(intended, delta);
+        UpdateAppearance(effective);
 
         // Record AFTER executing, but with the position from BEFORE the move, so that the
         // frame means "at time T the player stood HERE and then did THIS".
         if (_recorder.IsRecording)
             _recorder.Tick(CurrentRoom.LoopClock, effective, positionBeforeMove);
+    }
 
-        // R projects the captured window as an Echo, in place. The run keeps going: no clock
-        // rewind, no puzzle reset, and the player is not moved.
-        if (HasPendant && _input.IsProjectEchoPressed()) ProjectEcho();
+    private void SetupAppearance()
+    {
+        _frontTexture = ResourceLoader.Load<Texture2D>(FrontSpritePath);
+        Texture2D walkSheet = ResourceLoader.Load<Texture2D>(LeftWalkSpritePath);
+        if (_frontTexture == null || walkSheet == null)
+        {
+            GD.PushError("Player: could not load the front and walk sprites.");
+            return;
+        }
+
+        if (walkSheet.GetWidth() % WalkFrameCount != 0)
+        {
+            GD.PushError("Player: the walk strip width must divide evenly into six frames.");
+            _frontTexture = null;
+            return;
+        }
+
+        int frameWidth = walkSheet.GetWidth() / WalkFrameCount;
+        _walkAtlas = new AtlasTexture
+        {
+            Atlas = walkSheet,
+            Region = new Rect2(0, 0, frameWidth, walkSheet.GetHeight())
+        };
+        _appearance = new Sprite2D
+        {
+            Texture = _frontTexture,
+            Centered = true,
+            TextureFilter = CanvasItem.TextureFilterEnum.Nearest
+        };
+        AddChild(_appearance);
+    }
+
+    private void UpdateAppearance(PlayerAction action)
+    {
+        if (_appearance == null || _frontTexture == null || _walkAtlas == null) return;
+
+        bool walkingHorizontally = action == PlayerAction.MoveLeft || action == PlayerAction.MoveRight;
+        if (!walkingHorizontally)
+        {
+            _appearance.Texture = _frontTexture;
+            _appearance.FlipH = false;
+            return;
+        }
+
+        bool flip = action == PlayerAction.MoveLeft;
+        float frameWidth = _walkAtlas.Region.Size.X;
+        _walkAtlas.Region = new Rect2(0, 0, frameWidth, _walkAtlas.Region.Size.Y);
+        _appearance.Texture = _walkAtlas;
+        _appearance.FlipH = flip;
     }
 
     private PlayerAction ExecuteAction(PlayerAction action, float delta)
@@ -183,6 +255,7 @@ public partial class Player : Entity
         _lives--;
         EmitSignal(SignalName.LivesChanged, _lives);
         SyncLivesToState();
+        GameStateManager.Instance?.CurrentRoom?.ResetLevelFlagsForDeath();
 
         if (_lives <= 0)
         {
@@ -247,12 +320,12 @@ public partial class Player : Entity
     }
 
     /// <summary>The capture window is capped per room ([Export] MaxCaptureSeconds), so the recorded
-    /// past can never grow past what the puzzle needs. The window closes itself once the cap is hit.</summary>
+    /// past can never grow past what the puzzle needs. Reaching the cap projects the Echo automatically.</summary>
     private void AutoStopCaptureAtLimit()
     {
         if (!_recorder.IsRecording || CurrentRoom == null) return;
         if (CurrentRoom.LoopClock - _captureStartClock < CurrentRoom.MaxCaptureSeconds) return;
-        StopCapture();
+        ProjectEcho();
     }
 
     public void ProjectEcho()
@@ -280,7 +353,8 @@ public partial class Player : Entity
     {
         Revive(1.0f);            // full health + one second of spawn protection
         WorldPosition = room.PlayerStartPosition;
-        FacingDirection = Vector2.Right;
+        FacingDirection = Vector2.Down;
+        UpdateAppearance(PlayerAction.Idle);
     }
     #endregion
 
@@ -290,3 +364,5 @@ public partial class Player : Entity
     public bool RemoveItem(string item) => _inventory.Remove(item);
     #endregion
 }
+
+

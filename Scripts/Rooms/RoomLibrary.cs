@@ -1,4 +1,4 @@
-using Godot;
+﻿using Godot;
 
 /// <summary>Level 2, scenes 2-5: the Archives through to the heavy library doors.
 ///
@@ -174,7 +174,7 @@ public partial class RoomLibrary : Room
         // first two ranks, a few steps from where the player comes down out of the reading room - so
         // the pan finds her without a search, and she is not a wall across the aisle either.
         _yoruka = Talkable("Yoruka", "YORUKA (E)", new Vector2(150, 134), new Vector2(24, 34),
-                           "library_yoruka", solid: false);
+                           "library_yoruka", solid: false, characterSheet: CharacterSprite.FrontSpritePath(GameStateManager.Yoruka));
 
         // Scene 2 ends with her storming off - "leaving behind an item" (sheet). It is anchored to
         // her node rather than to a hard-coded spot, so moving her moves the thing she leaves.
@@ -231,8 +231,8 @@ public partial class RoomLibrary : Room
         Talkable("ServerRack", "SERVER RACK (E)", new Vector2(552, 150), new Vector2(50, 60), "library_server_rack");
         Talkable("TerminalSpares", "SPARES (E)", new Vector2(558, 214), new Vector2(44, 28), "library_spares");
 
-        _yorukaWaiting = Talkable("YorukaWaiting", "YORUKA (E)", new Vector2(600, 112), new Vector2(24, 34),
-                                  "library_yoruka_followup", repeat: true);
+        _yorukaWaiting = Talkable("YorukaWaiting", "YORUKA (E)", new Vector2(570, 112), new Vector2(24, 34),
+                                  "library_yoruka_followup", repeat: true, characterSheet: CharacterSprite.FrontSpritePath(GameStateManager.Yoruka));
     }
 
     /// <summary>Scene 5: the corridor the sheet webs with roots. It runs west from the drop under
@@ -379,7 +379,7 @@ public partial class RoomLibrary : Room
     /// caption and the interaction stay.</summary>
     private Inspectable Talkable(string name, string caption, Vector2 position, Vector2 size,
                                  string dialogueId, string flagToSet = "", bool repeat = false,
-                                 bool solid = true)
+                                 bool solid = true, string characterSheet = "")
     {
         var node = new Inspectable
         {
@@ -389,7 +389,8 @@ public partial class RoomLibrary : Room
             DrawBox = false,
             FirstDialogueId = dialogueId,
             RepeatDialogueId = repeat ? dialogueId : "",
-            FlagToSet = flagToSet
+            FlagToSet = flagToSet,
+            CharacterSheetPath = characterSheet
         };
         return Add(node, name, P(position.X, position.Y));
     }

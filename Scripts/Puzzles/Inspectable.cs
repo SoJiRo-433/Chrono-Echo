@@ -1,4 +1,4 @@
-using Godot;
+﻿using Godot;
 
 public partial class Inspectable : Node2D, IInteractable
 {
@@ -11,6 +11,7 @@ public partial class Inspectable : Node2D, IInteractable
     private string _repeatDialogueId = "";
     private string _flagToSet = "";
     private string _requiredFlag = "";
+    private string _characterSheetPath = "";
     private bool _solid;
     private bool _drawBox = true;
     private bool _examined;
@@ -29,6 +30,10 @@ public partial class Inspectable : Node2D, IInteractable
     [Export] public string FlagToSet { get => _flagToSet; set => _flagToSet = value ?? ""; }
     [Export] public string RequiredFlag { get => _requiredFlag; set => _requiredFlag = value ?? ""; }
 
+    /// <summary>When set, the object uses a static, front-facing character sprite.
+    /// Empty = the plain captioned box, which is what every piece of scenery uses.</summary>
+    [Export] public string CharacterSheetPath { get => _characterSheetPath; set => _characterSheetPath = value ?? ""; }
+
     [Export] public bool Solid { get => _solid; set => _solid = value; }
 
     // For a room whose art comes from its own painted backdrop: the fill and outline are not drawn,
@@ -45,6 +50,16 @@ public partial class Inspectable : Node2D, IInteractable
     #region Lifecycle
     public override void _Ready()
     {
+        CharacterSprite character = null;
+        if (_characterSheetPath != "")
+        {
+            character = new CharacterSprite { SheetPath = _characterSheetPath, FrameCount = 1, Look = CharacterSprite.Facing.South };
+            AddChild(character);
+            // The character stands on the bottom edge of the box, centred on it, so the feet land
+            // on the floor the room laid out rather than in the middle of the interaction area.
+            character.Position = new Vector2(_size.X * 0.5f, _size.Y);
+        }
+
         if (_caption != "")
         {
             Label label = new Label
@@ -55,6 +70,17 @@ public partial class Inspectable : Node2D, IInteractable
             };
             label.AddThemeFontSizeOverride("font_size", 12);
             label.AddThemeColorOverride("font_color", _outline);
+
+            // A character is a picture of the thing the caption names, so the caption moves under
+            // their feet instead of sitting on top of their head.
+            if (character != null)
+            {
+                float width = Mathf.Max(_size.X, 90f);
+                label.Size = new Vector2(width, 16f);
+                label.Position = new Vector2((_size.X - width) * 0.5f, _size.Y + 4f);
+                label.HorizontalAlignment = HorizontalAlignment.Center;
+            }
+
             AddChild(label);
         }
         QueueRedraw();

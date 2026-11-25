@@ -1,8 +1,9 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using Godot;
 
 public partial class GameStateManager : Node
 {
+    private const string CompletionRecordPath = "user://chrono_echoes_progress.cfg";
     #region Singleton
     public static GameStateManager Instance { get; private set; }
 
@@ -36,6 +37,7 @@ public partial class GameStateManager : Node
     public Room CurrentRoom { get; private set; }
     public Player Player { get; private set; }
     public bool IsPaused { get; private set; }
+    public bool CompletedRunBefore { get; private set; }
 
     public IReadOnlyDictionary<string, bool> Flags => _flags;
     #endregion
@@ -64,6 +66,37 @@ public partial class GameStateManager : Node
     {
         _flags.Clear();
         EmitSignal(SignalName.FlagsReset);
+    }
+
+    public void ResetLevelFlags(int levelNumber, IEnumerable<string> additionalFlags = null)
+    {
+        if (levelNumber < 1) return;
+        var prefixes = new List<string> { "level" + levelNumber + "_" };
+        var exactFlags = new List<string>();
+        switch (levelNumber)
+        {
+            case 2: prefixes.Add("library_"); break;
+            case 3: exactFlags.Add("atrium_checkpoint"); break;
+            case 4: prefixes.Add("medical_"); break;
+            case 5: prefixes.Add("observation_"); break;
+            case 6: exactFlags.Add("felix_left"); exactFlags.Add("hesiod_joined"); break;
+        }
+        var toRemove = new List<string>();
+        foreach (string flag in _flags.Keys)
+            foreach (string prefix in prefixes)
+                if (flag.StartsWith(prefix, System.StringComparison.OrdinalIgnoreCase)) { toRemove.Add(flag); break; }
+        toRemove.AddRange(exactFlags);
+        if (additionalFlags != null)
+            foreach (string flag in additionalFlags)
+                if (!string.IsNullOrEmpty(flag)) toRemove.Add(flag);
+        bool changedAny = false;
+        foreach (string flag in toRemove)
+            if (_flags.Remove(flag))
+            {
+                changedAny = true;
+                EmitSignal(SignalName.FlagChanged, flag, false);
+            }
+        if (changedAny) EmitSignal(SignalName.FlagsReset);
     }
     #endregion
 
@@ -162,10 +195,22 @@ public partial class GameStateManager : Node
     #region Save / load handshake
     public override void _Ready()
     {
+        var completion = new ConfigFile();
+        if (completion.Load(CompletionRecordPath) == Error.Ok)
+            CompletedRunBefore = completion.GetValue("progress", "completed_run", false).AsBool();
+
         // SaveManager owns the files; this singleton owns the state that goes into them.
         SaveManager.CaptureState = BuildSaveState;
         SaveManager.GameLoaded += OnGameLoaded;
         SaveManager.NewGameStarted += OnNewGame;
+    }
+
+    public void MarkRunCompleted()
+    {
+        CompletedRunBefore = true;
+        var completion = new ConfigFile();
+        completion.SetValue("progress", "completed_run", true);
+        completion.Save(CompletionRecordPath);
     }
 
     /// <summary>The slice of the singleton a save file holds: the narrative flags and the
@@ -178,11 +223,19 @@ public partial class GameStateManager : Node
         var affection = new Godot.Collections.Dictionary();
         foreach (KeyValuePair<string, int> pair in _affection) affection[pair.Key] = pair.Value;
 
+        var playerPosition = new Godot.Collections.Dictionary();
+        if (Player != null)
+        {
+            playerPosition["x"] = Player.WorldPosition.X;
+            playerPosition["y"] = Player.WorldPosition.Y;
+        }
+
         return new Godot.Collections.Dictionary
         {
             { "flags", flags },
             { "affection", affection },
-            { "affection_scale", 10 }
+            { "affection_scale", 10 },
+            { "player_position", playerPosition }
         };
     }
 
@@ -214,6 +267,17 @@ public partial class GameStateManager : Node
             EmitSignal(SignalName.FlagChanged, pair.Key, pair.Value);
         foreach (KeyValuePair<string, int> pair in _affection)
             EmitSignal(SignalName.AffectionChanged, pair.Key, pair.Value / 10f);
+
+        if (Player != null && state != null && state.ContainsKey("player_position"))
+        {
+            Godot.Collections.Dictionary savedPosition = state["player_position"].AsGodotDictionary();
+            if (savedPosition.ContainsKey("x") && savedPosition.ContainsKey("y"))
+            {
+                Player.WorldPosition = new Vector2(
+                    (float)savedPosition["x"].AsDouble(),
+                    (float)savedPosition["y"].AsDouble());
+            }
+        }
     }
 
     private void OnNewGame()
@@ -225,19 +289,38 @@ public partial class GameStateManager : Node
 
     #region Ending resolution
     /// <summary>Reads the flags and the affection counters and returns the id of one of the
-    /// endings the design doc lists. Nothing triggers it in gameplay yet - the levels that would
-    /// are not built - but every ending rule lives here, in one place, so the later levels only
-    /// have to send the player to the ending screen.</summary>
+    /// endings the design doc lists. Level 10 records its final choice here before sending the
+    /// player to the ending screen.</summary>
     public string ResolveEnding()
     {
-        bool timelineFixed = GetFlag("atrium_complete");
-        bool remembered = GetFlag("asked_identity");
+        if (GetFlag("final_choice_true_ending")) return "true_ending";
+        if (GetFlag("final_choice_erase") || GetFlag("chose_sacrifice")) return "sacrificial";
+        if (GetFlag("final_choice_do_nothing")) return "no_more_time";
+
+        bool timelineFixed = GetFlag("final_choice_repair") || GetFlag("timeline_fixed") || GetFlag("atrium_complete");
+        bool remembered = GetFlag("asked_identity") || GetFlag("F9_resonance") || GetFlag("F10_divergence");
+
+        if (GetFlag("final_choice_repair"))
+        {
+            if (GetFlag("level10_felix_together")) return "felix_bad_together";
+            if (GetFlag("level10_felix_bad")) return "felix_bad";
+            if (GetFlag("level10_felix_good")) return "felix_good";
+            if (GetFlag("level10_yoruka_bad")) return timelineFixed ? "yoruka_alternate" : "yoruka_bad";
+            if (GetFlag("level10_yoruka_good")) return "yoruka_good";
+            if (GetFlag("level10_adellaine_bad")) return "adellaine_bad";
+            if (GetFlag("level10_adellaine_good")) return "adellaine_good";
+            if (GetFlag("level10_hesiod_bad")) return "hesiod_bad";
+            if (GetFlag("level10_hesiod_good")) return "hesiod_good";
+        }
 
         // Romance routes win once the affection is actually there.
         if (GetAffection(Felix) >= RomanceThreshold) return ResolveFelixEnding(timelineFixed);
-        if (GetAffection(Yoruka) >= RomanceThreshold) return timelineFixed ? "yoruka_good" : "yoruka_bad";
-        if (GetAffection(Adellaine) >= RomanceThreshold) return timelineFixed ? "adellaine_good" : "adellaine_bad";
-        if (GetAffection(Hesiod) >= RomanceThreshold) return timelineFixed ? "hesiod_good" : "hesiod_bad";
+        if (GetAffection(Yoruka) >= RomanceThreshold)
+            return GetFlag("level10_yoruka_bad") ? (timelineFixed ? "yoruka_alternate" : "yoruka_bad") : timelineFixed ? "yoruka_good" : "yoruka_bad";
+        if (GetAffection(Adellaine) >= RomanceThreshold)
+            return GetFlag("level10_adellaine_bad") ? "adellaine_bad" : timelineFixed ? "adellaine_good" : "adellaine_bad";
+        if (GetAffection(Hesiod) >= RomanceThreshold)
+            return GetFlag("level10_hesiod_bad") ? "hesiod_bad" : timelineFixed ? "hesiod_good" : "hesiod_bad";
 
         if (!remembered) return "no_more_time";            // she never pieced the truth together
         if (GetFlag("chose_sacrifice")) return "sacrificial";
@@ -246,9 +329,15 @@ public partial class GameStateManager : Node
 
     private string ResolveFelixEnding(bool timelineFixed)
     {
+        if (GetFlag("level10_felix_together")) return "felix_bad_together";
+        if (GetFlag("level10_felix_good")) return "felix_good";
+        if (GetFlag("level10_felix_bad") || GetFlag("FELIX_BAD_FED")) return "felix_bad";
         // Without the timeline fixed he takes them both down with him.
         if (!timelineFixed) return "felix_bad_together";
         return GetFlag("remembered_felix") ? "true_ending" : "felix_good";
     }
     #endregion
 }
+
+
+

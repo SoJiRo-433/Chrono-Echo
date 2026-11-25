@@ -1,44 +1,39 @@
-[gd_scene load_steps=11 format=3]
+[gd_scene format=3 uid="uid://yk7ln0qqc385"]
 
-[ext_resource type="Script" path="res://Scripts/Rooms/Room.cs" id="1_room"]
-[ext_resource type="Script" path="res://Scripts/Dialogue/DialogueManager.cs" id="2_dlg"]
-[ext_resource type="Script" path="res://Scripts/Puzzles/Obstacle.cs" id="3_obs"]
-[ext_resource type="Script" path="res://Scripts/Puzzles/Door.cs" id="4_door"]
-[ext_resource type="Script" path="res://Scripts/Puzzles/Switch.cs" id="5_sw"]
+[ext_resource type="Script" uid="uid://bfysmapa3xwj2" path="res://Scripts/Rooms/Room.cs" id="1_room"]
+[ext_resource type="Script" uid="uid://cmlce6o6m600s" path="res://Scripts/Dialogue/DialogueManager.cs" id="2_dlg"]
+[ext_resource type="Script" uid="uid://cvk44l3lorsg6" path="res://Scripts/Puzzles/Obstacle.cs" id="3_obs"]
+[ext_resource type="Script" uid="uid://bexdam8uanyim" path="res://Scripts/Puzzles/Door.cs" id="4_door"]
+[ext_resource type="Script" uid="uid://bt6jsgy3vst72" path="res://Scripts/Puzzles/Switch.cs" id="5_sw"]
 [ext_resource type="PackedScene" path="res://Scenes/Player.tscn" id="7_player"]
-[ext_resource type="Script" path="res://Scripts/Rooms/FloorMarker.cs" id="8_marker"]
-[ext_resource type="Script" path="res://Scripts/Puzzles/Inspectable.cs" id="9_inspect"]
-[ext_resource type="Script" path="res://Scripts/Puzzles/Pendant.cs" id="10_pendant"]
-[ext_resource type="Texture2D" path="res://Assets/level1_tutorial_room.png" id="11_backdrop"]
+[ext_resource type="Script" uid="uid://bkqukl7iim1np" path="res://Scripts/Rooms/FloorMarker.cs" id="8_marker"]
+[ext_resource type="Script" uid="uid://de3lcg8o7v2hr" path="res://Scripts/Puzzles/Inspectable.cs" id="9_inspect"]
+[ext_resource type="Script" uid="uid://c78a3onol8j6g" path="res://Scripts/Puzzles/Pendant.cs" id="10_pendant"]
+[ext_resource type="Texture2D" uid="uid://pe6aa7havvbk" path="res://Assets/level1_tutorial_room.png" id="11_backdrop"]
 
-[node name="Room01" type="Node2D"]
+[node name="Room01" type="Node2D" unique_id=458546588]
 script = ExtResource("1_room")
-RoomSize = Vector2(1152, 648)
 PlayerStartPosition = Vector2(118, 306)
 ExitPosition = Vector2(1054, 260)
 ExitSize = Vector2(79, 110)
-MaxEchoes = 3
 MaxCaptureSeconds = 9.0
-LevelNumber = 1
-NextLevelPath = "res://Scenes/Rooms/Room02.tscn"
+NextLevelPath = "res://Scenes/Rooms/RoomLibrary.tscn"
 DemoEchoDialogueId = "pendant_flash"
-LoopReplay = false
-EchoLifetimeSeconds = 20.0
 
-[node name="DialogueManager" type="Node" parent="."]
+[node name="DialogueManager" type="Node" parent="." unique_id=2038713852]
 script = ExtResource("2_dlg")
 
-[node name="Backdrop" type="Sprite2D" parent="."]
+[node name="Backdrop" type="Sprite2D" parent="." unique_id=620192551]
+scale = Vector2(0.6, 0.6)
 texture = ExtResource("11_backdrop")
 centered = false
-scale = Vector2(0.6, 0.6)
 
-[node name="DividerUpper" type="Node2D" parent="."]
+[node name="DividerUpper" type="Node2D" parent="." unique_id=839534320]
 position = Vector2(1008, 0)
 script = ExtResource("3_obs")
 Size = Vector2(32, 156)
 
-[node name="SecurityDoor" type="Node2D" parent="."]
+[node name="SecurityDoor" type="Node2D" parent="." unique_id=352773538]
 position = Vector2(1008, 156)
 script = ExtResource("4_door")
 Size = Vector2(32, 75)
@@ -46,19 +41,19 @@ OpenedFlag = "room01_door_opened"
 ApproachDialogueId = "room01_plate"
 ApproachFlag = "room01_plate_seen"
 
-[node name="DividerLower" type="Node2D" parent="."]
+[node name="DividerLower" type="Node2D" parent="." unique_id=1157019270]
 position = Vector2(1008, 231)
 script = ExtResource("3_obs")
 Size = Vector2(32, 417)
 
-[node name="PressurePlate" type="Node2D" parent="."]
+[node name="PressurePlate" type="Node2D" parent="." unique_id=474956992]
 position = Vector2(978, 554)
 script = ExtResource("5_sw")
 LinkedDoorPath = NodePath("../SecurityDoor")
 IsPressurePlate = true
 PlateRadius = 30.0
 
-[node name="SpawnMarker" type="Node2D" parent="."]
+[node name="SpawnMarker" type="Node2D" parent="." unique_id=1149224534]
 position = Vector2(38, 272)
 script = ExtResource("8_marker")
 Size = Vector2(159, 67)
@@ -67,7 +62,7 @@ Fill = Color(0.2, 0.6, 0.9, 0.1)
 Outline = Color(0.35, 0.7, 0.95, 0.6)
 DrawBox = false
 
-[node name="GlassMarker" type="Node2D" parent="."]
+[node name="GlassMarker" type="Node2D" parent="." unique_id=863066081]
 position = Vector2(53, 41)
 script = ExtResource("8_marker")
 Size = Vector2(144, 32)
@@ -76,7 +71,7 @@ Fill = Color(0.75, 0.85, 0.9, 0.08)
 Outline = Color(0.6, 0.75, 0.85, 0.4)
 DrawBox = false
 
-[node name="RubbleMarker" type="Node2D" parent="."]
+[node name="RubbleMarker" type="Node2D" parent="." unique_id=402773033]
 position = Vector2(925, 41)
 script = ExtResource("8_marker")
 Size = Vector2(106, 29)
@@ -85,7 +80,7 @@ Fill = Color(0.7, 0.68, 0.62, 0.1)
 Outline = Color(0.65, 0.62, 0.55, 0.45)
 DrawBox = false
 
-[node name="PanelMarker" type="Node2D" parent="."]
+[node name="PanelMarker" type="Node2D" parent="." unique_id=37265781]
 position = Vector2(53, 567)
 script = ExtResource("8_marker")
 Size = Vector2(159, 32)
@@ -94,7 +89,7 @@ Fill = Color(0.7, 0.68, 0.62, 0.1)
 Outline = Color(0.65, 0.62, 0.55, 0.45)
 DrawBox = false
 
-[node name="DebrisMarker" type="Node2D" parent="."]
+[node name="DebrisMarker" type="Node2D" parent="." unique_id=1556291854]
 position = Vector2(1052, 588)
 script = ExtResource("8_marker")
 Size = Vector2(91, 29)
@@ -103,7 +98,7 @@ Fill = Color(0.7, 0.68, 0.62, 0.1)
 Outline = Color(0.65, 0.62, 0.55, 0.45)
 DrawBox = false
 
-[node name="PhotoMarker" type="Node2D" parent="."]
+[node name="PhotoMarker" type="Node2D" parent="." unique_id=1709631534]
 position = Vector2(459, 168)
 script = ExtResource("8_marker")
 Size = Vector2(189, 92)
@@ -113,7 +108,7 @@ Outline = Color(0.85, 0.75, 0.55, 0.6)
 VisibleFlag = "saw_burnt_photo"
 DrawBox = false
 
-[node name="AnomalyMarker" type="Node2D" parent="."]
+[node name="AnomalyMarker" type="Node2D" parent="." unique_id=1937758758]
 position = Vector2(788, 255)
 script = ExtResource("8_marker")
 Size = Vector2(220, 67)
@@ -122,7 +117,7 @@ Fill = Color(0.55, 0.45, 0.85, 0.1)
 Outline = Color(0.6, 0.5, 0.9, 0.6)
 DrawBox = false
 
-[node name="EchoZoneMarker" type="Node2D" parent="."]
+[node name="EchoZoneMarker" type="Node2D" parent="." unique_id=945405745]
 position = Vector2(758, 411)
 script = ExtResource("8_marker")
 Size = Vector2(235, 49)
@@ -131,7 +126,7 @@ Fill = Color(0.4, 0.8, 0.45, 0.1)
 Outline = Color(0.45, 0.85, 0.5, 0.6)
 DrawBox = false
 
-[node name="ReportLog" type="Node2D" parent="."]
+[node name="ReportLog" type="Node2D" parent="." unique_id=1213736130]
 position = Vector2(242, 52)
 script = ExtResource("9_inspect")
 Size = Vector2(227, 95)
@@ -144,7 +139,7 @@ FlagToSet = "read_report_log"
 Solid = true
 DrawBox = false
 
-[node name="Drawers" type="Node2D" parent="."]
+[node name="Drawers" type="Node2D" parent="." unique_id=1631624286]
 position = Vector2(273, 168)
 script = ExtResource("9_inspect")
 Size = Vector2(182, 64)
@@ -156,7 +151,7 @@ FlagToSet = "checked_drawers"
 Solid = true
 DrawBox = false
 
-[node name="TimeMachine" type="Node2D" parent="."]
+[node name="TimeMachine" type="Node2D" parent="." unique_id=1061985771]
 position = Vector2(546, 40)
 script = ExtResource("9_inspect")
 Size = Vector2(235, 106)
@@ -168,7 +163,7 @@ FlagToSet = "checked_machine"
 Solid = true
 DrawBox = false
 
-[node name="Cabinet" type="Node2D" parent="."]
+[node name="Cabinet" type="Node2D" parent="." unique_id=820821680]
 position = Vector2(553, 469)
 script = ExtResource("9_inspect")
 Size = Vector2(182, 81)
@@ -180,7 +175,7 @@ FlagToSet = "checked_cabinet"
 Solid = true
 DrawBox = false
 
-[node name="BrokenMachinery" type="Node2D" parent="."]
+[node name="BrokenMachinery" type="Node2D" parent="." unique_id=1650363244]
 position = Vector2(180, 488)
 script = ExtResource("9_inspect")
 Size = Vector2(129, 55)
@@ -191,7 +186,7 @@ FirstDialogueId = "broken_machinery"
 FlagToSet = "checked_machinery"
 DrawBox = false
 
-[node name="Boxes" type="Node2D" parent="."]
+[node name="Boxes" type="Node2D" parent="." unique_id=1734092253]
 position = Vector2(120, 120)
 script = ExtResource("9_inspect")
 Size = Vector2(140, 60)
@@ -202,7 +197,7 @@ FirstDialogueId = "boxes"
 FlagToSet = "checked_boxes"
 DrawBox = false
 
-[node name="Photos" type="Node2D" parent="."]
+[node name="Photos" type="Node2D" parent="." unique_id=1283191769]
 position = Vector2(720, 168)
 script = ExtResource("9_inspect")
 Size = Vector2(140, 70)
@@ -213,12 +208,9 @@ FirstDialogueId = "photos"
 FlagToSet = "checked_photos"
 DrawBox = false
 
-[node name="Pendant" type="Node2D" parent="."]
+[node name="Pendant" type="Node2D" parent="." unique_id=279369584]
 position = Vector2(614, 287)
 script = ExtResource("10_pendant")
-DialogueId = "pendant_flash"
-FlagToSet = "touched_pendant"
-ItemName = "pendant"
 
-[node name="Player" parent="." instance=ExtResource("7_player")]
+[node name="Player" parent="." unique_id=143912242 instance=ExtResource("7_player")]
 position = Vector2(118, 306)

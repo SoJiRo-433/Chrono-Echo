@@ -12,8 +12,7 @@ public sealed class PlayerInput
         AddKeyAction("interact", Key.E);
         AddKeyAction("attack", Key.J);
         AddKeyAction("jump", Key.Space);
-        AddKeyAction("toggle_capture", Key.T);
-        AddKeyAction("project_echo", Key.R);
+        AddKeyAction("record_echo", Key.R);
     }
 
     private static void AddKeyAction(string action, params Key[] keys)
@@ -42,9 +41,9 @@ public sealed class PlayerInput
         return PlayerAction.Idle;
     }
 
-    public bool IsProjectEchoPressed() => Input.IsActionJustPressed("project_echo");
-
-    public bool IsCaptureTogglePressed() => Input.IsActionJustPressed("toggle_capture");
+    /// <summary>Returns true when the record/echo key (R) is pressed. The caller decides what to
+    /// do based on whether we're currently recording.</summary>
+    public bool IsRecordEchoPressed() => Input.IsActionJustPressed("record_echo");
     #endregion
 
     #region Helpers
