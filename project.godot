@@ -23,6 +23,7 @@ config/features=PackedStringArray("4.7", "C#", "Forward Plus")
 [autoload]
 
 GameStateManager="*res://Scripts/Core/GameStateManager.cs"
+SettingsManager="*res://Scripts/Core/SettingsManager.cs"
 DisplayManager="*res://Scripts/Core/DisplayManager.cs"
 PauseMenu="*res://Scripts/Menu/PauseMenu.cs"
 

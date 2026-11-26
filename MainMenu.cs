@@ -7,6 +7,7 @@ public partial class MainMenu : Control
     private Button _btnLoadGame;
     private Button _btnNewGame;
     private Button _btnCGs;
+    private Button _btnSettings;
     private Button _btnQuit;
 
     public override void _Ready()
@@ -17,6 +18,7 @@ public partial class MainMenu : Control
 
         // Background video
         _video = GetNode<VideoStreamPlayer>("menuAnimation");
+        _video.Bus = SettingsManager.MusicBus;
         _video.Loop = true;
         _video.Play();
 
@@ -25,12 +27,14 @@ public partial class MainMenu : Control
         _btnLoadGame = GetNode<Button>("grpMenu/btnLoadGame");
         _btnNewGame  = GetNode<Button>("grpMenu/btnNewGame");
         _btnCGs      = GetNode<Button>("grpMenu/CGs");
+        _btnSettings = GetNode<Button>("grpMenu/btnSettings");
         _btnQuit     = GetNode<Button>("grpMenu/Quit");
 
         _btnStart.Pressed    += OnStartPressed;
         _btnLoadGame.Pressed += OnLoadGamePressed;
         _btnNewGame.Pressed  += OnNewGamePressed;
         _btnCGs.Pressed      += OnCGsPressed;
+        _btnSettings.Pressed += OnSettingsPressed;
         _btnQuit.Pressed     += OnQuitPressed;
 
         // "Start" becomes "Continue" once a game exists
@@ -71,6 +75,15 @@ public partial class MainMenu : Control
     private void OnCGsPressed()
     {
         CgGallery.Open(this);
+    }
+
+    private void OnSettingsPressed()
+    {
+        var settings = SettingsMenu.Open(this);
+        settings.TreeExited += () =>
+        {
+            if (IsInstanceValid(_btnSettings)) _btnSettings.GrabFocus();
+        };
     }
 
     private void OnQuitPressed()

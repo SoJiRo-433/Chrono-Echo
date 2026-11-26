@@ -72,6 +72,7 @@ public partial class PauseMenu : CanvasLayer
         _btnResume = AddButton(box, "Resume", Resume);
         AddButton(box, "Save Game", OnSavePressed);
         AddButton(box, "Load Game", OnLoadPressed);
+        AddButton(box, "Settings", OnSettingsPressed);
         AddButton(box, "Quit", OnQuitPressed);
     }
 
@@ -97,6 +98,12 @@ public partial class PauseMenu : CanvasLayer
             Visible = false; // the save's scene is loading; SaveManager unpauses the tree
         };
         picker.TreeExited += RefocusIfVisible;
+    }
+
+    private void OnSettingsPressed()
+    {
+        var settings = SettingsMenu.Open(_root);
+        settings.TreeExited += RefocusIfVisible;
     }
 
     private void OnQuitPressed()

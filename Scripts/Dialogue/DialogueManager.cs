@@ -35,11 +35,24 @@ public partial class DialogueManager : Node
 	private Label _dialogueLabel;
 	private Label _toastLabel;
 	private SceneTreeTimer _toastTimer;
+	private HBoxContainer _controlsBar;
+	private Button _autoButton;
+	private Button _skipButton;
+	private Button _settingsButton;
+
+	private string _fullLineText = "";
+	private float _revealedChars;
+	private bool _isRevealing;
+	private float _autoAdvanceTimer;
+	private bool _skipToggled;
+	private float _skipTimer;
+	private bool _settingsOpen;
 
 	private string _currentObjective = "";
 	private string _platePath = "";
 	#endregion
 
+	private const float SkipIntervalSeconds = 0.06f;
 	private const string ObjectiveSpeaker = "Objective";
 	private const string PortraitFolder = "res://Assets/Portraits/";
 
@@ -98,6 +111,8 @@ public partial class DialogueManager : Node
 			GameStateManager.Instance.FlagChanged += OnFlagChanged;
 			GameStateManager.Instance.FlagsReset += OnFlagsReset;
 		}
+		if (SettingsManager.Instance != null)
+			SettingsManager.Instance.SettingsChanged += OnSettingsChanged;
 	}
 
 	public override void _ExitTree()
@@ -107,20 +122,78 @@ public partial class DialogueManager : Node
 			GameStateManager.Instance.FlagChanged -= OnFlagChanged;
 			GameStateManager.Instance.FlagsReset -= OnFlagsReset;
 		}
+		if (SettingsManager.Instance != null)
+			SettingsManager.Instance.SettingsChanged -= OnSettingsChanged;
 	}
 
 	public override void _Process(double delta)
 	{
-		if (!_isActive || !_awaitingChoice || _choiceTimeout <= 0f) return;
+		if (!_isActive || _currentNode == null) return;
 
-		// A timed choice: when the clock runs out she takes the option that was left last.
-		_choiceTimer -= (float)delta;
-		if (_choiceTimer <= 0f)
+		float dt = (float)delta;
+		if (_isRevealing)
 		{
-			SelectChoice(_visibleChoices.Count - 1);
+			if (IsSkippingActiveAndAllowed())
+			{
+				CompleteReveal();
+			}
+			else
+			{
+				float cps = SettingsManager.Instance?.CharactersPerSecond ?? float.PositiveInfinity;
+				if (float.IsPositiveInfinity(cps))
+				{
+					CompleteReveal();
+				}
+				else
+				{
+					_revealedChars += cps * dt;
+					if (_revealedChars >= _fullLineText.Length) CompleteReveal();
+					else RefreshDialogueLabelText();
+				}
+				return;
+			}
+		}
+
+		bool ctrlHeld = Input.IsKeyPressed(Key.Ctrl);
+		if (ctrlHeld || _skipToggled)
+		{
+			if (CanSkipCurrentLine())
+			{
+				_skipTimer -= dt;
+				if (_skipTimer <= 0f)
+				{
+					_skipTimer = SkipIntervalSeconds;
+					Advance();
+				}
+				return;
+			}
+			if (_skipToggled)
+			{
+				_skipToggled = false;
+				RefreshControlsBar();
+				RefreshDialogueLabelText();
+			}
+		}
+
+		if (_awaitingChoice && _choiceTimeout > 0f)
+		{
+			// A timed choice: when the clock runs out she takes the option that was left last.
+			_choiceTimer -= dt;
+			if (_choiceTimer <= 0f)
+			{
+				SelectChoice(_visibleChoices.Count - 1);
+				return;
+			}
+			RefreshDialogueLabelText();
 			return;
 		}
-		RefreshOverlay();
+
+		if (!_awaitingChoice && SettingsManager.Instance?.AutoText == true)
+		{
+			_autoAdvanceTimer -= dt;
+			if (_autoAdvanceTimer <= 0f)
+				Advance();
+		}
 	}
 
 	public override void _UnhandledInput(InputEvent @event)
@@ -136,6 +209,12 @@ public partial class DialogueManager : Node
 		// hands over to the next level, and the scene change frees this node - so touching
 		// the viewport afterwards dereferences a node that no longer exists.
 		GetViewport()?.SetInputAsHandled();
+
+		if (_isRevealing)
+		{
+			CompleteReveal();
+			return;
+		}
 
 		if (advance) Advance();
 		else SelectChoice((int)key.Keycode - (int)Key.Key1);
@@ -162,6 +241,13 @@ public partial class DialogueManager : Node
 	public void Advance()
 	{
 		if (!_isActive || _awaitingChoice) return;
+		if (_isRevealing)
+		{
+			CompleteReveal();
+			return;
+		}
+
+		MarkCurrentLineRead();
 
 		if (_lineIndex < _currentNode.Lines.Count - 1)
 		{
@@ -213,11 +299,12 @@ public partial class DialogueManager : Node
 
 	private void ShowCurrentLine()
 	{
-		EmitSignal(SignalName.LineChanged, _currentNode.Speaker, _currentNode.Lines[_lineIndex]);
+		_fullLineText = _currentNode.Lines[_lineIndex];
+		EmitSignal(SignalName.LineChanged, _currentNode.Speaker, _fullLineText);
 
 		// An Objective line is also the HUD's "Current objective": it replaces the previous one
 		// and stays on screen long after this dialogue box has closed.
-		if (_currentNode.Speaker == ObjectiveSpeaker) _currentObjective = _currentNode.Lines[_lineIndex];
+		if (_currentNode.Speaker == ObjectiveSpeaker) _currentObjective = _fullLineText;
 
 		_awaitingChoice = false;
 		_visibleChoices.Clear();
@@ -240,6 +327,22 @@ public partial class DialogueManager : Node
 				EmitSignal(SignalName.ChoicesPresented, texts);
 			}
 		}
+
+		float cps = SettingsManager.Instance?.CharactersPerSecond ?? float.PositiveInfinity;
+		bool revealImmediately = float.IsPositiveInfinity(cps) || string.IsNullOrEmpty(_fullLineText) || IsSkippingActiveAndAllowed();
+		if (revealImmediately)
+		{
+			_revealedChars = _fullLineText.Length;
+			_isRevealing = false;
+			MarkCurrentLineRead();
+		}
+		else
+		{
+			_revealedChars = 0f;
+			_isRevealing = true;
+		}
+
+		_autoAdvanceTimer = SettingsManager.Instance?.AutoTextDelay ?? SettingsManager.DefaultAutoTextDelay;
 		RefreshOverlay();
 	}
 
@@ -248,8 +351,12 @@ public partial class DialogueManager : Node
 		string finishedId = _currentData?.Id ?? "";
 		_isActive = false;
 		_awaitingChoice = false;
+		_isRevealing = false;
+		_skipToggled = false;
+		_fullLineText = "";
 		_currentData = null;
 		_currentNode = null;
+		SettingsManager.Instance?.FlushReadLines();
 		GameStateManager.Instance?.SetPaused(false);   // resume gameplay
 		RefreshOverlay();
 		EmitSignal(SignalName.DialogueEnded, finishedId);
@@ -342,6 +449,8 @@ public partial class DialogueManager : Node
 		_dialogueLabel.AddThemeFontSizeOverride("font_size", 20);
 		_panel.AddChild(_dialogueLabel);
 
+		BuildControlsBar();
+
 		// The toast sits above the frame, clear of the portrait plate beside it.
 		_toastLabel = new Label { Position = FragmentToastPosition, Size = FragmentToastSize, HorizontalAlignment = HorizontalAlignment.Left, AutowrapMode = TextServer.AutowrapMode.WordSmart, Visible = false };
 		_toastLabel.AddThemeColorOverride("font_color", new Color(1f, 0.9f, 0.4f));
@@ -372,8 +481,134 @@ public partial class DialogueManager : Node
 		_speakerLabel.Text = speaker;
 		_speakerLabel.AddThemeColorOverride("font_color", colour);
 		RefreshPortrait(speaker);
+		RefreshControlsBar();
+		RefreshDialogueLabelText();
+	}
 
-		string text = _currentNode.Lines[_lineIndex];
+	private void BuildControlsBar()
+	{
+		_controlsBar = new HBoxContainer
+		{
+			Position = new Vector2(DialogueFrameSize.X - 356f, 22f),
+			Size = new Vector2(320f, 34f),
+			Alignment = BoxContainer.AlignmentMode.End,
+			MouseFilter = Control.MouseFilterEnum.Ignore
+		};
+		_controlsBar.AddThemeConstantOverride("separation", 8);
+
+		_autoButton = CreateOverlayButton("Auto: Off", OnAutoButtonPressed);
+		_skipButton = CreateOverlayButton("Skip", OnSkipButtonPressed);
+		_settingsButton = CreateOverlayButton("Settings", OnDialogueSettingsPressed);
+
+		_controlsBar.AddChild(_autoButton);
+		_controlsBar.AddChild(_skipButton);
+		_controlsBar.AddChild(_settingsButton);
+		_panel.AddChild(_controlsBar);
+		RefreshControlsBar();
+	}
+
+	private static Button CreateOverlayButton(string text, System.Action onPressed)
+	{
+		var button = new Button
+		{
+			Text = text,
+			FocusMode = Control.FocusModeEnum.None,
+			MouseFilter = Control.MouseFilterEnum.Stop,
+			CustomMinimumSize = new Vector2(88f, 30f)
+		};
+		button.AddThemeFontSizeOverride("font_size", 14);
+		button.Pressed += onPressed;
+		return button;
+	}
+
+	private void OnAutoButtonPressed()
+	{
+		if (SettingsManager.Instance == null) return;
+		SettingsManager.Instance.SetAutoText(!SettingsManager.Instance.AutoText);
+	}
+
+	private void OnSkipButtonPressed()
+	{
+		if (_skipToggled)
+		{
+			_skipToggled = false;
+			RefreshControlsBar();
+			return;
+		}
+		if (!CanSkipCurrentLine()) return;
+
+		_skipToggled = true;
+		_skipTimer = 0f;
+		if (_isRevealing) CompleteReveal();
+		RefreshControlsBar();
+	}
+
+	private void OnDialogueSettingsPressed()
+	{
+		if (_layer == null || _settingsOpen) return;
+		_settingsOpen = true;
+		bool wasPaused = GetTree().Paused;
+		GetTree().Paused = true;
+		var settings = SettingsMenu.Open(_layer);
+		settings.TreeExited += () =>
+		{
+			_settingsOpen = false;
+			if (IsInstanceValid(this)) GetTree().Paused = wasPaused;
+		};
+	}
+
+	private void OnSettingsChanged()
+	{
+		if (!IsInstanceValid(this)) return;
+		RefreshControlsBar();
+		if (!_isActive) return;
+
+		if (_isRevealing && float.IsPositiveInfinity(SettingsManager.Instance?.CharactersPerSecond ?? float.PositiveInfinity))
+			CompleteReveal();
+		else
+		{
+			_autoAdvanceTimer = SettingsManager.Instance?.AutoTextDelay ?? SettingsManager.DefaultAutoTextDelay;
+			RefreshDialogueLabelText();
+		}
+	}
+
+	private void RefreshControlsBar()
+	{
+		if (_autoButton == null || _skipButton == null) return;
+
+		bool autoOn = SettingsManager.Instance?.AutoText ?? false;
+		SkipMode skipMode = SettingsManager.Instance?.SkipMode ?? SkipMode.ReadOnly;
+
+		_autoButton.Text = autoOn ? "Auto: On" : "Auto: Off";
+		_autoButton.Modulate = autoOn ? new Color(0.65f, 0.92f, 1f) : new Color(0.85f, 0.85f, 0.9f);
+
+		_skipButton.Text = _skipToggled
+			? "Skipping"
+			: skipMode == SkipMode.All ? "Skip (All)" : "Skip (Read)";
+		_skipButton.Modulate = _skipToggled ? new Color(1f, 0.88f, 0.45f) : new Color(0.85f, 0.85f, 0.9f);
+	}
+
+	private void CompleteReveal()
+	{
+		_isRevealing = false;
+		_revealedChars = _fullLineText.Length;
+		MarkCurrentLineRead();
+		_autoAdvanceTimer = SettingsManager.Instance?.AutoTextDelay ?? SettingsManager.DefaultAutoTextDelay;
+		RefreshDialogueLabelText();
+	}
+
+	private void RefreshDialogueLabelText()
+	{
+		if (_dialogueLabel == null || _currentNode == null) return;
+
+		if (_isRevealing)
+		{
+			int count = Mathf.Clamp((int)_revealedChars, 0, _fullLineText.Length);
+			_dialogueLabel.Text = _fullLineText.Substring(0, count);
+			return;
+		}
+
+		string text = _fullLineText;
 		if (_awaitingChoice)
 		{
 			text += "\n";
@@ -385,10 +620,34 @@ public partial class DialogueManager : Node
 		}
 		else
 		{
-			text += "\n\n  [Enter] continue";
+			bool autoOn = SettingsManager.Instance?.AutoText ?? false;
+			text += autoOn ? "\n\n  [Enter] continue   [Auto]" : "\n\n  [Enter] continue";
 		}
 		_dialogueLabel.Text = text;
 	}
+
+	private string CurrentLineKey() =>
+		_currentData == null || _currentNode == null
+			? ""
+			: SettingsManager.MakeLineKey(_currentData.Id, _currentNode.Id, _lineIndex);
+
+	private void MarkCurrentLineRead()
+	{
+		string key = CurrentLineKey();
+		if (!string.IsNullOrEmpty(key))
+			SettingsManager.Instance?.MarkLineRead(key);
+	}
+
+	private bool CanSkipCurrentLine()
+	{
+		if (!_isActive || _currentNode == null || _awaitingChoice) return false;
+		SkipMode mode = SettingsManager.Instance?.SkipMode ?? SkipMode.ReadOnly;
+		if (mode == SkipMode.All) return true;
+		return SettingsManager.Instance?.IsLineRead(CurrentLineKey()) == true;
+	}
+
+	private bool IsSkippingActiveAndAllowed() =>
+		(_skipToggled || Input.IsKeyPressed(Key.Ctrl)) && CanSkipCurrentLine();
 
 	/// <summary>The CG plate behind the box. Two things can put a picture there: the pendant's
 	/// flash, which is the memory the whole game opens with, and any node that declares one of its

@@ -57,10 +57,10 @@ anchor_bottom = 0.5
 offset_left = -476.0
 offset_top = -37.0
 offset_right = -95.0
-offset_bottom = 290.0
+offset_bottom = 305.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/separation = 17
+theme_override_constants/separation = 12
 
 [node name="btnStart" type="Button" parent="grpMenu" unique_id=2026475702]
 layout_mode = 2
@@ -89,13 +89,18 @@ layout_mode = 2
 theme_override_fonts/font = ExtResource("4_jix8l")
 theme_override_font_sizes/font_size = 32
 theme_override_styles/normal = SubResource("StyleBoxFlat_lfxu0")
-text = "CGs
-"
+text = "CGs"
+
+[node name="btnSettings" type="Button" parent="grpMenu" unique_id=1425364758]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("4_jix8l")
+theme_override_font_sizes/font_size = 32
+theme_override_styles/normal = SubResource("StyleBoxFlat_lfxu0")
+text = "Settings"
 
 [node name="Quit" type="Button" parent="grpMenu" unique_id=1802146162]
 layout_mode = 2
 theme_override_fonts/font = ExtResource("4_jix8l")
 theme_override_font_sizes/font_size = 32
 theme_override_styles/normal = SubResource("StyleBoxFlat_lfxu0")
-text = "Quit
-"
+text = "Quit"

@@ -1,23 +1,23 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\HP\\Downloads\\ChronoEchoes\\ChronoEchoes\\ChronoEchoes.csproj": {}
+    "C:\\Users\\chris\\Documents\\GitHub\\Chrono-Echo\\ChronoEchoes.csproj": {}
   },
   "projects": {
-    "C:\\Users\\HP\\Downloads\\ChronoEchoes\\ChronoEchoes\\ChronoEchoes.csproj": {
+    "C:\\Users\\chris\\Documents\\GitHub\\Chrono-Echo\\ChronoEchoes.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\HP\\Downloads\\ChronoEchoes\\ChronoEchoes\\ChronoEchoes.csproj",
+        "projectUniqueName": "C:\\Users\\chris\\Documents\\GitHub\\Chrono-Echo\\ChronoEchoes.csproj",
         "projectName": "ChronoEchoes",
-        "projectPath": "C:\\Users\\HP\\Downloads\\ChronoEchoes\\ChronoEchoes\\ChronoEchoes.csproj",
-        "packagesPath": "C:\\Users\\HP\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\HP\\Downloads\\ChronoEchoes\\ChronoEchoes\\.godot\\mono\\temp\\obj\\",
+        "projectPath": "C:\\Users\\chris\\Documents\\GitHub\\Chrono-Echo\\ChronoEchoes.csproj",
+        "packagesPath": "C:\\Users\\chris\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\chris\\Documents\\GitHub\\Chrono-Echo\\.godot\\mono\\temp\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
         ],
         "configFilePaths": [
-          "C:\\Users\\HP\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Users\\chris\\AppData\\Roaming\\NuGet\\NuGet.Config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
@@ -26,8 +26,7 @@
         ],
         "sources": {
           "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
-          "C:\\Program Files\\dotnet\\library-packs": {},
-          "https://api.nuget.org/v3/index.json": {}
+          "C:\\Users\\chris\\Downloads\\Godot_v4.7.2-stable_mono_win64\\Godot_v4.7.2-stable_mono_win64\\GodotSharp\\Tools\\nupkgs": {}
         },
         "frameworks": {
           "net8.0": {
