@@ -19,11 +19,10 @@ public partial class Room09SectorAlpha : Room
 	private readonly float[] _pillarSpeeds = { 0.72f, 0.93f, 1.14f };
 	private readonly Vector2[] _pillarBases = { P(335, 16), P(425, 16), P(515, 16) };
 	private Switch _officeLever, _terminalPause;
-	private FloorMarker _slidingPanel;
 	private Inspectable _drawer;
 	private Door _chessDoor, _innerDoor;
-	private float _chessTick, _officeClock, _freezeRemaining, _hitCooldown;
-	private bool _panelHeld, _terminalRead, _felixTalked;
+	private float _chessTick, _freezeRemaining, _hitCooldown;
+	private bool _pillarsDisabled, _terminalRead, _felixTalked;
 	private Vector2 _lastSafePosition;
 	private bool _gearDialogueQueued;
 
@@ -85,18 +84,22 @@ public partial class Room09SectorAlpha : Room
 				if (GameStateManager.Instance?.GetFlag("level9_chess_objective_set") != true)
 				{
 					GameStateManager.Instance?.SetFlag("level9_chess_objective_set", true);
-					Dialogue?.SetObjective("Explore the shared office and find the sliding panel's hidden drawer.");
+					Dialogue?.SetObjective("Explore the shared office and investigate the surroundings to uncover the hidden drawer.");
 				}
 			}
 		}
 
-		_panelHeld = EchoOn(_officeLever);
-		if (!_panelHeld) _officeClock += dt;
-		float panelX = _panelHeld ? _slidingPanel.Position.X / MapScale : 170f + (Mathf.Sin(_officeClock * Mathf.Tau / 4f) + 1f) * 45f;
-		if (!_panelHeld) _slidingPanel.Position = P(panelX, 106);
-		bool drawerReachable = panelX <= 180f;
-		GameStateManager.Instance?.SetFlag("level9_drawer_revealed", drawerReachable);
-		if (_drawer != null) _drawer.Visible = drawerReachable;
+		// Office lever now temporarily disables the yellow pillars (timeline columns)
+		_pillarsDisabled = EchoOn(_officeLever);
+		GameStateManager.Instance?.SetFlag("level9_pillars_disabled", _pillarsDisabled);
+
+		// Check if all office interactions have been found to reveal the drawer
+		bool whiteboard = GameStateManager.Instance?.GetFlag("level9_office_whiteboard") == true;
+		bool mugs = GameStateManager.Instance?.GetFlag("level9_office_mugs") == true;
+		bool chair = GameStateManager.Instance?.GetFlag("level9_office_chair") == true;
+		bool drawerRevealed = whiteboard && mugs && chair;
+		GameStateManager.Instance?.SetFlag("level9_drawer_revealed", drawerRevealed);
+		if (_drawer != null) _drawer.Visible = drawerRevealed;
 		if (GameStateManager.Instance?.GetFlag("level9_drawer_found") == true &&
 			GameStateManager.Instance?.GetFlag("level9_drawer_objective_updated") != true)
 		{
@@ -111,11 +114,20 @@ public partial class Room09SectorAlpha : Room
 			var p = _pillars[i];
 			// Keep each column within the beam lane painted on the map instead of sweeping
 			// across unrelated rooms. Echo pause freezes it at its current aligned position.
-			float x = _pillarBases[i].X + Mathf.Sin(LoopClock * _pillarSpeeds[i]) * 18f;
-			if (!columnsPaused) p.Position = new Vector2(x, _pillarBases[i].Y);
-			if (!columnsPaused && _freezeRemaining <= 0 && Player != null &&
-				new Rect2(p.Position, S(14, 150)).Intersects(Player.Bounds))
-			{ _freezeRemaining = 2f; _lastSafePosition = Player.WorldPosition - new Vector2(24f, 0f); }
+			// Office lever also disables pillars temporarily.
+			if (!_pillarsDisabled && !columnsPaused)
+			{
+				float x = _pillarBases[i].X + Mathf.Sin(LoopClock * _pillarSpeeds[i]) * 18f;
+				p.Position = new Vector2(x, _pillarBases[i].Y);
+				if (_freezeRemaining <= 0 && Player != null &&
+					new Rect2(p.Position, S(14, 150)).Intersects(Player.Bounds))
+				{ _freezeRemaining = 2f; _lastSafePosition = Player.WorldPosition - new Vector2(24f, 0f); }
+			}
+			else
+			{
+				// Pillars disabled - hide them off-screen
+				p.Position = new Vector2(_pillarBases[i].X, -100);
+			}
 		}
 
 		if (!_terminalRead && GameStateManager.Instance?.GetFlag("level9_variable_1") == true &&
@@ -195,17 +207,21 @@ public partial class Room09SectorAlpha : Room
 		_chessDoor = Add(new Door { Size = S(24, 8), RequiresSwitch = true }, "ChessExit", P(142, 164));
 		RefreshAttackLines();
 
-		// Shared office, its moving cover, and memory objects.
+		// Shared office - investigate surroundings to uncover hidden drawer
 		Add(new Inspectable { Caption = "SHARED WHITEBOARD (E)", Size = S(48, 18), DrawBox = false,
-			FirstDialogueId = "level9_whiteboard", RepeatDialogueId = "level9_whiteboard" }, "SharedWhiteboard", P(82, 67));
+			FirstDialogueId = "level9_whiteboard", RepeatDialogueId = "level9_whiteboard",
+			FlagToSet = "level9_office_whiteboard" }, "SharedWhiteboard", P(82, 67));
 		Add(new Inspectable { Caption = "TWO MUGS (E)", Size = S(30, 18), DrawBox = false,
-			FirstDialogueId = "level9_mugs", RepeatDialogueId = "level9_mugs" }, "Mugs", P(170, 75));
+			FirstDialogueId = "level9_mugs", RepeatDialogueId = "level9_mugs",
+			FlagToSet = "level9_office_mugs" }, "Mugs", P(170, 75));
 		Add(new Inspectable { Caption = "EMPTY CHAIR (E)", Size = S(32, 24), DrawBox = false,
-			FirstDialogueId = "level9_chair", RepeatDialogueId = "level9_chair" }, "EmptyChair", P(215, 125));
-		_slidingPanel = Add(new FloorMarker { Caption = "SLIDING WALL PANEL", Size = S(58, 13),
-			Fill = new Color(.35f, .52f, .64f, .26f), Outline = new Color(.48f, .7f, .83f, .7f) }, "SlidingPanel", P(215, 106));
-		_officeLever = Add(new Switch { IsPressurePlate = true, PlateRadius = 16f }, "OfficePanelLever", P(38, 149));
-		Add(new FloorMarker { Caption = "HOLD PANEL / ECHO", Size = S(50, 12), DottedRing = true }, "PanelLeverLabel", P(20, 137));
+			FirstDialogueId = "level9_chair", RepeatDialogueId = "level9_chair",
+			FlagToSet = "level9_office_chair" }, "EmptyChair", P(215, 125));
+
+		// Office lever - now disables yellow pillars temporarily
+		_officeLever = Add(new Switch { IsPressurePlate = true, PlateRadius = 16f }, "OfficePillarLever", P(38, 149));
+		Add(new FloorMarker { Caption = "DISABLE PILLARS / ECHO", Size = S(50, 12), DottedRing = true }, "PillarLeverLabel", P(20, 137));
+
 		_drawer = Add(new Inspectable { Caption = "HIDDEN DRAWER (E)", Size = S(36, 20), DrawBox = false,
 			RequiredFlag = "level9_drawer_revealed", FirstDialogueId = "level9_drawer", RepeatDialogueId = "level9_drawer" }, "HiddenDrawer", P(260, 141));
 		_drawer.Visible = false;
@@ -220,11 +236,11 @@ public partial class Room09SectorAlpha : Room
 		_terminalPause = Add(new Switch { IsPressurePlate = true, PlateRadius = 17 }, "TerminalPause", P(576, 88));
 		Add(new FloorMarker { Caption = "ECHO PAUSE", Size = S(42, 12), DottedRing = true }, "PauseLabel", P(555, 71));
 		Add(new Inspectable { Caption = "VARIABLE 1 (E)", Size = S(24, 20), DrawBox = false, RequiredFlag = "level9_columns_paused",
-			FlagToSet = "level9_variable_1", FirstDialogueId = "level9_variable_one", RepeatDialogueId = "level9_variable_one" }, "VariableOne", P(520, 55));
+			FlagToSet = "level9_variable_1", FirstDialogueId = "level9_variable_one", RepeatDialogueId = "level9_variable_one" }, "VariableOne", P(555, 55));
 		Add(new Inspectable { Caption = "VARIABLE 2 (E)", Size = S(24, 20), DrawBox = false, RequiredFlag = "level9_columns_paused",
-			FlagToSet = "level9_variable_2", FirstDialogueId = "level9_variable_two", RepeatDialogueId = "level9_variable_two" }, "VariableTwo", P(520, 102));
+			FlagToSet = "level9_variable_2", FirstDialogueId = "level9_variable_two", RepeatDialogueId = "level9_variable_two" }, "VariableTwo", P(555, 102));
 		Add(new Inspectable { Caption = "OVERRIDE LOG (E)", Size = S(30, 22), DrawBox = false, RequiredFlag = "level9_columns_paused",
-			FlagToSet = "level9_variable_3", FirstDialogueId = "level9_variable_three", RepeatDialogueId = "level9_variable_three" }, "VariableThree", P(560, 136));
+			FlagToSet = "level9_variable_3", FirstDialogueId = "level9_variable_three", RepeatDialogueId = "level9_variable_three" }, "VariableThree", P(580, 136));
 
 		// Prototype chamber: the five blue gear pads are separate Echo replay tasks.
 		Vector2[] gearPoints = { P(455, 202), P(505, 194), P(548, 220), P(528, 276), P(455, 275) };
