@@ -26,19 +26,33 @@ public partial class DialogueManager : Node
 	private float _choiceTimeout;
 	private float _choiceTimer;
 
-	// Dialogue UI - the frame, its speaker tab and the portrait plate are drawn from Assets/UI.
+	// Dialogue UI - drawn from Assets/UI via UiSkin.
 	private CanvasLayer _layer;
 	private TextureRect _memoryImage;
 	private TextureRect _portrait;
 	private TextureRect _panel;
+	private Control _nameBoxContainer;
+	private NinePatchRect _nameBox;
+	private TextureRect _nextIndicator;
 	private Label _speakerLabel;
 	private Label _dialogueLabel;
 	private Label _toastLabel;
 	private SceneTreeTimer _toastTimer;
-	private HBoxContainer _controlsBar;
+	private HBoxContainer _autoSkipBar;
 	private Button _autoButton;
 	private Button _skipButton;
+	private HBoxContainer _controlsBar;
+	private Button _logsButton;
+	private Button _loadButton;
+	private Button _saveButton;
 	private Button _settingsButton;
+	private VBoxContainer _choicesContainer;
+	private Label _choiceTimerLabel;
+	private readonly List<ChoiceRow> _choiceRows = new();
+	private readonly List<(string Speaker, string Text)> _localDialogueLog = new();
+
+	private Texture2D _selectDialogueTex;
+	private Texture2D _selectedDialogueTex;
 
 	private string _fullLineText = "";
 	private float _revealedChars;
@@ -46,7 +60,17 @@ public partial class DialogueManager : Node
 	private float _autoAdvanceTimer;
 	private bool _skipToggled;
 	private float _skipTimer;
-	private bool _settingsOpen;
+	private float _indicatorBlinkClock;
+	private int _hoveredChoiceIndex = -1;
+	private bool _selectedByScroll;
+	private bool _overlayMenuOpen;
+
+	private sealed class ChoiceRow
+	{
+		public Button Button;
+		public TextureRect Background;
+		public Label Label;
+	}
 
 	private string _currentObjective = "";
 	private string _platePath = "";
@@ -62,12 +86,12 @@ public partial class DialogueManager : Node
 	private const string MemoryCgPath = "res://Assets/blue_light_memory.jpg";
 	private const string PendantMemoryCgPath = "res://Assets/memoryPendant.PNG";
 
-	// The dialogue frame is drawn whole, at the proportions it is drawn at, and pinned near the
-	// bottom of the screen. The speaker tab, the text block and the portrait window are all placed
-	// from the sheets' own rectangles scaled to these two sizes (see UiSkin), so the drawing keeps
-	// its proportions whatever the frame is sized to.
-	private static readonly Vector2 DialogueFrameSize = new(957f, 294f);
-	private static readonly Vector2 DialogueFrameOrigin = new(20f, 316f);
+	// Dialogue box proportions derived from the 1920x1080 UI artboard scaled to the 1152x648 viewport.
+	private const float UiArtScale = 0.6f;
+	private const float DialogueBoxHeight = 254f;
+	private const float DialogueBoxBottomMargin = 20f;
+	private const int NameFontSize = 22;
+	private const float NameBoxHeight = 52f;
 	private static readonly Vector2 PortraitFigureSize = new(1320f, 1720f);
 	private static readonly Vector2 PortraitFigureOrigin = new(160f, 75f);
 	private static readonly Vector2 FragmentToastPosition = new(20f, 190f);
@@ -131,6 +155,8 @@ public partial class DialogueManager : Node
 		if (!_isActive || _currentNode == null) return;
 
 		float dt = (float)delta;
+		_indicatorBlinkClock += dt;
+
 		if (_isRevealing)
 		{
 			if (IsSkippingActiveAndAllowed())
@@ -150,6 +176,7 @@ public partial class DialogueManager : Node
 					if (_revealedChars >= _fullLineText.Length) CompleteReveal();
 					else RefreshDialogueLabelText();
 				}
+				RefreshNextIndicator();
 				return;
 			}
 		}
@@ -159,6 +186,7 @@ public partial class DialogueManager : Node
 		{
 			if (CanSkipCurrentLine())
 			{
+				RefreshNextIndicator();
 				_skipTimer -= dt;
 				if (_skipTimer <= 0f)
 				{
@@ -170,7 +198,7 @@ public partial class DialogueManager : Node
 			if (_skipToggled)
 			{
 				_skipToggled = false;
-				RefreshControlsBar();
+				RefreshAutoSkipBar();
 				RefreshDialogueLabelText();
 			}
 		}
@@ -184,9 +212,12 @@ public partial class DialogueManager : Node
 				SelectChoice(_visibleChoices.Count - 1);
 				return;
 			}
-			RefreshDialogueLabelText();
+			RefreshChoiceTimerLabel();
+			RefreshNextIndicator();
 			return;
 		}
+
+		RefreshNextIndicator();
 
 		if (!_awaitingChoice && SettingsManager.Instance?.AutoText == true)
 		{
@@ -196,10 +227,42 @@ public partial class DialogueManager : Node
 		}
 	}
 
+	public override void _Input(InputEvent @event)
+	{
+		if (!_isActive || _currentNode == null || _overlayMenuOpen || !_awaitingChoice || _visibleChoices.Count == 0)
+			return;
+
+		if (@event is InputEventMouseButton mouseButton && mouseButton.Pressed)
+		{
+			if (mouseButton.ButtonIndex == MouseButton.WheelUp)
+			{
+				MoveHoveredChoice(-1);
+				GetViewport()?.SetInputAsHandled();
+			}
+			else if (mouseButton.ButtonIndex == MouseButton.WheelDown)
+			{
+				MoveHoveredChoice(1);
+				GetViewport()?.SetInputAsHandled();
+			}
+			else if (mouseButton.ButtonIndex == MouseButton.Middle && _hoveredChoiceIndex >= 0 && _hoveredChoiceIndex < _visibleChoices.Count)
+			{
+				GetViewport()?.SetInputAsHandled();
+				SelectChoice(_hoveredChoiceIndex);
+			}
+		}
+	}
+
 	public override void _UnhandledInput(InputEvent @event)
 	{
-		if (!_isActive || _currentNode == null) return;
+		if (!_isActive || _currentNode == null || _overlayMenuOpen) return;
 		if (!(@event is InputEventKey key) || !key.Pressed || key.IsEcho()) return;
+
+		if (_awaitingChoice && _visibleChoices.Count > 0 && (key.Keycode == Key.Up || key.Keycode == Key.Down))
+		{
+			GetViewport()?.SetInputAsHandled();
+			MoveHoveredChoice(key.Keycode == Key.Up ? -1 : 1);
+			return;
+		}
 
 		bool advance = key.Keycode == Key.Enter || key.Keycode == Key.KpEnter || key.Keycode == Key.Space;
 		bool choose = key.Keycode >= Key.Key1 && key.Keycode <= Key.Key9;
@@ -216,7 +279,18 @@ public partial class DialogueManager : Node
 			return;
 		}
 
-		if (advance) Advance();
+		if (advance)
+		{
+			if (_awaitingChoice)
+			{
+				if (_hoveredChoiceIndex >= 0 && _hoveredChoiceIndex < _visibleChoices.Count)
+					SelectChoice(_hoveredChoiceIndex);
+			}
+			else
+			{
+				Advance();
+			}
+		}
 		else SelectChoice((int)key.Keycode - (int)Key.Key1);
 	}
 	#endregion
@@ -300,6 +374,7 @@ public partial class DialogueManager : Node
 	private void ShowCurrentLine()
 	{
 		_fullLineText = _currentNode.Lines[_lineIndex];
+		RecordDialogueLine(_currentNode.Speaker, _fullLineText);
 		EmitSignal(SignalName.LineChanged, _currentNode.Speaker, _fullLineText);
 
 		// An Objective line is also the HUD's "Current objective": it replaces the previous one
@@ -308,6 +383,8 @@ public partial class DialogueManager : Node
 
 		_awaitingChoice = false;
 		_visibleChoices.Clear();
+		_hoveredChoiceIndex = -1;
+		_selectedByScroll = false;
 		_choiceTimeout = 0f;
 		_choiceTimer = 0f;
 
@@ -391,10 +468,11 @@ public partial class DialogueManager : Node
 	}
 	#endregion
 
-	#region Placeholder overlay (no external assets)
+	#region Dialogue UI overlay
 	private void BuildOverlay()
 	{
 		_layer = new CanvasLayer { Layer = 10 };
+		Font mainFont = UiSkin.MainFont;
 
 		_memoryImage = new TextureRect
 		{
@@ -419,46 +497,115 @@ public partial class DialogueManager : Node
 			Visible = false
 		};
 
-		_panel = UiSkin.DialoguePlate(DialogueFrameSize);
-		_panel.Position = DialogueFrameOrigin;
-		_panel.Visible = false;
-
-		// The speaker's name goes in the tab the frame draws for it, which the sheet hangs over the
-		// box's own top-left corner - not above the box, where it used to float.
-		Rect2 tab = UiSkin.DialogueLocal(UiSkin.DialogueTabRegion, DialogueFrameSize);
-		_speakerLabel = new Label
+		// Main dialogue box pinned at the bottom of the screen.
+		_panel = new TextureRect
 		{
-			Position = tab.Position + new Vector2(18f, 10f),
-			Size = tab.Size - new Vector2(36f, 20f),
-			VerticalAlignment = VerticalAlignment.Center,
+			Texture = UiSkin.Crop(UiSkin.BoxDialogueSheet, UiSkin.BoxDialogueRegion),
+			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+			StretchMode = TextureRect.StretchModeEnum.Scale,
+			MouseFilter = Control.MouseFilterEnum.Stop,
+			Visible = false
+		};
+		_panel.AnchorLeft = 0f;
+		_panel.AnchorRight = 1f;
+		_panel.AnchorTop = 1f;
+		_panel.AnchorBottom = 1f;
+		_panel.OffsetLeft = 0f;
+		_panel.OffsetRight = 0f;
+		_panel.OffsetBottom = -DialogueBoxBottomMargin;
+		_panel.OffsetTop = -(DialogueBoxBottomMargin + DialogueBoxHeight);
+		_panel.GuiInput += OnDialogueBoxGuiInput;
+
+		// Speaker nameplate fitted tightly around the speaker name at the half top-left of boxDialogue.
+		_nameBoxContainer = new Control
+		{
+			Position = new Vector2(UiSkin.BoxNameRegion.Position.X * UiArtScale, -NameBoxHeight * 0.5f),
+			Size = new Vector2(220f, NameBoxHeight),
 			MouseFilter = Control.MouseFilterEnum.Ignore
 		};
-		_speakerLabel.AddThemeFontSizeOverride("font_size", 21);
-		_speakerLabel.AddThemeColorOverride("font_outline_color", Colors.Black);
-		_speakerLabel.AddThemeConstantOverride("outline_size", 5);
-		_panel.AddChild(_speakerLabel);
+		_panel.AddChild(_nameBoxContainer);
 
-		Rect2 text = UiSkin.DialogueLocal(UiSkin.DialogueTextRegion, DialogueFrameSize);
+		_nameBox = new NinePatchRect
+		{
+			Texture = UiSkin.BoxNameSheet,
+			RegionRect = UiSkin.BoxNameRegion,
+			PatchMarginLeft = 24,
+			PatchMarginRight = 24,
+			PatchMarginTop = 20,
+			PatchMarginBottom = 20,
+			Scale = Vector2.One * UiArtScale,
+			Size = new Vector2(220f, NameBoxHeight) / UiArtScale,
+			MouseFilter = Control.MouseFilterEnum.Ignore
+		};
+		_nameBoxContainer.AddChild(_nameBox);
+
+		_speakerLabel = new Label
+		{
+			HorizontalAlignment = HorizontalAlignment.Center,
+			VerticalAlignment = VerticalAlignment.Center,
+			AutowrapMode = TextServer.AutowrapMode.Off,
+			TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis,
+			MouseFilter = Control.MouseFilterEnum.Ignore
+		};
+		_speakerLabel.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+		_speakerLabel.OffsetLeft = 14f;
+		_speakerLabel.OffsetRight = -14f;
+		_speakerLabel.OffsetTop = 4f;
+		_speakerLabel.OffsetBottom = -4f;
+		if (mainFont != null) _speakerLabel.AddThemeFontOverride("font", mainFont);
+		_speakerLabel.AddThemeFontSizeOverride("font_size", NameFontSize);
+		_speakerLabel.AddThemeColorOverride("font_outline_color", Colors.Black);
+		_speakerLabel.AddThemeConstantOverride("outline_size", 4);
+		_nameBoxContainer.AddChild(_speakerLabel);
+
 		_dialogueLabel = new Label
 		{
-			Position = text.Position,
-			Size = text.Size,
 			AutowrapMode = TextServer.AutowrapMode.WordSmart,
 			MouseFilter = Control.MouseFilterEnum.Ignore
 		};
-		_dialogueLabel.AddThemeFontSizeOverride("font_size", 20);
+		_dialogueLabel.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+		_dialogueLabel.OffsetLeft = 48f;
+		_dialogueLabel.OffsetTop = 82f;
+		_dialogueLabel.OffsetRight = -64f;
+		_dialogueLabel.OffsetBottom = -26f;
+		if (mainFont != null) _dialogueLabel.AddThemeFontOverride("font", mainFont);
+		_dialogueLabel.AddThemeFontSizeOverride("font_size", 21);
+		_dialogueLabel.AddThemeColorOverride("font_color", Colors.White);
+		_dialogueLabel.AddThemeColorOverride("font_outline_color", Colors.Black);
+		_dialogueLabel.AddThemeConstantOverride("outline_size", 3);
 		_panel.AddChild(_dialogueLabel);
 
+		_nextIndicator = new TextureRect
+		{
+			Texture = UiSkin.Crop(UiSkin.NextIndicatorSheet, UiSkin.NextIndicatorRegion),
+			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+			StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
+			MouseFilter = Control.MouseFilterEnum.Ignore,
+			Visible = false
+		};
+		_nextIndicator.AnchorLeft = 1f;
+		_nextIndicator.AnchorRight = 1f;
+		_nextIndicator.AnchorTop = 1f;
+		_nextIndicator.AnchorBottom = 1f;
+		_nextIndicator.OffsetLeft = -52f;
+		_nextIndicator.OffsetRight = -26f;
+		_nextIndicator.OffsetTop = -44f;
+		_nextIndicator.OffsetBottom = -22f;
+		_panel.AddChild(_nextIndicator);
+
 		BuildControlsBar();
+		BuildChoicesOverlay(mainFont);
 
 		// The toast sits above the frame, clear of the portrait plate beside it.
 		_toastLabel = new Label { Position = FragmentToastPosition, Size = FragmentToastSize, HorizontalAlignment = HorizontalAlignment.Left, AutowrapMode = TextServer.AutowrapMode.WordSmart, Visible = false };
+		if (mainFont != null) _toastLabel.AddThemeFontOverride("font", mainFont);
 		_toastLabel.AddThemeColorOverride("font_color", new Color(1f, 0.9f, 0.4f));
 		_toastLabel.AddThemeColorOverride("font_outline_color", Colors.Black);
 		_toastLabel.AddThemeConstantOverride("outline_size", 4);
 
 		_layer.AddChild(_portrait);
 		_layer.AddChild(_panel);
+		_layer.AddChild(_choicesContainer);
 		_layer.AddChild(_toastLabel);
 		AddChild(_layer);
 	}
@@ -472,51 +619,140 @@ public partial class DialogueManager : Node
 		if (!_isActive || _currentNode == null)
 		{
 			HidePortrait();
+			if (_choicesContainer != null) _choicesContainer.Visible = false;
+			if (_nextIndicator != null) _nextIndicator.Visible = false;
 			return;
 		}
 
 		string speaker = _currentNode.Speaker;
 		Color colour = SpeakerColor(speaker);
 
+		RefreshNameBox(speaker, colour);
+		RefreshPortrait(speaker);
+		RefreshAutoSkipBar();
+		RefreshChoicesOverlay();
+		RefreshDialogueLabelText();
+		RefreshNextIndicator();
+	}
+
+	private void RefreshNameBox(string speaker, Color colour)
+	{
+		if (_speakerLabel == null || _nameBoxContainer == null || _nameBox == null) return;
+
 		_speakerLabel.Text = speaker;
 		_speakerLabel.AddThemeColorOverride("font_color", colour);
-		RefreshPortrait(speaker);
-		RefreshControlsBar();
-		RefreshDialogueLabelText();
+
+		Font font = UiSkin.MainFont ?? ThemeDB.FallbackFont;
+		float textWidth = font != null
+			? font.GetStringSize(speaker, HorizontalAlignment.Left, -1f, NameFontSize).X
+			: speaker.Length * 12f;
+
+		float boxWidth = Mathf.Clamp(textWidth + 52f, 130f, 440f);
+		Vector2 boxSize = new(boxWidth, NameBoxHeight);
+		_nameBoxContainer.Size = boxSize;
+		_nameBoxContainer.Position = new Vector2(UiSkin.BoxNameRegion.Position.X * UiArtScale, -NameBoxHeight * 0.5f);
+		_nameBox.Size = boxSize / UiArtScale;
 	}
 
 	private void BuildControlsBar()
 	{
-		_controlsBar = new HBoxContainer
+		// Auto & Skip label buttons sitting on the upper right edge of the dialogue box.
+		_autoSkipBar = new HBoxContainer
 		{
-			Position = new Vector2(DialogueFrameSize.X - 356f, 22f),
-			Size = new Vector2(320f, 34f),
 			Alignment = BoxContainer.AlignmentMode.End,
 			MouseFilter = Control.MouseFilterEnum.Ignore
 		};
-		_controlsBar.AddThemeConstantOverride("separation", 8);
+		_autoSkipBar.AnchorLeft = 1f;
+		_autoSkipBar.AnchorRight = 1f;
+		_autoSkipBar.AnchorTop = 0f;
+		_autoSkipBar.AnchorBottom = 0f;
+		_autoSkipBar.OffsetRight = -24f;
+		_autoSkipBar.OffsetLeft = -248f;
+		_autoSkipBar.OffsetTop = -36f;
+		_autoSkipBar.OffsetBottom = -4f;
+		_autoSkipBar.AddThemeConstantOverride("separation", 8);
 
-		_autoButton = CreateOverlayButton("Auto: Off", OnAutoButtonPressed);
-		_skipButton = CreateOverlayButton("Skip", OnSkipButtonPressed);
-		_settingsButton = CreateOverlayButton("Settings", OnDialogueSettingsPressed);
+		_autoButton = CreateLabelActionButton("Auto: Off", OnAutoButtonPressed);
+		_skipButton = CreateLabelActionButton("Skip (Read)", OnSkipButtonPressed);
+		_autoSkipBar.AddChild(_autoButton);
+		_autoSkipBar.AddChild(_skipButton);
+		_panel.AddChild(_autoSkipBar);
+		RefreshAutoSkipBar();
 
-		_controlsBar.AddChild(_autoButton);
-		_controlsBar.AddChild(_skipButton);
+		_controlsBar = new HBoxContainer
+		{
+			Alignment = BoxContainer.AlignmentMode.End,
+			MouseFilter = Control.MouseFilterEnum.Ignore
+		};
+		_controlsBar.AnchorLeft = 1f;
+		_controlsBar.AnchorRight = 1f;
+		_controlsBar.AnchorTop = 0f;
+		_controlsBar.AnchorBottom = 0f;
+		_controlsBar.OffsetRight = -24f;
+		_controlsBar.OffsetLeft = -204f;
+		_controlsBar.OffsetTop = 14f;
+		_controlsBar.OffsetBottom = 50f;
+		_controlsBar.AddThemeConstantOverride("separation", 12);
+
+		_logsButton = CreateIconButton(UiSkin.Crop(UiSkin.BtnDiaLogsSheet, UiSkin.BtnDiaLogsRegion), "Dialogue Logs", OnDialogueLogsPressed);
+		_loadButton = CreateIconButton(UiSkin.Crop(UiSkin.BtnLoadSheet, UiSkin.BtnLoadRegion), "Load Game", OnDialogueLoadPressed);
+		_saveButton = CreateIconButton(UiSkin.Crop(UiSkin.BtnSaveSheet, UiSkin.BtnSaveRegion), "Save Game", OnDialogueSavePressed);
+		_settingsButton = CreateIconButton(UiSkin.Crop(UiSkin.BtnSettingsSheet, UiSkin.BtnSettingsRegion), "Settings", OnDialogueSettingsPressed);
+
+		_controlsBar.AddChild(_logsButton);
+		_controlsBar.AddChild(_loadButton);
+		_controlsBar.AddChild(_saveButton);
 		_controlsBar.AddChild(_settingsButton);
 		_panel.AddChild(_controlsBar);
-		RefreshControlsBar();
 	}
 
-	private static Button CreateOverlayButton(string text, System.Action onPressed)
+	private static Button CreateLabelActionButton(string text, System.Action onPressed)
 	{
+		var normalStyle = new StyleBoxFlat
+		{
+			BgColor = new Color(0.08f, 0.09f, 0.12f, 0.85f),
+			BorderWidthLeft = 1,
+			BorderWidthRight = 1,
+			BorderWidthTop = 1,
+			BorderWidthBottom = 1,
+			BorderColor = new Color(1f, 1f, 1f, 0.35f),
+			CornerRadiusTopLeft = 4,
+			CornerRadiusTopRight = 4,
+			CornerRadiusBottomLeft = 4,
+			CornerRadiusBottomRight = 4,
+			ContentMarginLeft = 10,
+			ContentMarginRight = 10
+		};
+		var hoverStyle = new StyleBoxFlat
+		{
+			BgColor = new Color(0.16f, 0.2f, 0.28f, 0.92f),
+			BorderWidthLeft = 1,
+			BorderWidthRight = 1,
+			BorderWidthTop = 1,
+			BorderWidthBottom = 1,
+			BorderColor = new Color(0.65f, 0.9f, 1f, 0.75f),
+			CornerRadiusTopLeft = 4,
+			CornerRadiusTopRight = 4,
+			CornerRadiusBottomLeft = 4,
+			CornerRadiusBottomRight = 4,
+			ContentMarginLeft = 10,
+			ContentMarginRight = 10
+		};
+
 		var button = new Button
 		{
 			Text = text,
 			FocusMode = Control.FocusModeEnum.None,
 			MouseFilter = Control.MouseFilterEnum.Stop,
-			CustomMinimumSize = new Vector2(88f, 30f)
+			CustomMinimumSize = new Vector2(102f, 30f),
+			MouseDefaultCursorShape = Control.CursorShape.PointingHand
 		};
+		if (UiSkin.MainFont != null) button.AddThemeFontOverride("font", UiSkin.MainFont);
 		button.AddThemeFontSizeOverride("font_size", 14);
+		button.AddThemeStyleboxOverride("normal", normalStyle);
+		button.AddThemeStyleboxOverride("hover", hoverStyle);
+		button.AddThemeStyleboxOverride("pressed", hoverStyle);
+		button.AddThemeStyleboxOverride("focus", normalStyle);
 		button.Pressed += onPressed;
 		return button;
 	}
@@ -532,7 +768,8 @@ public partial class DialogueManager : Node
 		if (_skipToggled)
 		{
 			_skipToggled = false;
-			RefreshControlsBar();
+			RefreshAutoSkipBar();
+			RefreshNextIndicator();
 			return;
 		}
 		if (!CanSkipCurrentLine()) return;
@@ -540,27 +777,353 @@ public partial class DialogueManager : Node
 		_skipToggled = true;
 		_skipTimer = 0f;
 		if (_isRevealing) CompleteReveal();
-		RefreshControlsBar();
+		RefreshAutoSkipBar();
+		RefreshNextIndicator();
+	}
+
+	private void RefreshAutoSkipBar()
+	{
+		if (_autoButton == null || _skipButton == null) return;
+
+		bool autoOn = SettingsManager.Instance?.AutoText ?? false;
+		SkipMode skipMode = SettingsManager.Instance?.SkipMode ?? SkipMode.ReadOnly;
+
+		_autoButton.Text = autoOn ? "Auto: On" : "Auto: Off";
+		_autoButton.Modulate = autoOn ? new Color(0.65f, 0.92f, 1f) : new Color(0.9f, 0.9f, 0.94f);
+
+		_skipButton.Text = _skipToggled
+			? "Skipping"
+			: skipMode == SkipMode.All ? "Skip (All)" : "Skip (Read)";
+		_skipButton.Modulate = _skipToggled ? new Color(1f, 0.88f, 0.45f) : new Color(0.9f, 0.9f, 0.94f);
+	}
+
+	private static Button CreateIconButton(Texture2D iconTexture, string tooltip, System.Action onPressed)
+	{
+		var emptyStyle = new StyleBoxEmpty();
+		var button = new Button
+		{
+			FocusMode = Control.FocusModeEnum.None,
+			MouseFilter = Control.MouseFilterEnum.Stop,
+			CustomMinimumSize = new Vector2(36f, 36f),
+			TooltipText = tooltip,
+			MouseDefaultCursorShape = Control.CursorShape.PointingHand
+		};
+		button.AddThemeStyleboxOverride("normal", emptyStyle);
+		button.AddThemeStyleboxOverride("hover", emptyStyle);
+		button.AddThemeStyleboxOverride("pressed", emptyStyle);
+		button.AddThemeStyleboxOverride("focus", emptyStyle);
+
+		var icon = new TextureRect
+		{
+			Texture = iconTexture,
+			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+			StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
+			MouseFilter = Control.MouseFilterEnum.Ignore
+		};
+		icon.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+		icon.OffsetLeft = 4f;
+		icon.OffsetRight = -4f;
+		icon.OffsetTop = 4f;
+		icon.OffsetBottom = -4f;
+		button.AddChild(icon);
+
+		button.MouseEntered += () => icon.Modulate = new Color(0.75f, 0.92f, 1f);
+		button.MouseExited += () => icon.Modulate = Colors.White;
+		button.ButtonDown += () => icon.Modulate = new Color(0.55f, 0.8f, 0.95f);
+		button.ButtonUp += () => icon.Modulate = button.IsHovered() ? new Color(0.75f, 0.92f, 1f) : Colors.White;
+		button.Pressed += onPressed;
+		return button;
+	}
+
+	private void BuildChoicesOverlay(Font mainFont)
+	{
+		_selectDialogueTex = UiSkin.Crop(UiSkin.SelectDialogueSheet, UiSkin.SelectDialogueRegion);
+		_selectedDialogueTex = UiSkin.Crop(UiSkin.SelectedDialogueSheet, UiSkin.SelectedDialogueRegion);
+
+		_choicesContainer = new VBoxContainer
+		{
+			Alignment = BoxContainer.AlignmentMode.End,
+			GrowVertical = Control.GrowDirection.Begin,
+			MouseFilter = Control.MouseFilterEnum.Ignore,
+			Visible = false
+		};
+		_choicesContainer.AnchorLeft = 1f;
+		_choicesContainer.AnchorRight = 1f;
+		_choicesContainer.AnchorTop = 1f;
+		_choicesContainer.AnchorBottom = 1f;
+		_choicesContainer.OffsetRight = -24f;
+		_choicesContainer.OffsetLeft = -494f;
+		_choicesContainer.OffsetBottom = -(DialogueBoxBottomMargin + DialogueBoxHeight + 48f);
+		_choicesContainer.OffsetTop = -620f;
+		_choicesContainer.AddThemeConstantOverride("separation", 8);
+
+		_choiceTimerLabel = new Label
+		{
+			HorizontalAlignment = HorizontalAlignment.Right,
+			MouseFilter = Control.MouseFilterEnum.Ignore,
+			Visible = false
+		};
+		if (mainFont != null) _choiceTimerLabel.AddThemeFontOverride("font", mainFont);
+		_choiceTimerLabel.AddThemeFontSizeOverride("font_size", 18);
+		_choiceTimerLabel.AddThemeColorOverride("font_color", new Color(1f, 0.86f, 0.45f));
+		_choiceTimerLabel.AddThemeColorOverride("font_outline_color", Colors.Black);
+		_choiceTimerLabel.AddThemeConstantOverride("outline_size", 4);
+		_choicesContainer.AddChild(_choiceTimerLabel);
+	}
+
+	private void RefreshChoicesOverlay()
+	{
+		if (_choicesContainer == null) return;
+
+		foreach (ChoiceRow row in _choiceRows)
+			row.Button.QueueFree();
+		_choiceRows.Clear();
+
+		if (!_isActive || !_awaitingChoice || _visibleChoices.Count == 0)
+		{
+			_choicesContainer.Visible = false;
+			if (_choiceTimerLabel != null) _choiceTimerLabel.Visible = false;
+			return;
+		}
+
+		var emptyStyle = new StyleBoxEmpty();
+		Font mainFont = UiSkin.MainFont;
+
+		for (int i = 0; i < _visibleChoices.Count; i++)
+		{
+			int choiceIndex = i;
+			var button = new Button
+			{
+				CustomMinimumSize = new Vector2(470f, 64f),
+				FocusMode = Control.FocusModeEnum.None,
+				MouseFilter = Control.MouseFilterEnum.Stop,
+				MouseDefaultCursorShape = Control.CursorShape.PointingHand
+			};
+			button.AddThemeStyleboxOverride("normal", emptyStyle);
+			button.AddThemeStyleboxOverride("hover", emptyStyle);
+			button.AddThemeStyleboxOverride("pressed", emptyStyle);
+			button.AddThemeStyleboxOverride("focus", emptyStyle);
+
+			var bg = new TextureRect
+			{
+				Texture = _selectDialogueTex,
+				ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+				StretchMode = TextureRect.StretchModeEnum.Scale,
+				MouseFilter = Control.MouseFilterEnum.Ignore
+			};
+			bg.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+			button.AddChild(bg);
+
+			var label = new Label
+			{
+				Text = _visibleChoices[i].Text,
+				HorizontalAlignment = HorizontalAlignment.Center,
+				VerticalAlignment = VerticalAlignment.Center,
+				AutowrapMode = TextServer.AutowrapMode.WordSmart,
+				MouseFilter = Control.MouseFilterEnum.Ignore
+			};
+			label.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+			label.OffsetLeft = 24f;
+			label.OffsetRight = -24f;
+			label.OffsetTop = 6f;
+			label.OffsetBottom = -6f;
+			if (mainFont != null) label.AddThemeFontOverride("font", mainFont);
+			label.AddThemeFontSizeOverride("font_size", 17);
+			label.AddThemeColorOverride("font_color", Colors.White);
+			label.AddThemeColorOverride("font_outline_color", Colors.Black);
+			label.AddThemeConstantOverride("outline_size", 3);
+			button.AddChild(label);
+
+			button.MouseEntered += () =>
+			{
+				_selectedByScroll = false;
+				SetHoveredChoice(choiceIndex);
+			};
+			button.MouseExited += () =>
+			{
+				if (!_selectedByScroll && _hoveredChoiceIndex == choiceIndex)
+					SetHoveredChoice(-1);
+			};
+			button.Pressed += () => SelectChoice(choiceIndex);
+
+			_choicesContainer.AddChild(button);
+			_choiceRows.Add(new ChoiceRow { Button = button, Background = bg, Label = label });
+		}
+
+		_choicesContainer.Visible = true;
+		RefreshChoiceTimerLabel();
+		RefreshChoiceSelectionVisuals();
+	}
+
+	private void MoveHoveredChoice(int delta)
+	{
+		if (_visibleChoices.Count == 0) return;
+		_selectedByScroll = true;
+		int next;
+		if (_hoveredChoiceIndex < 0)
+			next = delta > 0 ? 0 : _visibleChoices.Count - 1;
+		else
+			next = Mathf.PosMod(_hoveredChoiceIndex + delta, _visibleChoices.Count);
+		SetHoveredChoice(next);
+	}
+
+	private void SetHoveredChoice(int index)
+	{
+		if (_hoveredChoiceIndex == index) return;
+		_hoveredChoiceIndex = index;
+		RefreshChoiceSelectionVisuals();
+	}
+
+	private void RefreshChoiceSelectionVisuals()
+	{
+		for (int i = 0; i < _choiceRows.Count; i++)
+		{
+			bool picked = i == _hoveredChoiceIndex;
+			ChoiceRow row = _choiceRows[i];
+			row.Background.Texture = picked ? _selectedDialogueTex : _selectDialogueTex;
+			if (picked)
+			{
+				row.Background.OffsetLeft = -15f;
+				row.Background.OffsetRight = 15f;
+				row.Background.OffsetTop = -8f;
+				row.Background.OffsetBottom = 8f;
+				row.Label.AddThemeColorOverride("font_color", new Color(1f, 0.95f, 0.72f));
+			}
+			else
+			{
+				row.Background.OffsetLeft = 0f;
+				row.Background.OffsetRight = 0f;
+				row.Background.OffsetTop = 0f;
+				row.Background.OffsetBottom = 0f;
+				row.Label.AddThemeColorOverride("font_color", Colors.White);
+			}
+		}
+	}
+
+	private void RefreshChoiceTimerLabel()
+	{
+		if (_choiceTimerLabel == null) return;
+		bool showTimer = _isActive && _awaitingChoice && _choiceTimeout > 0f;
+		_choiceTimerLabel.Visible = showTimer;
+		if (showTimer)
+			_choiceTimerLabel.Text = Mathf.Max(0f, _choiceTimer).ToString("0.0") + "s";
+	}
+
+	private void RefreshNextIndicator()
+	{
+		if (_nextIndicator == null) return;
+
+		bool skipping = IsSkippingActiveAndAllowed();
+		bool show = _isActive && _currentNode != null && !_awaitingChoice && (!_isRevealing || skipping);
+		_nextIndicator.Visible = show;
+		if (!show) return;
+
+		bool autoOn = SettingsManager.Instance?.AutoText == true;
+		float alpha;
+		if (skipping)
+		{
+			// Blink rapidly while skipping.
+			alpha = Mathf.Sin(_indicatorBlinkClock * 28f) >= 0f ? 1f : 0.15f;
+		}
+		else if (autoOn)
+		{
+			// Blink slowly while auto-advance is enabled.
+			alpha = 0.2f + 0.8f * (0.5f + 0.5f * Mathf.Sin(_indicatorBlinkClock * 4f));
+		}
+		else
+		{
+			// Gentle visible indicator when waiting for the player to click/press next.
+			alpha = 0.82f + 0.18f * Mathf.Sin(_indicatorBlinkClock * 3f);
+		}
+		_nextIndicator.Modulate = new Color(1f, 1f, 1f, alpha);
+	}
+
+	private void OnDialogueBoxGuiInput(InputEvent @event)
+	{
+		if (!_isActive || _currentNode == null || _overlayMenuOpen) return;
+		if (@event is InputEventMouseButton mb && mb.Pressed && mb.ButtonIndex == MouseButton.Left)
+		{
+			GetViewport()?.SetInputAsHandled();
+			if (_isRevealing) CompleteReveal();
+			else if (!_awaitingChoice) Advance();
+		}
+	}
+
+	private void OnDialogueLogsPressed()
+	{
+		if (_layer == null || _overlayMenuOpen) return;
+		OpenModalOverlay(() => DialogueLogModal.Open(_layer, GetDialogueLogEntries()));
+	}
+
+	private void OnDialogueLoadPressed()
+	{
+		if (_layer == null || _overlayMenuOpen) return;
+		_overlayMenuOpen = true;
+		bool wasPaused = GetTree().Paused;
+		GetTree().Paused = true;
+		bool loaded = false;
+		var picker = SlotPicker.Open(_layer, SlotPickerMode.Load);
+		picker.Chosen += () => loaded = true;
+		picker.TreeExited += () =>
+		{
+			_overlayMenuOpen = false;
+			if (!loaded && IsInstanceValid(this)) GetTree().Paused = wasPaused;
+		};
+	}
+
+	private void OnDialogueSavePressed()
+	{
+		if (_layer == null || _overlayMenuOpen) return;
+		OpenModalOverlay(() => SlotPicker.Open(_layer, SlotPickerMode.Save));
 	}
 
 	private void OnDialogueSettingsPressed()
 	{
-		if (_layer == null || _settingsOpen) return;
-		_settingsOpen = true;
+		if (_layer == null || _overlayMenuOpen) return;
+		OpenModalOverlay(() => SettingsMenu.Open(_layer));
+	}
+
+	private void OpenModalOverlay(System.Func<Control> opener)
+	{
+		_overlayMenuOpen = true;
 		bool wasPaused = GetTree().Paused;
 		GetTree().Paused = true;
-		var settings = SettingsMenu.Open(_layer);
-		settings.TreeExited += () =>
+		Control modal = opener();
+		modal.TreeExited += () =>
 		{
-			_settingsOpen = false;
+			_overlayMenuOpen = false;
 			if (IsInstanceValid(this)) GetTree().Paused = wasPaused;
 		};
+	}
+
+	private void RecordDialogueLine(string speaker, string text)
+	{
+		if (string.IsNullOrWhiteSpace(text)) return;
+		if (GameStateManager.Instance != null)
+			GameStateManager.Instance.AddDialogueLog(speaker, text);
+		else
+			_localDialogueLog.Add((speaker ?? "", text));
+	}
+
+	private List<(string Speaker, string Text)> GetDialogueLogEntries()
+	{
+		var entries = new List<(string Speaker, string Text)>();
+		if (GameStateManager.Instance != null)
+		{
+			foreach (GameStateManager.DialogueLogEntry entry in GameStateManager.Instance.DialogueLog)
+				entries.Add((entry.Speaker, entry.Text));
+		}
+		else
+		{
+			entries.AddRange(_localDialogueLog);
+		}
+		return entries;
 	}
 
 	private void OnSettingsChanged()
 	{
 		if (!IsInstanceValid(this)) return;
-		RefreshControlsBar();
+		RefreshAutoSkipBar();
 		if (!_isActive) return;
 
 		if (_isRevealing && float.IsPositiveInfinity(SettingsManager.Instance?.CharactersPerSecond ?? float.PositiveInfinity))
@@ -569,23 +1132,8 @@ public partial class DialogueManager : Node
 		{
 			_autoAdvanceTimer = SettingsManager.Instance?.AutoTextDelay ?? SettingsManager.DefaultAutoTextDelay;
 			RefreshDialogueLabelText();
+			RefreshNextIndicator();
 		}
-	}
-
-	private void RefreshControlsBar()
-	{
-		if (_autoButton == null || _skipButton == null) return;
-
-		bool autoOn = SettingsManager.Instance?.AutoText ?? false;
-		SkipMode skipMode = SettingsManager.Instance?.SkipMode ?? SkipMode.ReadOnly;
-
-		_autoButton.Text = autoOn ? "Auto: On" : "Auto: Off";
-		_autoButton.Modulate = autoOn ? new Color(0.65f, 0.92f, 1f) : new Color(0.85f, 0.85f, 0.9f);
-
-		_skipButton.Text = _skipToggled
-			? "Skipping"
-			: skipMode == SkipMode.All ? "Skip (All)" : "Skip (Read)";
-		_skipButton.Modulate = _skipToggled ? new Color(1f, 0.88f, 0.45f) : new Color(0.85f, 0.85f, 0.9f);
 	}
 
 	private void CompleteReveal()
@@ -595,6 +1143,7 @@ public partial class DialogueManager : Node
 		MarkCurrentLineRead();
 		_autoAdvanceTimer = SettingsManager.Instance?.AutoTextDelay ?? SettingsManager.DefaultAutoTextDelay;
 		RefreshDialogueLabelText();
+		RefreshNextIndicator();
 	}
 
 	private void RefreshDialogueLabelText()
@@ -608,22 +1157,118 @@ public partial class DialogueManager : Node
 			return;
 		}
 
-		string text = _fullLineText;
-		if (_awaitingChoice)
-		{
-			text += "\n";
-			for (int i = 0; i < _visibleChoices.Count; i++)
-				text += "\n  [" + (i + 1) + "]  " + _visibleChoices[i].Text;
+		_dialogueLabel.Text = _fullLineText;
+	}
 
-			if (_choiceTimeout > 0f)
-				text += "\n\n  " + Mathf.Max(0f, _choiceTimer).ToString("0.0") + "s";
-		}
-		else
+	private sealed partial class DialogueLogModal : Control
+	{
+		private List<(string Speaker, string Text)> _entries;
+
+		public static DialogueLogModal Open(Node parent, List<(string Speaker, string Text)> entries)
 		{
-			bool autoOn = SettingsManager.Instance?.AutoText ?? false;
-			text += autoOn ? "\n\n  [Enter] continue   [Auto]" : "\n\n  [Enter] continue";
+			var modal = new DialogueLogModal { _entries = entries ?? new List<(string, string)>() };
+			parent.AddChild(modal);
+			return modal;
 		}
-		_dialogueLabel.Text = text;
+
+		public override void _Ready()
+		{
+			Theme = UiHelper.GetTheme();
+			ProcessMode = ProcessModeEnum.Always;
+			SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
+
+			var dim = new ColorRect { Color = new Color(0f, 0f, 0f, 0.8f), MouseFilter = MouseFilterEnum.Stop };
+			dim.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
+			AddChild(dim);
+
+			var center = new CenterContainer();
+			center.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
+			AddChild(center);
+
+			var panel = new PanelContainer();
+			center.AddChild(panel);
+
+			var margin = new MarginContainer();
+			foreach (string side in new[] { "margin_left", "margin_right", "margin_top", "margin_bottom" })
+				margin.AddThemeConstantOverride(side, 24);
+			panel.AddChild(margin);
+
+			var rootBox = new VBoxContainer();
+			rootBox.AddThemeConstantOverride("separation", 12);
+			margin.AddChild(rootBox);
+
+			var title = new Label { Text = "Dialogue Log", HorizontalAlignment = HorizontalAlignment.Center };
+			title.AddThemeFontSizeOverride("font_size", 26);
+			rootBox.AddChild(title);
+
+			var scroll = new ScrollContainer
+			{
+				CustomMinimumSize = new Vector2(800f, 380f),
+				HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled
+			};
+			rootBox.AddChild(scroll);
+
+			var list = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
+			list.AddThemeConstantOverride("separation", 10);
+			scroll.AddChild(list);
+
+			if (_entries.Count == 0)
+			{
+				var empty = new Label { Text = "No dialogue recorded yet.", HorizontalAlignment = HorizontalAlignment.Center };
+				empty.AddThemeFontSizeOverride("font_size", 18);
+				empty.AddThemeColorOverride("font_color", new Color(0.72f, 0.76f, 0.84f));
+				list.AddChild(empty);
+			}
+			else
+			{
+				foreach ((string speaker, string text) in _entries)
+				{
+					var row = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
+					row.AddThemeConstantOverride("separation", 2);
+
+					var speakerLbl = new Label { Text = speaker };
+					speakerLbl.AddThemeFontSizeOverride("font_size", 17);
+					speakerLbl.AddThemeColorOverride("font_color", SpeakerColor(speaker));
+					row.AddChild(speakerLbl);
+
+					var textLbl = new Label
+					{
+						Text = text,
+						AutowrapMode = TextServer.AutowrapMode.WordSmart,
+						SizeFlagsHorizontal = SizeFlags.ExpandFill
+					};
+					textLbl.AddThemeFontSizeOverride("font_size", 18);
+					textLbl.AddThemeColorOverride("font_color", Colors.White);
+					row.AddChild(textLbl);
+
+					list.AddChild(row);
+				}
+			}
+
+			var closeBtn = new Button { Text = "Close", CustomMinimumSize = new Vector2(220f, 44f), SizeFlagsHorizontal = SizeFlags.ShrinkCenter };
+			closeBtn.AddThemeFontSizeOverride("font_size", 20);
+			closeBtn.Pressed += QueueFree;
+			rootBox.AddChild(closeBtn);
+			closeBtn.GrabFocus();
+
+			Callable.From(() =>
+			{
+				if (IsInstanceValid(scroll))
+				{
+					VScrollBar bar = scroll.GetVScrollBar();
+					if (bar != null) scroll.ScrollVertical = (int)bar.MaxValue;
+				}
+			}).CallDeferred();
+		}
+
+		public override void _Input(InputEvent @event)
+		{
+			if (@event.IsActionPressed("ui_cancel"))
+			{
+				GetViewport().SetInputAsHandled();
+				QueueFree();
+			}
+		}
 	}
 
 	private string CurrentLineKey() =>
@@ -698,7 +1343,8 @@ public partial class DialogueManager : Node
 	{
 		switch (speaker)
 		{
-			case "Aionia Avgerinos": return new Color(0.63f, 0.87f, 1f);     // cold blue of the pendant
+			case "Aionia Avgerinos":
+			case "??? Aionia": return new Color(0.63f, 0.87f, 1f);     // cold blue of the pendant
 			case "Mochizuki Yoruka": return new Color(1f, 0.66f, 0.82f);     // jirai-kei pink
 			case "Felix Lasarewitch": return new Color(1f, 0.85f, 0.45f);    // the institute's golden boy
 			case "Adellaine Moriarty": return new Color(0.66f, 1f, 0.78f);   // medicine green

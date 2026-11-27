@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\MyPc\\Documents\\Chrono-Echo-7.0\\Chrono-Echo\\ChronoEchoes.csproj": {}
+    "C:\\Users\\MyPc\\Documents\\Chrono-Echo-7.0\\ChronoEchoes.csproj": {}
   },
   "projects": {
-    "C:\\Users\\MyPc\\Documents\\Chrono-Echo-7.0\\Chrono-Echo\\ChronoEchoes.csproj": {
+    "C:\\Users\\MyPc\\Documents\\Chrono-Echo-7.0\\ChronoEchoes.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\MyPc\\Documents\\Chrono-Echo-7.0\\Chrono-Echo\\ChronoEchoes.csproj",
+        "projectUniqueName": "C:\\Users\\MyPc\\Documents\\Chrono-Echo-7.0\\ChronoEchoes.csproj",
         "projectName": "ChronoEchoes",
-        "projectPath": "C:\\Users\\MyPc\\Documents\\Chrono-Echo-7.0\\Chrono-Echo\\ChronoEchoes.csproj",
+        "projectPath": "C:\\Users\\MyPc\\Documents\\Chrono-Echo-7.0\\ChronoEchoes.csproj",
         "packagesPath": "C:\\Users\\MyPc\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\MyPc\\Documents\\Chrono-Echo-7.0\\Chrono-Echo\\.godot\\mono\\temp\\obj\\",
+        "outputPath": "C:\\Users\\MyPc\\Documents\\Chrono-Echo-7.0\\.godot\\mono\\temp\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\MyPc\\AppData\\Roaming\\NuGet\\NuGet.Config"

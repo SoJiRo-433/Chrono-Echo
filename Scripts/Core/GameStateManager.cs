@@ -29,6 +29,21 @@ public partial class GameStateManager : Node
     [Signal] public delegate void AffectionChangedEventHandler(string character, float value);
     #endregion
 
+    public readonly struct DialogueLogEntry
+    {
+        public string Speaker { get; }
+        public string Text { get; }
+
+        public DialogueLogEntry(string speaker, string text)
+        {
+            Speaker = speaker ?? "";
+            Text = text ?? "";
+        }
+    }
+
+    private const int MaxDialogueLogEntries = 250;
+    private readonly List<DialogueLogEntry> _dialogueLog = new();
+
     #region State
     private readonly Dictionary<string, bool> _flags = new();
     // Stored as integer tenths so old JSON remains integer-based while supporting PDF deltas.
@@ -40,6 +55,7 @@ public partial class GameStateManager : Node
     public bool CompletedRunBefore { get; private set; }
 
     public IReadOnlyDictionary<string, bool> Flags => _flags;
+    public IReadOnlyList<DialogueLogEntry> DialogueLog => _dialogueLog;
     #endregion
 
     #region Registration (called by Room and Player when they enter the scene)
@@ -65,7 +81,15 @@ public partial class GameStateManager : Node
     public void ResetFlags()
     {
         _flags.Clear();
+        _dialogueLog.Clear();
         EmitSignal(SignalName.FlagsReset);
+    }
+
+    public void AddDialogueLog(string speaker, string text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return;
+        if (_dialogueLog.Count >= MaxDialogueLogEntries) _dialogueLog.RemoveAt(0);
+        _dialogueLog.Add(new DialogueLogEntry(speaker, text));
     }
 
     public void ResetLevelFlags(int levelNumber, IEnumerable<string> additionalFlags = null)
@@ -243,6 +267,7 @@ public partial class GameStateManager : Node
     {
         _flags.Clear();
         _affection.Clear();
+        _dialogueLog.Clear();
 
         if (state != null && state.ContainsKey("flags"))
         {
