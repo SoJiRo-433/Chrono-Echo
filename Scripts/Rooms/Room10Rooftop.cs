@@ -78,6 +78,12 @@ public partial class Room10Rooftop : Room
         if (map != null) Add(new Sprite2D { Texture = map, Centered = false, Scale = Vector2.One * MapScale,
             TextureFilter = CanvasItem.TextureFilterEnum.Nearest }, "RooftopBackdrop", Vector2.Zero);
 
+        // Keep the player inside the stone rooftop parapet border.
+        Wall("ParapetNorth", 0, 0, 640, 8);
+        Wall("ParapetSouth", 0, 352, 640, 8);
+        Wall("ParapetWest", 0, 8, 8, 344);
+        Wall("ParapetEast", 632, 8, 8, 344);
+
         // The supplied art paints these concentric chronal rings; dotted markers carry them into play.
         foreach (var ring in new[] { (d: 472f, color: new Color(.78f, .86f, 1f, .55f)),
                      (d: 340f, color: new Color(.33f, .65f, 1f, .62f)),
@@ -159,6 +165,7 @@ public partial class Room10Rooftop : Room
 
     private T Add<T>(T node, string name, Vector2 position) where T : Node2D
     { node.Name = name; node.Position = position; AddChild(node); return node; }
+    private void Wall(string name, float x, float y, float w, float h) => Add(new Obstacle { Size = S(w, h), DrawBox = false }, name, P(x, y));
     private static Vector2 P(float x, float y) => new(x * MapScale, y * MapScale);
     private static Vector2 S(float x, float y) => new(x * MapScale, y * MapScale);
 }

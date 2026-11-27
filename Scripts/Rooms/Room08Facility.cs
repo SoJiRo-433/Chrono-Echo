@@ -58,7 +58,7 @@ public partial class Room08Facility : Room
         {
             _crateClock = 0;
             if (Player != null && Player.IsAlive && new Rect2(P(248, 228), S(86, 42)).Intersects(Player.Bounds))
-            { Player.TakeScratch(); Player.WorldPosition = P(24, 258); }
+            { Player.TakeScratch(); Player.WorldPosition = P(30, 258); }
         }
         if (!_resonanceSolved && EchoOn(_crystalOne) && EchoOn(_crystalTwo) && PlayerOn(_crystalThree))
         {
@@ -99,6 +99,53 @@ public partial class Room08Facility : Room
         // Walkable bands align to the three classrooms, archive, catwalk, balcony and chamber.
         Floor(12, 8, 476, 36); Floor(14, 46, 444, 75); Floor(100, 124, 354, 94);
         Floor(18, 226, 326, 70); Floor(430, 204, 196, 146); Floor(110, 292, 226, 64);
+
+        // Walls enclosing the drawn facility rooms and corridors so players cannot walk into the void.
+        Wall("TopHallNorth", 8, 4, 482, 6);
+        Wall("TopHallWest", 8, 10, 6, 30);
+        Wall("TopHallEast", 484, 10, 6, 194);
+        Wall("TopHallSouth1", 8, 40, 60, 6);
+        Wall("TopHallSouth2", 96, 40, 122, 6);
+        Wall("TopHallSouth3", 246, 40, 122, 6);
+        Wall("TopHallSouth4", 396, 40, 58, 6);
+
+        Wall("ClassWest", 8, 46, 6, 74);
+        Wall("ClassDiv1", 150, 46, 12, 74);
+        Wall("ClassDiv2", 298, 46, 12, 74);
+        Wall("ClassDiv3", 448, 46, 6, 74);
+        Wall("ClassSouth", 8, 120, 446, 6);
+
+        Wall("ArchiveDivNorth", 258, 126, 8, 24);
+        Wall("ArchiveDivSouth", 258, 178, 8, 28);
+        Wall("ArchiveWestNorth", 100, 126, 6, 24);
+        Wall("ArchiveWestSouth", 100, 178, 6, 34);
+        Wall("ArchiveSouth", 100, 206, 348, 6);
+
+        Wall("WestCorrNorth", 10, 144, 90, 6);
+        Wall("WestCorrWest", 10, 144, 6, 82);
+        Wall("WestCorrSouth", 54, 178, 46, 6);
+        Wall("WestCorrInnerEast", 54, 184, 6, 42);
+
+        Wall("CatwalkNorth", 60, 220, 290, 6);
+        Wall("CatwalkWest", 10, 226, 6, 70);
+        Wall("CatwalkEast", 344, 226, 6, 70);
+        Wall("CatwalkSouthWest", 10, 292, 100, 6);
+        Wall("CatwalkSouthEast", 336, 292, 14, 6);
+
+        Wall("ChamberWest", 104, 292, 6, 64);
+        Wall("ChamberSouth", 104, 352, 238, 6);
+        Wall("ChamberEastNorth", 336, 292, 6, 22);
+        Wall("ChamberEastSouth", 336, 342, 6, 16);
+
+        Wall("ExitCorrNorth", 342, 308, 88, 6);
+        Wall("ExitCorrSouth", 342, 342, 88, 6);
+
+        Wall("PortalNorth", 490, 198, 142, 6);
+        Wall("PortalEast", 626, 204, 6, 152);
+        Wall("PortalSouth", 424, 350, 208, 6);
+        Wall("PortalWestNorth", 424, 204, 6, 110);
+        Wall("PortalWestSouth", 424, 342, 6, 14);
+
         _keypad = Add(new FacilityKeypad { Position = P(423, 188) }, "ArchiveKeypad", P(423, 188));
         Add(new Inspectable { Caption = "WHITEBOARD (E)", Size = S(30, 18), DrawBox = false, FirstDialogueId = "level8_whiteboard", RepeatDialogueId = "level8_whiteboard" }, "Whiteboard", P(140, 139));
         Add(new Inspectable { Caption = "MEETING MINUTES (E)", Size = S(34, 18), DrawBox = false, FirstDialogueId = "level8_minutes", RepeatDialogueId = "level8_minutes" }, "Minutes", P(205, 139));
@@ -107,7 +154,7 @@ public partial class Room08Facility : Room
         Add(new Inspectable { Caption = "ENVELOPE TO FELIX (E)", Size = S(24, 18), DrawBox = false, FirstDialogueId = "level8_envelope", RepeatDialogueId = "level8_envelope" }, "Envelope", P(270, 184));
         _archiveFile = Add(new FloorMarker { Caption = "SHIFTING ARCHIVE FILE", Size = S(22, 12), DottedRing = true,
             Outline = new Color(0.68f, 0.48f, 1f) }, "ArchiveFile", P(336, 153));
-        _archiveDoor = Add(new Door { Size = S(8, 22), RequiresSwitch = false }, "ArchiveExit", P(448, 205));
+        _archiveDoor = Add(new Door { Size = S(36, 8), RequiresSwitch = false }, "ArchiveExit", P(448, 205));
 
         Add(new Inspectable { Caption = "CHALKBOARD (E)", Size = S(32, 18), DrawBox = false, FirstDialogueId = "level8_chalkboard", RepeatDialogueId = "level8_chalkboard" }, "Chalkboard", P(236, 105));
         Add(new Inspectable { Caption = "YORUKA'S ECHO (E)", Size = S(28, 28), DrawBox = false, FirstDialogueId = "level8_yoruka", RepeatDialogueId = "level8_yoruka", CharacterSheetPath = CharacterSprite.FrontSpritePath(GameStateManager.Yoruka) }, "YorukaEcho", P(85, 82));
@@ -146,6 +193,7 @@ public partial class Room08Facility : Room
     private bool AllTrustResponses() => GameStateManager.Instance?.GetFlag("level8_hesiod_trusted") == true && GameStateManager.Instance?.GetFlag("level8_adellaine_trusted") == true && GameStateManager.Instance?.GetFlag("level8_yoruka_trusted") == true;
     private T Add<T>(T node, string name, Vector2 pos) where T : Node2D { node.Name = name; node.Position = pos; AddChild(node); return node; }
     private void Floor(float x, float y, float w, float h) => Add(new FloorMarker { Size = S(w,h), DrawBox = false }, "Walkable" + GetChildCount(), P(x,y));
+    private void Wall(string name, float x, float y, float w, float h) => Add(new Obstacle { Size = S(w, h), DrawBox = false }, name, P(x, y));
     private static Vector2 P(float x, float y) => new(x * MapScale, y * MapScale);
     private static Vector2 S(float x, float y) => new(x * MapScale, y * MapScale);
 }

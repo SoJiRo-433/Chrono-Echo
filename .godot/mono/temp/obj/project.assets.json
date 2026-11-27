@@ -41,11 +41,12 @@
   },
   "libraries": {
     "Godot.SourceGenerators/4.7.2": {
-      "sha512": "Utbu3S+af5/+SVRUlSZZJb2M52mcL3RbHl5sW6lmvRkG2klS/KFjZ+6ldAmOlp1mTqvxZ+5QsEvl/Dis7a4ZMA==",
+      "sha512": "PeYESFlRxlmeClrPhlMINhVvt2HiKnx2Ux/FYA10rimDevHljji3/jmRZOMo9XDNQsZzPH4uQmDyPgQgzTFvAg==",
       "type": "package",
       "path": "godot.sourcegenerators/4.7.2",
       "files": [
         ".nupkg.metadata",
+        ".signature.p7s",
         "analyzers/dotnet/cs/Godot.SourceGenerators.dll",
         "build/Godot.SourceGenerators.props",
         "godot.sourcegenerators.4.7.2.nupkg.sha512",
@@ -53,11 +54,12 @@
       ]
     },
     "GodotSharp/4.7.2": {
-      "sha512": "7lbJgYB1o96H23sX0idzwhnY0DbRx0oJucYKP9xGQv5IcghlXUuxUv/xTMV+I1mW3Wh9uDdtuwtpwNurk2y7Fw==",
+      "sha512": "EPvfayB7b7MrBNdASvy86jRS5AbM9dprkVivcRD80g+ngn2M8KAIrBQH4NhyQL+pwxni0xVnuqhD9AFpZeNQpw==",
       "type": "package",
       "path": "godotsharp/4.7.2",
       "files": [
         ".nupkg.metadata",
+        ".signature.p7s",
         "godotsharp.4.7.2.nupkg.sha512",
         "godotsharp.nuspec",
         "lib/net8.0/GodotSharp.dll",
@@ -65,11 +67,12 @@
       ]
     },
     "GodotSharpEditor/4.7.2": {
-      "sha512": "Pl2L2ppnXyDuiQ5tqp208/yFsdFUF3x+e81GOhZNLoaudaSOQ6p/Lf12/cUiDj2g/flI3Kdf+LYz+2MDs8/DtQ==",
+      "sha512": "Fuf2rNvajla9N8Z+ksxsSIt326wsjpB2F2uZCtxkdfWIsApabCHy5fsE2EKxOlQ4NaINGdgMIv62D0n583qe1A==",
       "type": "package",
       "path": "godotsharpeditor/4.7.2",
       "files": [
         ".nupkg.metadata",
+        ".signature.p7s",
         "godotsharpeditor.4.7.2.nupkg.sha512",
         "godotsharpeditor.nuspec",
         "lib/net8.0/GodotSharpEditor.dll",
@@ -85,23 +88,23 @@
     ]
   },
   "packageFolders": {
-    "C:\\Users\\chris\\.nuget\\packages\\": {},
+    "C:\\Users\\HP\\.nuget\\packages\\": {},
     "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\chris\\Documents\\GitHub\\Chrono-Echo\\ChronoEchoes.csproj",
+      "projectUniqueName": "C:\\Users\\HP\\Downloads\\ChronoEchoes\\ChronoEchoes\\ChronoEchoes.csproj",
       "projectName": "ChronoEchoes",
-      "projectPath": "C:\\Users\\chris\\Documents\\GitHub\\Chrono-Echo\\ChronoEchoes.csproj",
-      "packagesPath": "C:\\Users\\chris\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\chris\\Documents\\GitHub\\Chrono-Echo\\.godot\\mono\\temp\\obj\\",
+      "projectPath": "C:\\Users\\HP\\Downloads\\ChronoEchoes\\ChronoEchoes\\ChronoEchoes.csproj",
+      "packagesPath": "C:\\Users\\HP\\.nuget\\packages\\",
+      "outputPath": "C:\\Users\\HP\\Downloads\\ChronoEchoes\\ChronoEchoes\\.godot\\mono\\temp\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
       ],
       "configFilePaths": [
-        "C:\\Users\\chris\\AppData\\Roaming\\NuGet\\NuGet.Config",
+        "C:\\Users\\HP\\AppData\\Roaming\\NuGet\\NuGet.Config",
         "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
         "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
       ],
@@ -110,7 +113,8 @@
       ],
       "sources": {
         "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
-        "C:\\Users\\chris\\Downloads\\Godot_v4.7.2-stable_mono_win64\\Godot_v4.7.2-stable_mono_win64\\GodotSharp\\Tools\\nupkgs": {}
+        "C:\\Program Files\\dotnet\\library-packs": {},
+        "https://api.nuget.org/v3/index.json": {}
       },
       "frameworks": {
         "net8.0": {

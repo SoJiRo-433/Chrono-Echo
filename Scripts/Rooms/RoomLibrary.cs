@@ -127,7 +127,7 @@ public partial class RoomLibrary : Room
         // Walls: shapes only - the map is what is drawn. The gap between the two south pieces is the
         // doorway down into the Archives.
         Wall("Reading north wall", new Vector2(6, 0), new Vector2(184, 6));
-        Wall("Reading west wall", new Vector2(0, 6), new Vector2(6, 56));
+        Wall("Reading west wall", new Vector2(0, 6), new Vector2(6, 62));
         Wall("Reading east wall", new Vector2(190, 6), new Vector2(6, 56));
         Wall("Reading south wall west", new Vector2(6, 62), new Vector2(95, 6));
         Wall("Reading south wall east", new Vector2(152, 62), new Vector2(38, 6));
@@ -197,6 +197,8 @@ public partial class RoomLibrary : Room
             ApproachFlag = "library_shelves_seen"
         }, "CollapsedShelvesDoor", P(386f, 142f));
 
+        Wall("Connector north wall", new Vector2(380, 136), new Vector2(55, 6));
+        Wall("Connector south wall", new Vector2(380, 182), new Vector2(55, 6));
         Wall("RubbleLatchNorth", new Vector2(348, 120), new Vector2(30, 30));
         Wall("RubbleLatchSouth", new Vector2(348, 186), new Vector2(30, 30));
 
@@ -225,6 +227,8 @@ public partial class RoomLibrary : Room
         // the rack and the spares on the room's east side.
         Wall("Terminal south wall west", new Vector2(429, 250), new Vector2(71, 6));
         Wall("Terminal south wall east", new Vector2(540, 250), new Vector2(100, 6));
+        Wall("Drop west wall", new Vector2(494, 250), new Vector2(6, 42));
+        Wall("Drop east wall", new Vector2(540, 250), new Vector2(6, 42));
 
         Talkable("TerminalLog", "TERMINAL (E)", new Vector2(487, 88), new Vector2(73, 40),
                  "library_terminal", repeat: true);
@@ -242,7 +246,7 @@ public partial class RoomLibrary : Room
     {
         Wall("Corridor north wall west", new Vector2(104, 286), new Vector2(396, 6));   // the drop from the
         Wall("Corridor north wall east", new Vector2(540, 286), new Vector2(100, 6));   // terminal is between
-        Wall("Corridor south wall", new Vector2(110, 354), new Vector2(530, 6));
+        Wall("Corridor south wall", new Vector2(104, 354), new Vector2(536, 6));
         Wall("Corridor west wall", new Vector2(104, 292), new Vector2(6, 62));
         Wall("Corridor east wall", new Vector2(634, 292), new Vector2(6, 62));
 

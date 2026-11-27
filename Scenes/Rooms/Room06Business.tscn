@@ -8,7 +8,7 @@
 script = ExtResource("1_room")
 RoomSize = Vector2(667, 747)
 WorldSize = Vector2(667, 747)
-PlayerStartPosition = Vector2(123, 634)
+PlayerStartPosition = Vector2(123, 628)
 ExitPosition = Vector2(192, 108)
 ExitSize = Vector2(72, 50)
 MaxEchoes = 3
@@ -25,4 +25,4 @@ CompletionFlag = "level6_complete"
 script = ExtResource("2_dialogue")
 
 [node name="Player" parent="." instance=ExtResource("3_player")]
-position = Vector2(123, 634)
+position = Vector2(123, 628)

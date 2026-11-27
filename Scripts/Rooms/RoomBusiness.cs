@@ -27,7 +27,7 @@ public partial class RoomBusiness : Room
     {
         BuildMap();
         RoomSize = new Vector2(667, 747);
-        PlayerStartPosition = new Vector2(123, 634);
+        PlayerStartPosition = new Vector2(123, 628);
         ExitPosition = new Vector2(192, 108); ExitSize = new Vector2(72, 50);
         LevelNumber = 6; NextLevelPath = "res://Scenes/Rooms/Room07Atrium.tscn"; MaxCaptureSeconds = 15f; EchoLifetimeSeconds = 15f; LoopReplay = false;
         ExitLockedHint = "STILL SHUT - TALK TO HESIOD, YORUKA AND ADELLAINE AT THE BORDER";
