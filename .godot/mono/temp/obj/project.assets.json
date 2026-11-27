@@ -41,11 +41,12 @@
   },
   "libraries": {
     "Godot.SourceGenerators/4.7.2": {
-      "sha512": "Utbu3S+af5/+SVRUlSZZJb2M52mcL3RbHl5sW6lmvRkG2klS/KFjZ+6ldAmOlp1mTqvxZ+5QsEvl/Dis7a4ZMA==",
+      "sha512": "PeYESFlRxlmeClrPhlMINhVvt2HiKnx2Ux/FYA10rimDevHljji3/jmRZOMo9XDNQsZzPH4uQmDyPgQgzTFvAg==",
       "type": "package",
       "path": "godot.sourcegenerators/4.7.2",
       "files": [
         ".nupkg.metadata",
+        ".signature.p7s",
         "analyzers/dotnet/cs/Godot.SourceGenerators.dll",
         "build/Godot.SourceGenerators.props",
         "godot.sourcegenerators.4.7.2.nupkg.sha512",
@@ -53,11 +54,12 @@
       ]
     },
     "GodotSharp/4.7.2": {
-      "sha512": "7lbJgYB1o96H23sX0idzwhnY0DbRx0oJucYKP9xGQv5IcghlXUuxUv/xTMV+I1mW3Wh9uDdtuwtpwNurk2y7Fw==",
+      "sha512": "EPvfayB7b7MrBNdASvy86jRS5AbM9dprkVivcRD80g+ngn2M8KAIrBQH4NhyQL+pwxni0xVnuqhD9AFpZeNQpw==",
       "type": "package",
       "path": "godotsharp/4.7.2",
       "files": [
         ".nupkg.metadata",
+        ".signature.p7s",
         "godotsharp.4.7.2.nupkg.sha512",
         "godotsharp.nuspec",
         "lib/net8.0/GodotSharp.dll",
@@ -65,11 +67,12 @@
       ]
     },
     "GodotSharpEditor/4.7.2": {
-      "sha512": "Pl2L2ppnXyDuiQ5tqp208/yFsdFUF3x+e81GOhZNLoaudaSOQ6p/Lf12/cUiDj2g/flI3Kdf+LYz+2MDs8/DtQ==",
+      "sha512": "Fuf2rNvajla9N8Z+ksxsSIt326wsjpB2F2uZCtxkdfWIsApabCHy5fsE2EKxOlQ4NaINGdgMIv62D0n583qe1A==",
       "type": "package",
       "path": "godotsharpeditor/4.7.2",
       "files": [
         ".nupkg.metadata",
+        ".signature.p7s",
         "godotsharpeditor.4.7.2.nupkg.sha512",
         "godotsharpeditor.nuspec",
         "lib/net8.0/GodotSharpEditor.dll",
@@ -85,32 +88,25 @@
     ]
   },
   "packageFolders": {
-    "C:\\Users\\chris\\.nuget\\packages\\": {},
-    "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages": {}
+    "C:\\Users\\MyPc\\.nuget\\packages\\": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\chris\\Documents\\GitHub\\Chrono-Echo\\ChronoEchoes.csproj",
+      "projectUniqueName": "C:\\Users\\MyPc\\Documents\\Chrono-Echo-7.0\\Chrono-Echo\\ChronoEchoes.csproj",
       "projectName": "ChronoEchoes",
-      "projectPath": "C:\\Users\\chris\\Documents\\GitHub\\Chrono-Echo\\ChronoEchoes.csproj",
-      "packagesPath": "C:\\Users\\chris\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\chris\\Documents\\GitHub\\Chrono-Echo\\.godot\\mono\\temp\\obj\\",
+      "projectPath": "C:\\Users\\MyPc\\Documents\\Chrono-Echo-7.0\\Chrono-Echo\\ChronoEchoes.csproj",
+      "packagesPath": "C:\\Users\\MyPc\\.nuget\\packages\\",
+      "outputPath": "C:\\Users\\MyPc\\Documents\\Chrono-Echo-7.0\\Chrono-Echo\\.godot\\mono\\temp\\obj\\",
       "projectStyle": "PackageReference",
-      "fallbackFolders": [
-        "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
-      ],
       "configFilePaths": [
-        "C:\\Users\\chris\\AppData\\Roaming\\NuGet\\NuGet.Config",
-        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
-        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+        "C:\\Users\\MyPc\\AppData\\Roaming\\NuGet\\NuGet.Config"
       ],
       "originalTargetFrameworks": [
         "net8.0"
       ],
       "sources": {
-        "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
-        "C:\\Users\\chris\\Downloads\\Godot_v4.7.2-stable_mono_win64\\Godot_v4.7.2-stable_mono_win64\\GodotSharp\\Tools\\nupkgs": {}
+        "C:\\Users\\MyPc\\.nuget\\packages": {}
       },
       "frameworks": {
         "net8.0": {
@@ -127,8 +123,7 @@
         "enableAudit": "true",
         "auditLevel": "low",
         "auditMode": "direct"
-      },
-      "SdkAnalysisLevel": "9.0.300"
+      }
     },
     "frameworks": {
       "net8.0": {
@@ -167,7 +162,7 @@
             "privateAssets": "all"
           }
         },
-        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.318/PortableRuntimeIdentifierGraph.json"
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.427/PortableRuntimeIdentifierGraph.json"
       }
     }
   }

@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("ChronoEchoes")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+e18c62cd467b914ec1f532f86721c40cc1a70c90")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+08f32c2c7ab3a5516a55e7c2b0c6f508457b34a9")]
 [assembly: System.Reflection.AssemblyProductAttribute("ChronoEchoes")]
 [assembly: System.Reflection.AssemblyTitleAttribute("ChronoEchoes")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

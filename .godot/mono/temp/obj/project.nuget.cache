@@ -1,12 +1,12 @@
 {
   "version": 2,
-  "dgSpecHash": "Du0/5GOh6hc=",
+  "dgSpecHash": "0O1glQAt5yk=",
   "success": true,
-  "projectFilePath": "C:\\Users\\chris\\Documents\\GitHub\\Chrono-Echo\\ChronoEchoes.csproj",
+  "projectFilePath": "C:\\Users\\MyPc\\Documents\\Chrono-Echo-7.0\\Chrono-Echo\\ChronoEchoes.csproj",
   "expectedPackageFiles": [
-    "C:\\Users\\chris\\.nuget\\packages\\godot.sourcegenerators\\4.7.2\\godot.sourcegenerators.4.7.2.nupkg.sha512",
-    "C:\\Users\\chris\\.nuget\\packages\\godotsharp\\4.7.2\\godotsharp.4.7.2.nupkg.sha512",
-    "C:\\Users\\chris\\.nuget\\packages\\godotsharpeditor\\4.7.2\\godotsharpeditor.4.7.2.nupkg.sha512"
+    "C:\\Users\\MyPc\\.nuget\\packages\\godot.sourcegenerators\\4.7.2\\godot.sourcegenerators.4.7.2.nupkg.sha512",
+    "C:\\Users\\MyPc\\.nuget\\packages\\godotsharp\\4.7.2\\godotsharp.4.7.2.nupkg.sha512",
+    "C:\\Users\\MyPc\\.nuget\\packages\\godotsharpeditor\\4.7.2\\godotsharpeditor.4.7.2.nupkg.sha512"
   ],
   "logs": []
 }

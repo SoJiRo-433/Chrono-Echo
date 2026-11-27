@@ -1,32 +1,26 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\chris\\Documents\\GitHub\\Chrono-Echo\\ChronoEchoes.csproj": {}
+    "C:\\Users\\MyPc\\Documents\\Chrono-Echo-7.0\\Chrono-Echo\\ChronoEchoes.csproj": {}
   },
   "projects": {
-    "C:\\Users\\chris\\Documents\\GitHub\\Chrono-Echo\\ChronoEchoes.csproj": {
+    "C:\\Users\\MyPc\\Documents\\Chrono-Echo-7.0\\Chrono-Echo\\ChronoEchoes.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\chris\\Documents\\GitHub\\Chrono-Echo\\ChronoEchoes.csproj",
+        "projectUniqueName": "C:\\Users\\MyPc\\Documents\\Chrono-Echo-7.0\\Chrono-Echo\\ChronoEchoes.csproj",
         "projectName": "ChronoEchoes",
-        "projectPath": "C:\\Users\\chris\\Documents\\GitHub\\Chrono-Echo\\ChronoEchoes.csproj",
-        "packagesPath": "C:\\Users\\chris\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\chris\\Documents\\GitHub\\Chrono-Echo\\.godot\\mono\\temp\\obj\\",
+        "projectPath": "C:\\Users\\MyPc\\Documents\\Chrono-Echo-7.0\\Chrono-Echo\\ChronoEchoes.csproj",
+        "packagesPath": "C:\\Users\\MyPc\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\MyPc\\Documents\\Chrono-Echo-7.0\\Chrono-Echo\\.godot\\mono\\temp\\obj\\",
         "projectStyle": "PackageReference",
-        "fallbackFolders": [
-          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
-        ],
         "configFilePaths": [
-          "C:\\Users\\chris\\AppData\\Roaming\\NuGet\\NuGet.Config",
-          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
-          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+          "C:\\Users\\MyPc\\AppData\\Roaming\\NuGet\\NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net8.0"
         ],
         "sources": {
-          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
-          "C:\\Users\\chris\\Downloads\\Godot_v4.7.2-stable_mono_win64\\Godot_v4.7.2-stable_mono_win64\\GodotSharp\\Tools\\nupkgs": {}
+          "C:\\Users\\MyPc\\.nuget\\packages": {}
         },
         "frameworks": {
           "net8.0": {
@@ -43,8 +37,7 @@
           "enableAudit": "true",
           "auditLevel": "low",
           "auditMode": "direct"
-        },
-        "SdkAnalysisLevel": "9.0.300"
+        }
       },
       "frameworks": {
         "net8.0": {
@@ -83,7 +76,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.318/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.427/PortableRuntimeIdentifierGraph.json"
         }
       }
     }
