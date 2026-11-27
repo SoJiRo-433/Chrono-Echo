@@ -62,26 +62,21 @@ public partial class Inspectable : Node2D, IInteractable
 
         if (_caption != "")
         {
-            Label label = new Label
+            Texture2D indicatorTexture = UiSkin.DisInspect;
+            if (indicatorTexture != null)
             {
-                Text = _caption,
-                Position = new Vector2(6f, 4f),
-                MouseFilter = Control.MouseFilterEnum.Ignore
-            };
-            label.AddThemeFontSizeOverride("font_size", 12);
-            label.AddThemeColorOverride("font_color", _outline);
-
-            // A character is a picture of the thing the caption names, so the caption moves under
-            // their feet instead of sitting on top of their head.
-            if (character != null)
-            {
-                float width = Mathf.Max(_size.X, 90f);
-                label.Size = new Vector2(width, 16f);
-                label.Position = new Vector2((_size.X - width) * 0.5f, _size.Y + 4f);
-                label.HorizontalAlignment = HorizontalAlignment.Center;
+                var indicator = new Sprite2D
+                {
+                    Texture = indicatorTexture,
+                    Centered = true,
+                    TextureFilter = CanvasItem.TextureFilterEnum.Nearest,
+                    ZIndex = 20,
+                    Position = character != null
+                        ? new Vector2(_size.X * 0.5f, _size.Y - 46f)
+                        : new Vector2(_size.X * 0.5f, Mathf.Min(_size.Y * 0.4f, 20f))
+                };
+                AddChild(indicator);
             }
-
-            AddChild(label);
         }
         QueueRedraw();
     }

@@ -293,9 +293,18 @@ public partial class Room09SectorAlpha : Room
 
 		public override void _Ready()
 		{
-			Label label = new() { Text = Caption, Position = new Vector2(6, 4), MouseFilter = Control.MouseFilterEnum.Ignore };
-			label.AddThemeFontSizeOverride("font_size", 12);
-			AddChild(label);
+			Texture2D indicatorTexture = UiSkin.DisInspect;
+			if (indicatorTexture != null)
+			{
+				AddChild(new Sprite2D
+				{
+					Texture = indicatorTexture,
+					Centered = true,
+					TextureFilter = CanvasItem.TextureFilterEnum.Nearest,
+					ZIndex = 20,
+					Position = new Vector2(Size.X * 0.5f, Mathf.Min(Size.Y * 0.4f, 16f))
+				});
+			}
 		}
 
 		public void Interact(Entity interactor)

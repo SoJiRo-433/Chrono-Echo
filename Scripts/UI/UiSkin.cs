@@ -23,13 +23,56 @@ public static class UiSkin
     #endregion
 
     #region Sheets
+    public const string MainFontPath = "res://Assets/Fonts/NotoSerifJP-VariableFont_wght.ttf";
+
     private static Texture2D _hearts;
     private static Texture2D _dialogueFrame;
     private static Texture2D _portraitFrame;
+    private static Texture2D _boxDialogue;
+    private static Texture2D _boxName;
+    private static Texture2D _btnDiaLogs;
+    private static Texture2D _btnLoad;
+    private static Texture2D _btnSave;
+    private static Texture2D _btnSettings;
+    private static Texture2D _nextIndicator;
+    private static Texture2D _selectDialogue;
+    private static Texture2D _selectedDialogue;
+    private static Texture2D _disInspect;
+    private static Font _mainFont;
 
     public static Texture2D Hearts => _hearts ??= GD.Load<Texture2D>("res://Assets/UI/ui_hearts.png");
     public static Texture2D DialogueFrame => _dialogueFrame ??= GD.Load<Texture2D>("res://Assets/UI/ui_dialogue_panel.png");
     public static Texture2D PortraitFrame => _portraitFrame ??= GD.Load<Texture2D>("res://Assets/UI/ui_portrait_frame.png");
+    public static Texture2D BoxDialogueSheet => _boxDialogue ??= GD.Load<Texture2D>("res://Assets/UI/boxDialogue.png");
+    public static Texture2D BoxNameSheet => _boxName ??= GD.Load<Texture2D>("res://Assets/UI/boxName.png");
+    public static Texture2D BtnDiaLogsSheet => _btnDiaLogs ??= GD.Load<Texture2D>("res://Assets/UI/btnDiaLogs.png");
+    public static Texture2D BtnLoadSheet => _btnLoad ??= GD.Load<Texture2D>("res://Assets/UI/btnLoad.png");
+    public static Texture2D BtnSaveSheet => _btnSave ??= GD.Load<Texture2D>("res://Assets/UI/btnSave.png");
+    public static Texture2D BtnSettingsSheet => _btnSettings ??= GD.Load<Texture2D>("res://Assets/UI/btnSettings.png");
+    public static Texture2D NextIndicatorSheet => _nextIndicator ??= GD.Load<Texture2D>("res://Assets/UI/nextIndicator.png");
+    public static Texture2D SelectDialogueSheet => _selectDialogue ??= GD.Load<Texture2D>("res://Assets/UI/selectDialogue.png");
+    public static Texture2D SelectedDialogueSheet => _selectedDialogue ??= GD.Load<Texture2D>("res://Assets/UI/selectedDialogue.png");
+    public static Texture2D DisInspect => _disInspect ??= GD.Load<Texture2D>("res://Assets/UI/disInspect.png");
+    public static Font MainFont => _mainFont ??= GD.Load<Font>(MainFontPath);
+    #endregion
+
+    #region Cropped dialogue & inspect UI textures
+    public static readonly Rect2 BoxDialogueRegion = new(0f, 610f, 1920f, 424f);
+    public static readonly Rect2 BoxNameRegion = new(65f, 508f, 568f, 165f);
+    public static readonly Rect2 BtnDiaLogsRegion = new(880f, 443f, 160f, 194f);
+    public static readonly Rect2 BtnLoadRegion = new(890f, 474f, 128f, 120f);
+    public static readonly Rect2 BtnSaveRegion = new(840f, 397f, 240f, 274f);
+    public static readonly Rect2 BtnSettingsRegion = new(700f, 280f, 520f, 520f);
+    public static readonly Rect2 NextIndicatorRegion = new(701f, 315f, 518f, 449f);
+    public static readonly Rect2 SelectDialogueRegion = new(944f, 290f, 834f, 159f);
+    public static readonly Rect2 SelectedDialogueRegion = new(919f, 270f, 887f, 200f);
+
+    public static Texture2D Crop(Texture2D sheet, Rect2 region) => new AtlasTexture
+    {
+        Atlas = sheet,
+        Region = region,
+        FilterClip = true
+    };
     #endregion
 
     #region Hearts
