@@ -37,8 +37,8 @@ public partial class RoomAtriumHub : Room
         RoomSize = new Vector2(1280f, 720f);
         WorldSize = RoomSize;
         PlayerStartPosition = P(28f, 320f); // the doorway back from the Level 6 corridor
-        ExitPosition = P(110f, 138f);        // the north-wall service hatch
-        ExitSize = S(40f, 6f);
+        ExitPosition = P(110f, 120f);        // the north-wall service hatch alcove
+        ExitSize = S(40f, 16f);
         LevelNumber = 7;
         NextLevelPath = "res://Scenes/Rooms/Room08Facility.tscn";
         MaxEchoes = 3;
@@ -138,10 +138,10 @@ public partial class RoomAtriumHub : Room
         Floor("Storeroom", 520, 292, 112, 60);
 
         // Edge rails and room dividers. Openings line up with the routes shown on the map.
-        Wall("EntryWestTop", 2, 292, 6, 20); Wall("EntryWestBottom", 2, 336, 6, 16);
+        Wall("EntryWest", 2, 292, 6, 60);
         Wall("EntrySouth", 8, 352, 512, 6); Wall("EntryNorth", 8, 286, 182, 6);
         Wall("EntryEastTop", 184, 292, 6, 22);
-        Wall("CorridorNorthWest", 190, 286, 278, 6); Wall("CorridorNorthEast", 520, 286, 6, 6);
+        Wall("CorridorNorthWest", 190, 286, 286, 40); Wall("CorridorNorthEast", 520, 286, 6, 6);
         Wall("CorridorEast", 520, 292, 6, 22); Wall("StoreroomSouth", 520, 352, 112, 6);
         Wall("StoreroomEast", 632, 292, 6, 60); Wall("StoreroomNorth", 520, 286, 112, 6);
         Wall("WalkwayWest", 82, 256, 6, 30); Wall("WalkwayEast", 520, 256, 6, 30);
@@ -150,11 +150,14 @@ public partial class RoomAtriumHub : Room
         Wall("BridgeSouthWest", 88, 250, 212, 6); Wall("BridgeSouthEast", 380, 250, 176, 6);
         Wall("TerminalWest", 74, 144, 6, 66); Wall("TerminalEast", 230, 144, 6, 66);
         Wall("TerminalNorthWest", 80, 138, 30, 6); Wall("TerminalNorthMiddle", 150, 138, 10, 6);
-        Wall("TerminalNorthEast", 160, 138, 70, 6);
+        Wall("TerminalNorthEast", 216, 138, 14, 6);
+        Wall("HatchAlcoveWest", 104, 120, 6, 18); Wall("HatchAlcoveEast", 150, 120, 6, 18);
+        Wall("HatchAlcoveNorth", 104, 114, 52, 6);
         Wall("TerminalSouthWest", 80, 210, 50, 6); Wall("TerminalSouthEast", 190, 210, 40, 6);
         Wall("StairsWest", 154, 76, 6, 62); Wall("StairsEast", 216, 76, 6, 62);
         Wall("DeckNorth", 98, 10, 508, 6); Wall("DeckWest", 98, 16, 6, 54);
         Wall("DeckSouthWest", 104, 70, 56, 6); Wall("DeckSouthEast", 216, 70, 384, 6);
+        Wall("DeckEast", 600, 16, 6, 54);
 
         Add(new FloorMarker { Caption = "BACK TO THE ATRIUM", Size = S(120, 16), DrawBox = false },
             "StartCaption", P(12, 338));

@@ -40,7 +40,7 @@ public partial class Room09SectorAlpha : Room
 		BuildMap();
 		RoomSize = WorldSize = new Vector2(1280, 720);
 		PlayerStartPosition = P(34, 255);
-		ExitPosition = P(315, 345); ExitSize = S(50, 12);
+		ExitPosition = P(246, 336); ExitSize = S(30, 14);
 		LevelNumber = 9; NextLevelPath = "res://Scenes/Rooms/Room10Rooftop.tscn"; MaxEchoes = 1;
 		MaxCaptureSeconds = 15; EchoLifetimeSeconds = 15; LoopReplay = false;
 		IntroDialogueId = "level9_intro"; ClearDialogueId = "level9_clear";
@@ -154,7 +154,7 @@ public partial class Room09SectorAlpha : Room
 		}
 		if (_terminalRead && AllGearsRewound()) _innerDoor?.Open();
 
-		Vector2 chamberEntry = P(386, 286);
+		Vector2 chamberEntry = P(386, 268);
 		for (int i = 0; i < _floatingTiles.Count; i++)
 		{
 			float phase = Mathf.PosMod(LoopClock + i * 0.8f, 4f);
@@ -238,16 +238,46 @@ public partial class Room09SectorAlpha : Room
 			Add(new FloorMarker { Caption = $"GEAR {index}", Size = S(20, 12), DottedRing = true,
 				Outline = new Color(.33f, .72f, 1f) }, $"GearMarker{index}", gearPoints[i] - new Vector2(20, 12));
 		}
+		// Enclose all drawn Sector Alpha rooms and connectors so players cannot leave the map.
+		Wall("UpperNorthWall", 14, 6, 594, 6);
+		Wall("OfficeWestWall", 14, 12, 6, 144);
+		Wall("TerminalEastWall", 602, 12, 6, 144);
+		Wall("UpperSouthWall1", 14, 156, 128, 18);
+		Wall("UpperSouthWall2", 166, 156, 314, 18);
+		Wall("UpperSouthWall3", 510, 156, 98, 18);
+
+		Wall("ChessWestWall", 14, 174, 6, 160);
+		Wall("ChessEastWall", 180, 174, 6, 160);
+		Wall("ChessSouthWall", 14, 334, 172, 6);
+
+		Wall("ProtoEastWall", 578, 174, 6, 170);
+		Wall("ProtoSouthWall", 396, 344, 188, 6);
+		Wall("ProtoWestNorth", 396, 174, 6, 76);
+		Wall("ProtoWestSouth", 396, 286, 6, 58);
+
+		Wall("CoreCorrNorth", 320, 244, 76, 6);
+		Wall("CoreCorrSouth", 320, 286, 76, 6);
+
+		Wall("CoreNorthWall", 204, 222, 122, 6);
+		Wall("CoreWestWall", 204, 228, 6, 108);
+		Wall("CoreEastNorth", 320, 228, 6, 22);
+		Wall("CoreEastSouth", 320, 286, 6, 50);
+		Wall("CoreSouthWest", 204, 336, 42, 6);
+		Wall("CoreSouthEast", 276, 336, 50, 6);
+		Wall("ExitAlcoveWest", 240, 342, 6, 10);
+		Wall("ExitAlcoveEast", 276, 342, 6, 10);
+		Wall("ExitAlcoveSouth", 240, 350, 42, 6);
+
 		Add(new FloorMarker { Caption = "HYPERION PROTOTYPE", Size = S(64, 16), DrawBox = false }, "PrototypeLabel", P(474, 245));
-		Vector2[] tilePoints = { P(420, 224), P(570, 208), P(577, 278), P(423, 300), P(495, 324) };
+		Vector2[] tilePoints = { P(420, 224), P(532, 208), P(536, 278), P(423, 300), P(495, 324) };
 		for (int i = 0; i < tilePoints.Length; i++)
 			_floatingTiles.Add(Add(new FloorMarker { Size = S(24, 18), Fill = new Color(.34f, .55f, .66f, .28f),
 				Outline = new Color(.65f, .82f, .9f, .78f) }, $"FloatingTile{i + 1}", tilePoints[i]));
 		_innerDoor = Add(new Door { Size = S(10, 36), RequiresSwitch = true }, "InnerCoreDoor", P(316, 250));
 		Add(new Inspectable { Caption = "FELIX (E)", Size = S(36, 30), DrawBox = false,
 			RequiredFlag = "level9_prototype_restored", FirstDialogueId = "level9_felix", RepeatDialogueId = "level9_felix",
-			CharacterSheetPath = CharacterSprite.FrontSpritePath(GameStateManager.Felix) }, "Felix", P(347, 286));
-		Add(new FloorMarker { Caption = "INNER CORE", Size = S(46, 13), DrawBox = false }, "InnerCoreLabel", P(320, 322));
+			CharacterSheetPath = CharacterSprite.FrontSpritePath(GameStateManager.Felix) }, "Felix", P(247, 268));
+		Add(new FloorMarker { Caption = "INNER CORE", Size = S(46, 13), DrawBox = false }, "InnerCoreLabel", P(240, 322));
 	}
 
 	private partial class GearToggle : Node2D, IInteractable
@@ -379,6 +409,7 @@ public partial class Room09SectorAlpha : Room
 	private static Vector2 PiecePosition(Vector2I c) => P(BoardX + c.X * Cell + 4, BoardY + c.Y * Cell + 4);
 	private static Vector2I BoardCell(Vector2 p) => new(Mathf.FloorToInt(p.X / S(Cell, Cell).X) - Mathf.FloorToInt(P(BoardX, 0).X / S(Cell, Cell).X), Mathf.FloorToInt(p.Y / S(Cell, Cell).Y) - Mathf.FloorToInt(P(0, BoardY).Y / S(Cell, Cell).Y));
 	private T Add<T>(T node, string name, Vector2 position) where T : Node2D { node.Name = name; node.Position = position; AddChild(node); return node; }
+	private void Wall(string name, float x, float y, float w, float h) => Add(new Obstacle { Size = S(w, h), DrawBox = false }, name, P(x, y));
 	private static Vector2 P(float x, float y) => new(x * MapScale, y * MapScale);
 	private static Vector2 S(float x, float y) => new(x * MapScale, y * MapScale);
 }

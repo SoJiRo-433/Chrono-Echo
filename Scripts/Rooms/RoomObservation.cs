@@ -41,7 +41,7 @@ public partial class RoomObservation : Room
         RoomSize = S(640f, 360f);
         WorldSize = S(640f, 360f);
         PlayerStartPosition = P(462f, 319f);
-        ExitPosition = P(242f, 342f); ExitSize = S(26f, 17f);
+        ExitPosition = P(242f, 326f); ExitSize = S(20f, 20f);
         LevelNumber = 5; NextLevelPath = "res://Scenes/Rooms/Room06Business.tscn";
         MaxCaptureSeconds = 8f; EchoLifetimeSeconds = 15f; LoopReplay = false;
         ExitLockedHint = "STILL SHUT - PRESS THE SECURITY CONSOLE, THEN SHUT ALL THREE STEAM VALVES";
@@ -81,7 +81,7 @@ public partial class RoomObservation : Room
         Wall("Pane north wall", new Vector2(274, 4), new Vector2(362, 6));
         Wall("Pane east wall", new Vector2(630, 10), new Vector2(6, 177));
         Wall("Pane west wall north", new Vector2(274, 10), new Vector2(6, 80));
-        Wall("Pane west wall south", new Vector2(274, 125), new Vector2(6, 62));
+        Wall("Pane west wall south", new Vector2(274, 125), new Vector2(6, 69));
 
         _felixAtWindow = Add(new Inspectable { Caption = "FELIX", Size = S(22f, 22f), DrawBox = false, FirstDialogueId = "level5_felix_window",
             CharacterSheetPath = CharacterSprite.FrontSpritePath(GameStateManager.Felix) }, "Felix", P(455f, 80f));
@@ -92,26 +92,26 @@ public partial class RoomObservation : Room
         // because the corridor he would otherwise be standing in is the only way between the gallery
         // and this room - and an Inspectable is not solid unless a room says so, so he never blocks.
         _felixAtDoor = Add(new Inspectable { Caption = "FELIX", Size = S(20f, 20f), DrawBox = false, FirstDialogueId = "level5_felix_door",
-            CharacterSheetPath = CharacterSprite.FrontSpritePath(GameStateManager.Felix) }, "FelixAtDoor", P(250f, 107f));
+            CharacterSheetPath = CharacterSprite.FrontSpritePath(GameStateManager.Felix) }, "FelixAtDoor", P(240f, 100f));
         _felixAtDoor.Hide();
 
-        // --- the door between the pane and the security room ---
-        Floor("Security door corridor", new Vector2(262, 90), new Vector2(18, 35));
-        Wall("Door corridor north", new Vector2(256, 84), new Vector2(24, 6));
-        Wall("Door corridor south", new Vector2(256, 125), new Vector2(24, 6));
+        // --- the door between the pane and the security room (matches the drawn walkway x=198..280, y=95..125) ---
+        Floor("Security door corridor", new Vector2(198, 95), new Vector2(82, 30));
+        Wall("Door corridor north", new Vector2(196, 89), new Vector2(84, 6));
+        Wall("Door corridor south", new Vector2(196, 125), new Vector2(84, 6));
 
-        // --- the security room: one way in, the beams are the way through ---
-        Floor("Security room", new Vector2(10, 8), new Vector2(262, 264));
-        Wall("Security north wall", new Vector2(4, 2), new Vector2(274, 6));
-        Wall("Security west wall", new Vector2(4, 8), new Vector2(6, 268));
-        Wall("Security east wall north", new Vector2(272, 8), new Vector2(6, 82));
-        Wall("Security east wall south", new Vector2(272, 125), new Vector2(6, 151));
-        // The seam between the security room and the conduit: solid either side of the opening she
-        // drops through into the first lane.
-        Wall("Security south wall west", new Vector2(4, 272), new Vector2(36, 6));
-        Wall("Security south wall east", new Vector2(110, 272), new Vector2(168, 6));
+        // --- the security room: one way in, the beams are the way through (x=14..196, y=8..226) ---
+        Floor("Security room", new Vector2(14, 8), new Vector2(182, 218));
+        Wall("Security north wall", new Vector2(8, 2), new Vector2(194, 6));
+        Wall("Security west wall", new Vector2(8, 8), new Vector2(6, 224));
+        Wall("Security east wall north", new Vector2(196, 8), new Vector2(6, 87));
+        Wall("Security east wall south", new Vector2(196, 125), new Vector2(6, 107));
+        // The seam between the security room and the conduit: solid either side of the floor hatch
+        // opening (x=148..176) she drops through into the first conduit lane.
+        Wall("Security south wall west", new Vector2(8, 226), new Vector2(140, 6));
+        Wall("Security south wall east", new Vector2(176, 226), new Vector2(26, 6));
 
-        _lasers = Add(new LaserGrid { Bounds = new Rect2(P(16f, 56f), S(250f, 150f)), Spacing = 84f }, "LaserGrid", Vector2.Zero);
+        _lasers = Add(new LaserGrid { Bounds = new Rect2(P(20f, 52f), S(172f, 152f)), Spacing = 58f }, "LaserGrid", Vector2.Zero);
         // The console only asks for the footage; the fragment itself is handed over at the end of
         // the conversation it starts, so the unlock lands with the beat and not before it.
         Add(new Switch { StaysOn = true, FlagToSet = "level5_console_pressed" }, "SecurityConsole", P(80f, 32f));
@@ -119,42 +119,40 @@ public partial class RoomObservation : Room
         // --- the maintenance conduit: three lanes, two shafts, one valve per lane ---
         BuildConduit();
         Add(new FloorMarker { Caption = "START - OBSERVATION WING", Size = S(90f, 12f), DrawBox = false }, "StartMarker", P(462f, 320f));
-        Add(new FloorMarker { Caption = "EXIT - BUSINESS", Size = S(85f, 13f), DrawBox = false, Outline = new Color(0.3f, 0.5f, 1f) }, "ExitMarker", P(242f, 344f));
+        Add(new FloorMarker { Caption = "EXIT - BUSINESS", Size = S(85f, 13f), DrawBox = false, Outline = new Color(0.3f, 0.5f, 1f) }, "ExitMarker", P(200f, 336f));
     }
 
-    /// <summary>The sheet's serpentine: lane one runs east, drops down the east shaft, lane two
-    /// runs west, drops down the west shaft, lane three runs east to the exit. Each lane has its
-    /// vent, its fan and its valve, and the valve sits at the end the player has to run to.</summary>
+    /// <summary>The sheet's serpentine aligned to the drawn conduit walkways (y=232..346):
+    /// lane one runs east, drops down the east shaft, lane two runs west, drops down the west
+    /// shaft, lane three runs east to the exit.</summary>
     private void BuildConduit()
     {
-        // Keep the maze's three-lane serpentine, but give each lane 22 map pixels (44 world
-        // units). The player is 28 world units wide, so this leaves a real steering margin instead
-        // of the two pixels of clearance the original 16-pixel lanes allowed.
-        Floor("Conduit lane one", new Vector2(14, 278), new Vector2(254, 22));
-        Floor("Conduit east shaft", new Vector2(242, 300), new Vector2(26, 28));
-        Floor("Conduit lane two", new Vector2(14, 306), new Vector2(254, 22));
-        Floor("Conduit west shaft", new Vector2(14, 328), new Vector2(26, 28));
-        Floor("Conduit lane three", new Vector2(14, 334), new Vector2(254, 22));
-        Floor("Level 6 exit", new Vector2(242, 334), new Vector2(26, 22));
+        Floor("Conduit lane one", new Vector2(50, 232), new Vector2(212, 22));
+        Floor("Conduit east shaft", new Vector2(240, 254), new Vector2(22, 28));
+        Floor("Conduit lane two", new Vector2(24, 282), new Vector2(238, 22));
+        Floor("Conduit west shaft", new Vector2(24, 304), new Vector2(26, 20));
+        Floor("Conduit lane three", new Vector2(24, 324), new Vector2(238, 22));
+        Floor("Level 6 exit", new Vector2(242, 326), new Vector2(20, 20));
 
-        // outer shell. The security room's south wall is the conduit's north wall: it leaves the
-        // opening she drops through into the first lane.
-        Wall("Conduit west wall", new Vector2(4, 278), new Vector2(10, 80));
-        Wall("Conduit east wall", new Vector2(268, 278), new Vector2(6, 80));
+        // Outer shell around the drawn conduit walkways.
+        Wall("Conduit lane1 north east", new Vector2(202, 226), new Vector2(66, 6));
+        Wall("Conduit lane1 west wall", new Vector2(44, 232), new Vector2(6, 22));
+        Wall("Conduit lane2 north west", new Vector2(18, 276), new Vector2(32, 6));
+        Wall("Conduit west wall", new Vector2(18, 282), new Vector2(6, 68));
+        Wall("Conduit east wall", new Vector2(262, 232), new Vector2(6, 118));
+        Wall("Conduit south wall", new Vector2(18, 346), new Vector2(250, 6));
 
-        // The two dividers, each stopping short of its end to leave its shaft open: divider one
-        // stops at x242 so the east shaft runs x242..268, divider two starts at x40 so the west
-        // shaft runs x14..40. Both are twenty-six wide, so the player has a body's width of
-        // clearance on either side of her.
-        Wall("Conduit divider one", new Vector2(14, 300), new Vector2(228, 6));
-        Wall("Conduit divider two", new Vector2(40, 328), new Vector2(228, 6));
+        // The two solid dividers between the drawn lanes: divider one stops at x240 to leave the
+        // east shaft open (x240..262), divider two starts at x50 to leave the west shaft open (x24..50).
+        Wall("Conduit divider one", new Vector2(44, 254), new Vector2(196, 28));
+        Wall("Conduit divider two", new Vector2(50, 304), new Vector2(218, 20));
 
-        // A valve, vent and fan remain in each lane; the trigger stays at the conduit mouth.
-        AddValveSection(1, new Vector2(60, 289), new Vector2(190, 289), new Vector2(258, 289));
-        AddValveSection(2, new Vector2(200, 317), new Vector2(80, 317), new Vector2(22, 317));
-        AddValveSection(3, new Vector2(60, 345), new Vector2(160, 345), new Vector2(225, 345));
+        // A valve, vent and fan aligned to each drawn conduit lane.
+        AddValveSection(1, new Vector2(66, 243), new Vector2(198, 243), new Vector2(250, 243));
+        AddValveSection(2, new Vector2(248, 268), new Vector2(110, 293), new Vector2(40, 293));
+        AddValveSection(3, new Vector2(38, 314), new Vector2(188, 335), new Vector2(225, 335));
 
-        _conduitTrigger = Add(new FloorMarker { Caption = "", Size = S(60f, 50f), Fill = new Color(0.4f, 0.85f, 0.9f, 0.04f), Outline = new Color(0.5f, 0.9f, 0.95f, 0.15f) }, "ConduitTrigger", P(44f, 280f));
+        _conduitTrigger = Add(new FloorMarker { Caption = "", Size = S(60f, 26f), Fill = new Color(0.4f, 0.85f, 0.9f, 0.04f), Outline = new Color(0.5f, 0.9f, 0.95f, 0.15f) }, "ConduitTrigger", P(132f, 228f));
     }
 
     /// <summary>One lane's trio: the valve wheel (held for six seconds, suppressing the lane for

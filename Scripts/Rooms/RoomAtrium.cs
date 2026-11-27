@@ -488,6 +488,7 @@ public partial class RoomAtrium : Room
         Floor("Exit threshold", new Vector2(606, 16), new Vector2(28, 54), new Color(0.5f, 0.55f, 0.62f));
         Wall("Exit threshold north", new Vector2(606, 10), new Vector2(28, 6));
         Wall("Exit threshold south", new Vector2(606, 70), new Vector2(28, 6));
+        Wall("Exit threshold east", new Vector2(634, 10), new Vector2(6, 66));
         Caption("ExitMarker", "EXIT - LEVEL 4", new Vector2(608, 2), new Vector2(90, 14));
     }
 

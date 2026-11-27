@@ -63,6 +63,7 @@ public partial class RoomMedical : Room
         Wall("Corridor west wall lower", new Vector2(54, 240), new Vector2(6, 112));
         Wall("Corridor east wall upper", new Vector2(132, 118), new Vector2(6, 162));
         Wall("Corridor east wall lower", new Vector2(132, 320), new Vector2(6, 32));
+        Wall("Corridor south wall", new Vector2(54, 352), new Vector2(84, 6));
 
         Floor("Keypad alcove", new Vector2(16, 200), new Vector2(44, 40));
         Wall("Keypad alcove north", new Vector2(10, 194), new Vector2(50, 6));
@@ -125,10 +126,10 @@ public partial class RoomMedical : Room
         _examines.Add(Add(new Inspectable { Caption = "SUPPLY CABINET", Size = S(23f, 15f), DrawBox = false, FirstDialogueId = "level4_cabinet", FlagToSet = "medical_exam_cabinet" }, "SupplyCabinet", P(135f, 104f)));
         _examines.Add(Add(new Inspectable { Caption = "NOTES", Size = S(21f, 15f), DrawBox = false, FirstDialogueId = "level4_notes", FlagToSet = "medical_exam_notes" }, "AdellaineNotes", P(165f, 13f)));
         _examines.Add(Add(new Inspectable { Caption = "WHITEBOARD", Size = S(23f, 15f), DrawBox = false, FirstDialogueId = "level4_whiteboard", FlagToSet = "medical_exam_whiteboard" }, "Whiteboard", P(75f, 92f)));
-        _adellaine = Add(new Inspectable { Caption = "ADELLAINE", Size = S(20f, 20f), DrawBox = false, FirstDialogueId = "level4_triage_encounter", CharacterSheetPath = CharacterSprite.FrontSpritePath(GameStateManager.Adellaine) }, "Adellaine", P(45f, 108f));
+        _adellaine = Add(new Inspectable { Caption = "ADELLAINE", Size = S(20f, 20f), DrawBox = false, FirstDialogueId = "level4_triage_encounter", CharacterSheetPath = CharacterSprite.FrontSpritePath(GameStateManager.Adellaine) }, "Adellaine", P(45f, 92f));
         _adellaine.Hide();
         Add(new Inspectable { Caption = "YORUKA", Size = S(20f, 20f), DrawBox = false, FirstDialogueId = "level4_yoruka",
-            CharacterSheetPath = CharacterSprite.FrontSpritePath(GameStateManager.Yoruka) }, "Yoruka", P(88f, 108f));
+            CharacterSheetPath = CharacterSprite.FrontSpritePath(GameStateManager.Yoruka) }, "Yoruka", P(88f, 92f));
         Add(new ScanMinigame { ContinueDialogueId = "level4_triage_scan_result" }, "ScanMinigame", P(125f, 108f));
 
         // --- the hall, the sealed gate at its east end, and the side route south ---
@@ -142,6 +143,7 @@ public partial class RoomMedical : Room
         Floor("Side route", new Vector2(500, 286), new Vector2(40, 66));
         Wall("Side route west", new Vector2(494, 286), new Vector2(6, 66));
         Wall("Side route east", new Vector2(540, 286), new Vector2(6, 66));
+        Wall("Side route south", new Vector2(494, 352), new Vector2(52, 6));
 
         // The business gate is the hazard tape the map paints across the hall's east end.
         Add(new Inspectable { Caption = "BUSINESS GATE", Size = S(35f, 12f), DrawBox = false, FirstDialogueId = "level4_business_gate", FlagToSet = "medical_route_open" }, "BusinessGate", P(586f, 240f));
