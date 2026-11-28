@@ -2,92 +2,92 @@ using Godot;
 
 public partial class MainMenu : Control
 {
-    private VideoStreamPlayer _video;
-    private Button _btnStart;
-    private Button _btnLoadGame;
-    private Button _btnNewGame;
-    private Button _btnCGs;
-    private Button _btnSettings;
-    private Button _btnQuit;
+	private VideoStreamPlayer _video;
+	private Button _btnStart;
+	private Button _btnLoadGame;
+	private Button _btnNewGame;
+	private Button _btnCGs;
+	private Button _btnSettings;
+	private Button _btnQuit;
 
-    public override void _Ready()
-    {
-        // Lets the Esc/pause menu know it should stay closed here
-        AddToGroup("main_menu");
-        GetTree().Paused = false;
+	public override void _Ready()
+	{
+		// Lets the Esc/pause menu know it should stay closed here
+		AddToGroup("main_menu");
+		GetTree().Paused = false;
 
-        // Background video
-        _video = GetNode<VideoStreamPlayer>("menuAnimation");
-        _video.Bus = SettingsManager.MusicBus;
-        _video.Loop = true;
-        _video.Play();
+		// Background video
+		_video = GetNode<VideoStreamPlayer>("menuAnimation");
+		_video.Bus = SettingsManager.MusicBus;
+		_video.Loop = true;
+		_video.Play();
 
-        // Buttons (paths are relative to Main Menu)
-        _btnStart    = GetNode<Button>("grpMenu/btnStart");
-        _btnLoadGame = GetNode<Button>("grpMenu/btnLoadGame");
-        _btnNewGame  = GetNode<Button>("grpMenu/btnNewGame");
-        _btnCGs      = GetNode<Button>("grpMenu/CGs");
-        _btnSettings = GetNode<Button>("grpMenu/btnSettings");
-        _btnQuit     = GetNode<Button>("grpMenu/Quit");
+		// Buttons (paths are relative to Main Menu)
+		_btnStart    = GetNode<Button>("grpMenu/btnStart");
+		_btnLoadGame = GetNode<Button>("grpMenu/btnLoadGame");
+		_btnNewGame  = GetNode<Button>("grpMenu/btnNewGame");
+		_btnCGs      = GetNode<Button>("grpMenu/CGs");
+		_btnSettings = GetNode<Button>("grpMenu/btnSettings");
+		_btnQuit     = GetNode<Button>("grpMenu/Quit");
 
-        _btnStart.Pressed    += OnStartPressed;
-        _btnLoadGame.Pressed += OnLoadGamePressed;
-        _btnNewGame.Pressed  += OnNewGamePressed;
-        _btnCGs.Pressed      += OnCGsPressed;
-        _btnSettings.Pressed += OnSettingsPressed;
-        _btnQuit.Pressed     += OnQuitPressed;
+		_btnStart.Pressed    += OnStartPressed;
+		_btnLoadGame.Pressed += OnLoadGamePressed;
+		_btnNewGame.Pressed  += OnNewGamePressed;
+		_btnCGs.Pressed      += OnCGsPressed;
+		_btnSettings.Pressed += OnSettingsPressed;
+		_btnQuit.Pressed     += OnQuitPressed;
 
-        // "Start" becomes "Continue" once a game exists
-        _btnStart.Text = SaveManager.HasGame ? "Continue" : "Start";
+		// "Start" becomes "Continue" once a game exists
+		_btnStart.Text = SaveManager.HasGame ? "Continue" : "Start";
 
-        _btnStart.GrabFocus();
-    }
+		_btnStart.GrabFocus();
+	}
 
-    private void OnStartPressed()
-    {
-        if (SaveManager.HasGame)
-            SaveManager.LoadSlot(GetTree(), SaveManager.LastSlot); // Continue
-        else
-            SaveManager.NewGame(GetTree());                        // Start = new game
-    }
+	private void OnStartPressed()
+	{
+		if (SaveManager.HasGame)
+			SaveManager.LoadSlot(GetTree(), SaveManager.LastSlot); // Continue
+		else
+			SaveManager.NewGame(GetTree());                        // Start = new game
+	}
 
-    private void OnNewGamePressed()
-    {
-        if (!SaveManager.HasGame)
-        {
-            SaveManager.NewGame(GetTree());
-            return;
-        }
+	private void OnNewGamePressed()
+	{
+		if (!SaveManager.HasGame)
+		{
+			SaveManager.NewGame(GetTree());
+			return;
+		}
 
-        UiHelper.Confirm(
-            this,
-            "New Game",
-            "You already have a game in progress.\nStarting a new game will overwrite it. Continue?",
-            () => SaveManager.NewGame(GetTree()),
-            "Overwrite");
-    }
+		UiHelper.Confirm(
+			this,
+			"New Game",
+			"You already have a game in progress.\nStarting a new game will overwrite it. Continue?",
+			() => SaveManager.NewGame(GetTree()),
+			"Overwrite");
+	}
 
-    private void OnLoadGamePressed()
-    {
-        SlotPicker.Open(this, SlotPickerMode.Load);
-    }
+	private void OnLoadGamePressed()
+	{
+		SlotPicker.Open(this, SlotPickerMode.Load);
+	}
 
-    private void OnCGsPressed()
-    {
-        CgGallery.Open(this);
-    }
+	private void OnCGsPressed()
+	{
+		CgGallery.Open(this);
+	}
 
-    private void OnSettingsPressed()
-    {
-        var settings = SettingsMenu.Open(this);
-        settings.TreeExited += () =>
-        {
-            if (IsInstanceValid(_btnSettings)) _btnSettings.GrabFocus();
-        };
-    }
+	private void OnSettingsPressed()
+	{
+		var settings = SettingsMenu.Open(this);
+		settings.TreeExited += () =>
+		{
+			if (IsInstanceValid(_btnSettings)) _btnSettings.GrabFocus();
+		};
+	}
 
-    private void OnQuitPressed()
-    {
-        GetTree().Quit();
-    }
+	private void OnQuitPressed()
+	{
+		GetTree().Quit();
+	}
 }

@@ -101,8 +101,8 @@ public static class UiSkin
     #region Dialogue frame (drawn whole)
     public static readonly Vector2 DialogueSheetSize = new(1408f, 433f);
 
-    /// <summary>The body's black interior on the sheet, starting below the speaker tab - which the
-    /// sheet draws hanging over the body's own top-left corner.</summary>
+	/// <summary>The body's black interior on the sheet, starting below the speaker tab - which the
+	/// sheet draws hanging over the body's own top-left corner.</summary>
     public static readonly Rect2 DialogueTextRegion = new(58f, 142f, 1292f, 234f);
 
     /// <summary>The speaker tab on the sheet: its name goes in here, not above the box.</summary>
@@ -117,15 +117,15 @@ public static class UiSkin
             StretchMode = TextureRect.StretchModeEnum.Scale,
             MouseFilter = Control.MouseFilterEnum.Ignore
         };
-        // Set last: until ExpandMode is IgnoreSize above, the texture's own size is this control's
+		// Set last: until ExpandMode is IgnoreSize above, the texture's own size is this control's
         // minimum, and any size assigned before that point is clamped straight back up to it.
         plate.Size = size;
         return plate;
     }
 
     /// <summary>Maps a rectangle measured on the sheet into a frame drawn at <paramref name="frameSize"/>,
-    /// in the frame's own coordinates - so the result can position children of the frame directly.
-    /// The frame is always drawn at the sheet's proportions.</summary>
+	/// in the frame's own coordinates - so the result can position children of the frame directly.
+	/// The frame is always drawn at the sheet's proportions.</summary>
     public static Rect2 DialogueLocal(Rect2 sheetRegion, Vector2 frameSize)
     {
         float scale = frameSize.X / DialogueSheetSize.X;
@@ -151,18 +151,18 @@ public static class UiSkin
             StretchMode = TextureRect.StretchModeEnum.Scale,
             MouseFilter = Control.MouseFilterEnum.Ignore
         };
-        // Set last: until ExpandMode is IgnoreSize above, the texture's own size is this control's
+		// Set last: until ExpandMode is IgnoreSize above, the texture's own size is this control's
         // minimum, and any size assigned before that point is clamped straight back up to it.
         plate.Size = size;
         return plate;
     }
 
-    /// <summary>Where a picture sits inside a frame of <paramref name="frameSize"/>, in the frame's
-    /// own coordinates.</summary>
-    public static Rect2 PortraitWindow(Vector2 frameSize)
-    {
-        Vector2 scale = new(frameSize.X / PortraitRegion.Size.X, frameSize.Y / PortraitRegion.Size.Y);
-        return new Rect2(PortraitWindowOnSheet.Position * scale, PortraitWindowOnSheet.Size * scale);
-    }
-    #endregion
+	/// <summary>Where a picture sits inside a frame of <paramref name="frameSize"/>, in the frame's
+	/// own coordinates.</summary>
+	public static Rect2 PortraitWindow(Vector2 frameSize)
+	{
+		Vector2 scale = new(frameSize.X / PortraitRegion.Size.X, frameSize.Y / PortraitRegion.Size.Y);
+		return new Rect2(PortraitWindowOnSheet.Position * scale, PortraitWindowOnSheet.Size * scale);
+	}
+	#endregion
 }
