@@ -4,6 +4,17 @@ using Godot;
 public partial class Echo : Entity
 {
 	#region Private state
+	private const string FrontSpritePath = "res://Assets/Characters/echo_front.png";
+	private const string BackSpritePath = "res://Assets/Characters/echo_back.png";
+	private const string WalkSpritePath = "res://Assets/Characters/echo_walk.png";
+	private const int WalkFrameCount = 6;
+
+	private Sprite2D _appearance;
+	private Texture2D _frontTexture;
+	private Texture2D _backTexture;
+	private AtlasTexture _walkAtlas;
+	private float _walkAnimClock;
+
 	private List<ActionFrame> _frames = new();
 	private int _nextFrameIndex;
 	private bool _isReplaying;
@@ -38,9 +49,50 @@ public partial class Echo : Entity
 	public float LifetimeRatio =>
 		_lifetimeSeconds > 0f ? Mathf.Clamp(_lifeRemaining / _lifetimeSeconds, 0f, 1f) : 1f;
 	protected override Color BodyColor => new Color(0.4f, 0.95f, 1f, 0.55f);
+	protected override bool DrawDefaultBody => _appearance == null;
+	protected override bool DrawFacingMarker => _appearance == null;
 	#endregion
 
 	#region Setup
+	public override void _Ready()
+	{
+		base._Ready();
+		SetupAppearance();
+	}
+
+	private void SetupAppearance()
+	{
+		_frontTexture = ResourceLoader.Load<Texture2D>(FrontSpritePath);
+		_backTexture = ResourceLoader.Load<Texture2D>(BackSpritePath);
+		Texture2D walkSheet = ResourceLoader.Load<Texture2D>(WalkSpritePath);
+		if (_frontTexture == null || walkSheet == null)
+		{
+			GD.PushError("Echo: could not load echo sprites.");
+			return;
+		}
+
+		if (walkSheet.GetWidth() % WalkFrameCount != 0)
+		{
+			GD.PushError("Echo: the walk strip width must divide evenly into six frames.");
+			_frontTexture = null;
+			return;
+		}
+
+		int frameWidth = walkSheet.GetWidth() / WalkFrameCount;
+		_walkAtlas = new AtlasTexture
+		{
+			Atlas = walkSheet,
+			Region = new Rect2(0, 0, frameWidth, walkSheet.GetHeight())
+		};
+		_appearance = new Sprite2D
+		{
+			Texture = _frontTexture,
+			Centered = true,
+			TextureFilter = CanvasItem.TextureFilterEnum.Nearest,
+			Modulate = new Color(1f, 1f, 1f, 0.9f)
+		};
+		AddChild(_appearance);
+	}
 	public void Initialize(IReadOnlyList<ActionFrame> frames)
 	{
 		_frames = new List<ActionFrame>(frames);   // private copy
@@ -65,7 +117,11 @@ public partial class Echo : Entity
 		// The projection is not permanent: the micro-loop decays and the room takes the Echo back.
 		if (!TickLifetime(delta)) return;
 
-		if (!_isReplaying || CurrentRoom == null) return;
+		if (!_isReplaying || CurrentRoom == null)
+		{
+			UpdateAppearance(delta, Vector2.Zero);
+			return;
+		}
 
 		// Express "now" in the recording's own timeline: the window's first frame fires the
 		// moment this Echo was projected, and every later frame keeps its original spacing.
@@ -116,6 +172,33 @@ public partial class Echo : Entity
 
 		Vector2 heading = next.Position - previous.Position;
 		if (heading != Vector2.Zero) FacingDirection = heading.Normalized();
+		UpdateAppearance(delta, heading);
+	}
+
+	private void UpdateAppearance(float delta, Vector2 heading)
+	{
+		if (_appearance == null || _frontTexture == null || _walkAtlas == null) return;
+
+		bool walkingHorizontally = _activeAction == PlayerAction.MoveLeft
+			|| _activeAction == PlayerAction.MoveRight
+			|| (Mathf.Abs(heading.X) > Mathf.Abs(heading.Y) && Mathf.Abs(heading.X) > 0.01f);
+
+		if (walkingHorizontally)
+		{
+			_walkAnimClock += delta;
+			int frame = (int)(_walkAnimClock * 10f) % WalkFrameCount;
+			bool flip = _activeAction == PlayerAction.MoveLeft || (_activeAction != PlayerAction.MoveRight && heading.X < 0f);
+			float frameWidth = _walkAtlas.Region.Size.X;
+			_walkAtlas.Region = new Rect2(frame * frameWidth, 0, frameWidth, _walkAtlas.Region.Size.Y);
+			_appearance.Texture = _walkAtlas;
+			_appearance.FlipH = flip;
+			return;
+		}
+
+		_walkAnimClock = 0f;
+		bool facingUp = _activeAction == PlayerAction.MoveUp || FacingDirection.Y < -0.5f;
+		_appearance.Texture = facingUp && _backTexture != null ? _backTexture : _frontTexture;
+		_appearance.FlipH = false;
 	}
 
 	private void Perform(PlayerAction action)

@@ -11,11 +11,27 @@ public partial class SequenceTerminal : Node2D, IInteractable
     private CanvasLayer _layer;
     private Label _prompt;
     private readonly List<int> _input = new();
+    private readonly List<int> _sequence = new();
     private int _round = 1;
     public Rect2 InteractionBounds => new Rect2(Position - Size * 0.5f, Size);
 
     public float DistanceTo(Vector2 from) => InteractionBounds.DistanceToPoint(from);
-    public void Interact(Entity interactor) { if (_layer == null) BuildUi(); _layer.Visible = true; _round = 1; _input.Clear(); Refresh(); }
+    public void Interact(Entity interactor)
+    {
+        if (_layer == null) BuildUi();
+        GenerateSequence();
+        _layer.Visible = true;
+        _round = 1;
+        _input.Clear();
+        Refresh();
+    }
+
+    private void GenerateSequence()
+    {
+        _sequence.Clear();
+        for (int i = 0; i < 5; i++)
+            _sequence.Add(GD.RandRange(1, 5));
+    }
 
     /// <summary>The terminal draws itself now, so the room does not need a separate marker beside it.</summary>
     public override void _Ready()
@@ -50,10 +66,10 @@ public partial class SequenceTerminal : Node2D, IInteractable
         for (int i = 1; i <= 5; i++) { int value = i; var b = new Button { Text = i.ToString(), CustomMinimumSize = new Vector2(72, 62) }; b.Pressed += () => Press(value); row.AddChild(b); }
         stack.AddChild(row); panel.AddChild(stack); _layer.AddChild(panel); AddChild(_layer);
     }
-    private void Refresh() => _prompt.Text = $"DIAGNOSTIC SEQUENCE - ROUND {_round}/5   REPEAT: {string.Join(" ", System.Linq.Enumerable.Range(1, _round))}   INPUT: {string.Join(" ", _input)}";
+    private void Refresh() => _prompt.Text = $"DIAGNOSTIC SEQUENCE - ROUND {_round}/5   REPEAT: {string.Join(" ", _sequence.GetRange(0, _round))}   INPUT: {string.Join(" ", _input)}";
     private void Press(int value)
     {
-        int expected = _input.Count + 1;
+        int expected = _sequence[_input.Count];
         if (value != expected) { _input.Clear(); Refresh(); return; }
         _input.Add(value);
         if (_input.Count < _round) { Refresh(); return; }

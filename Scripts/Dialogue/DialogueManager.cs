@@ -88,10 +88,11 @@ public partial class DialogueManager : Node
 
 	// Dialogue box proportions derived from the 1920x1080 UI artboard scaled to the 1152x648 viewport.
 	private const float UiArtScale = 0.6f;
-	private const float DialogueBoxHeight = 254f;
-	private const float DialogueBoxBottomMargin = 20f;
-	private const int NameFontSize = 22;
-	private const float NameBoxHeight = 52f;
+	private const float NameBoxArtScale = 0.5f;
+	private const float DialogueBoxHeight = 172f;
+	private const float DialogueBoxBottomMargin = 14f;
+	private const int NameFontSize = 17;
+	private const float NameBoxHeight = 38f;
 	private static readonly Vector2 PortraitFigureSize = new(1320f, 1720f);
 	private static readonly Vector2 PortraitFigureOrigin = new(160f, 75f);
 	private static readonly Vector2 FragmentToastPosition = new(20f, 190f);
@@ -520,7 +521,7 @@ public partial class DialogueManager : Node
 		_nameBoxContainer = new Control
 		{
 			Position = new Vector2(UiSkin.BoxNameRegion.Position.X * UiArtScale, -NameBoxHeight * 0.5f),
-			Size = new Vector2(220f, NameBoxHeight),
+			Size = new Vector2(180f, NameBoxHeight),
 			MouseFilter = Control.MouseFilterEnum.Ignore
 		};
 		_panel.AddChild(_nameBoxContainer);
@@ -533,8 +534,8 @@ public partial class DialogueManager : Node
 			PatchMarginRight = 24,
 			PatchMarginTop = 20,
 			PatchMarginBottom = 20,
-			Scale = Vector2.One * UiArtScale,
-			Size = new Vector2(220f, NameBoxHeight) / UiArtScale,
+			Scale = Vector2.One * NameBoxArtScale,
+			Size = new Vector2(180f, NameBoxHeight) / NameBoxArtScale,
 			MouseFilter = Control.MouseFilterEnum.Ignore
 		};
 		_nameBoxContainer.AddChild(_nameBox);
@@ -548,14 +549,14 @@ public partial class DialogueManager : Node
 			MouseFilter = Control.MouseFilterEnum.Ignore
 		};
 		_speakerLabel.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
-		_speakerLabel.OffsetLeft = 14f;
-		_speakerLabel.OffsetRight = -14f;
-		_speakerLabel.OffsetTop = 4f;
-		_speakerLabel.OffsetBottom = -4f;
+		_speakerLabel.OffsetLeft = 10f;
+		_speakerLabel.OffsetRight = -10f;
+		_speakerLabel.OffsetTop = 2f;
+		_speakerLabel.OffsetBottom = -2f;
 		if (mainFont != null) _speakerLabel.AddThemeFontOverride("font", mainFont);
 		_speakerLabel.AddThemeFontSizeOverride("font_size", NameFontSize);
 		_speakerLabel.AddThemeColorOverride("font_outline_color", Colors.Black);
-		_speakerLabel.AddThemeConstantOverride("outline_size", 4);
+		_speakerLabel.AddThemeConstantOverride("outline_size", 3);
 		_nameBoxContainer.AddChild(_speakerLabel);
 
 		_dialogueLabel = new Label
@@ -564,12 +565,12 @@ public partial class DialogueManager : Node
 			MouseFilter = Control.MouseFilterEnum.Ignore
 		};
 		_dialogueLabel.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
-		_dialogueLabel.OffsetLeft = 48f;
-		_dialogueLabel.OffsetTop = 82f;
-		_dialogueLabel.OffsetRight = -64f;
-		_dialogueLabel.OffsetBottom = -26f;
+		_dialogueLabel.OffsetLeft = 40f;
+		_dialogueLabel.OffsetTop = 48f;
+		_dialogueLabel.OffsetRight = -52f;
+		_dialogueLabel.OffsetBottom = -16f;
 		if (mainFont != null) _dialogueLabel.AddThemeFontOverride("font", mainFont);
-		_dialogueLabel.AddThemeFontSizeOverride("font_size", 21);
+		_dialogueLabel.AddThemeFontSizeOverride("font_size", 18);
 		_dialogueLabel.AddThemeColorOverride("font_color", Colors.White);
 		_dialogueLabel.AddThemeColorOverride("font_outline_color", Colors.Black);
 		_dialogueLabel.AddThemeConstantOverride("outline_size", 3);
@@ -587,10 +588,10 @@ public partial class DialogueManager : Node
 		_nextIndicator.AnchorRight = 1f;
 		_nextIndicator.AnchorTop = 1f;
 		_nextIndicator.AnchorBottom = 1f;
-		_nextIndicator.OffsetLeft = -52f;
-		_nextIndicator.OffsetRight = -26f;
-		_nextIndicator.OffsetTop = -44f;
-		_nextIndicator.OffsetBottom = -22f;
+		_nextIndicator.OffsetLeft = -42f;
+		_nextIndicator.OffsetRight = -20f;
+		_nextIndicator.OffsetTop = -34f;
+		_nextIndicator.OffsetBottom = -14f;
 		_panel.AddChild(_nextIndicator);
 
 		BuildControlsBar();
@@ -647,11 +648,11 @@ public partial class DialogueManager : Node
 			? font.GetStringSize(speaker, HorizontalAlignment.Left, -1f, NameFontSize).X
 			: speaker.Length * 12f;
 
-		float boxWidth = Mathf.Clamp(textWidth + 52f, 130f, 440f);
+		float boxWidth = Mathf.Clamp(textWidth + 36f, 100f, 340f);
 		Vector2 boxSize = new(boxWidth, NameBoxHeight);
 		_nameBoxContainer.Size = boxSize;
 		_nameBoxContainer.Position = new Vector2(UiSkin.BoxNameRegion.Position.X * UiArtScale, -NameBoxHeight * 0.5f);
-		_nameBox.Size = boxSize / UiArtScale;
+		_nameBox.Size = boxSize / NameBoxArtScale;
 	}
 
 	private void BuildControlsBar()
@@ -666,10 +667,10 @@ public partial class DialogueManager : Node
 		_autoSkipBar.AnchorRight = 1f;
 		_autoSkipBar.AnchorTop = 0f;
 		_autoSkipBar.AnchorBottom = 0f;
-		_autoSkipBar.OffsetRight = -24f;
-		_autoSkipBar.OffsetLeft = -248f;
-		_autoSkipBar.OffsetTop = -36f;
-		_autoSkipBar.OffsetBottom = -4f;
+		_autoSkipBar.OffsetRight = -20f;
+		_autoSkipBar.OffsetLeft = -244f;
+		_autoSkipBar.OffsetTop = -32f;
+		_autoSkipBar.OffsetBottom = -2f;
 		_autoSkipBar.AddThemeConstantOverride("separation", 8);
 
 		_autoButton = CreateLabelActionButton("Auto: Off", OnAutoButtonPressed);
@@ -688,10 +689,10 @@ public partial class DialogueManager : Node
 		_controlsBar.AnchorRight = 1f;
 		_controlsBar.AnchorTop = 0f;
 		_controlsBar.AnchorBottom = 0f;
-		_controlsBar.OffsetRight = -24f;
-		_controlsBar.OffsetLeft = -204f;
-		_controlsBar.OffsetTop = 14f;
-		_controlsBar.OffsetBottom = 50f;
+		_controlsBar.OffsetRight = -20f;
+		_controlsBar.OffsetLeft = -196f;
+		_controlsBar.OffsetTop = 10f;
+		_controlsBar.OffsetBottom = 42f;
 		_controlsBar.AddThemeConstantOverride("separation", 12);
 
 		_logsButton = CreateIconButton(UiSkin.Crop(UiSkin.BtnDiaLogsSheet, UiSkin.BtnDiaLogsRegion), "Dialogue Logs", OnDialogueLogsPressed);
@@ -853,7 +854,7 @@ public partial class DialogueManager : Node
 		_choicesContainer.AnchorBottom = 1f;
 		_choicesContainer.OffsetRight = -24f;
 		_choicesContainer.OffsetLeft = -494f;
-		_choicesContainer.OffsetBottom = -(DialogueBoxBottomMargin + DialogueBoxHeight + 48f);
+		_choicesContainer.OffsetBottom = -(DialogueBoxBottomMargin + DialogueBoxHeight + 36f);
 		_choicesContainer.OffsetTop = -620f;
 		_choicesContainer.AddThemeConstantOverride("separation", 8);
 

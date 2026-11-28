@@ -8,7 +8,7 @@ public partial class RoomAtriumHub : Room
 {
     private const float MapScale = 2f;
     private const string MapPath = "res://Assets/level3_atrium_map.png";
-    private const float ShutterHoldSeconds = 15f;
+    private const float ShutterHoldSeconds = 5f;
     private const float HatchHoldSeconds = 6f;
 
     private Switch _photoShutter;
@@ -168,7 +168,7 @@ public partial class RoomAtriumHub : Room
             FirstDialogueId = "level7_hesiod", RepeatDialogueId = "level7_hesiod",
             CharacterSheetPath = CharacterSprite.FrontSpritePath(GameStateManager.Hesiod) }, "Hesiod", P(360, 224));
         _photoShutter = Add(new Switch { IsPressurePlate = true, PlateRadius = 18f }, "CameraShutter", P(426, 225));
-        Add(new FloorMarker { Caption = "HOLD - 15 SEC", Size = S(52, 14), DottedRing = true,
+        Add(new FloorMarker { Caption = "HOLD - 5 SEC", Size = S(52, 14), DottedRing = true,
             Outline = new Color(0.25f, 0.55f, 1f) }, "ShutterMarker", P(400, 216));
         _cameraRoll = Add(new PhotoRollPuzzle { ShutterFlag = "level7_shutter_held", FlagToSet = "F7_camera_roll",
             SolvedDialogueId = "level7_camera_solved", Caption = "CAMERA ROLL (E)" }, "CameraRoll", P(472, 225));

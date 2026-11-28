@@ -251,7 +251,9 @@ public partial class SlotPicker : Control
 
         var timeLabel = new Label
         {
-            Text = info.Exists && !string.IsNullOrEmpty(info.SavedAt) ? info.SavedAt : (info.Exists ? "Saved" : "—"),
+            Text = info.Exists
+                ? $"{(string.IsNullOrEmpty(info.SavedAt) ? "Saved" : info.SavedAt)}  |  Puzzles: {info.CompletedPuzzleCount}"
+                : "—",
             TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis,
             MouseFilter = MouseFilterEnum.Ignore
         };

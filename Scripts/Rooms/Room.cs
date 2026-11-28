@@ -161,7 +161,7 @@ public partial class Room : Node2D
 		BuildHud();
 		QueueRedraw();
 
-		if (_introDialogueId != "") _dialogue?.StartDialogue(_introDialogueId);
+		if (_introDialogueId != "" && !SaveManager.IsLoadingSave) _dialogue?.StartDialogue(_introDialogueId);
 	}
 
 	private void RegisterChildren()
@@ -232,6 +232,14 @@ public partial class Room : Node2D
 		AddChild(_camera);
 		if (Player != null) _camera.Position = Player.WorldPosition;
 		_camera.MakeCurrent();
+	}
+
+	public void SnapCameraToPlayer()
+	{
+		if (_camera == null || Player == null) return;
+		_cameraPanSecondsLeft = 0f;
+		_camera.Zoom = Vector2.One;
+		_camera.Position = ClampCamera(Player.WorldPosition);
 	}
 
 	private void UpdateRoomCamera(float delta)

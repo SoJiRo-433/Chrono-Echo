@@ -14,12 +14,15 @@ public partial class Player : Entity
 
     #region Private state
     private const string FrontSpritePath = "res://Assets/Characters/player_front.png";
+    private const string BackSpritePath = "res://Assets/Characters/player_back.png";
     private const string LeftWalkSpritePath = "res://Assets/Characters/player_walk_left.png";
     private const int WalkFrameCount = 6;
 
     private Sprite2D _appearance;
     private Texture2D _frontTexture;
+    private Texture2D _backTexture;
     private AtlasTexture _walkAtlas;
+    private float _walkAnimClock;
 
     private int _startingLives = 3;
     private int _lives;
@@ -119,7 +122,7 @@ public partial class Player : Entity
 
         // Do the action first so we know whether a move was blocked by a wall.
         PlayerAction effective = ExecuteAction(intended, delta);
-        UpdateAppearance(effective);
+        UpdateAppearance(effective, delta);
 
         // Record AFTER executing, but with the position from BEFORE the move, so that the
         // frame means "at time T the player stood HERE and then did THIS".
@@ -130,6 +133,7 @@ public partial class Player : Entity
     private void SetupAppearance()
     {
         _frontTexture = ResourceLoader.Load<Texture2D>(FrontSpritePath);
+        _backTexture = ResourceLoader.Load<Texture2D>(BackSpritePath);
         Texture2D walkSheet = ResourceLoader.Load<Texture2D>(LeftWalkSpritePath);
         if (_frontTexture == null || walkSheet == null)
         {
@@ -159,23 +163,27 @@ public partial class Player : Entity
         AddChild(_appearance);
     }
 
-    private void UpdateAppearance(PlayerAction action)
+    private void UpdateAppearance(PlayerAction action, float delta = 0f)
     {
         if (_appearance == null || _frontTexture == null || _walkAtlas == null) return;
 
         bool walkingHorizontally = action == PlayerAction.MoveLeft || action == PlayerAction.MoveRight;
-        if (!walkingHorizontally)
+        if (walkingHorizontally)
         {
-            _appearance.Texture = _frontTexture;
-            _appearance.FlipH = false;
+            _walkAnimClock += delta;
+            int frame = (int)(_walkAnimClock * 10f) % WalkFrameCount;
+            bool flip = action == PlayerAction.MoveLeft;
+            float frameWidth = _walkAtlas.Region.Size.X;
+            _walkAtlas.Region = new Rect2(frame * frameWidth, 0, frameWidth, _walkAtlas.Region.Size.Y);
+            _appearance.Texture = _walkAtlas;
+            _appearance.FlipH = flip;
             return;
         }
 
-        bool flip = action == PlayerAction.MoveLeft;
-        float frameWidth = _walkAtlas.Region.Size.X;
-        _walkAtlas.Region = new Rect2(0, 0, frameWidth, _walkAtlas.Region.Size.Y);
-        _appearance.Texture = _walkAtlas;
-        _appearance.FlipH = flip;
+        _walkAnimClock = 0f;
+        bool facingUp = action == PlayerAction.MoveUp || (action == PlayerAction.Idle && FacingDirection.Y < -0.5f);
+        _appearance.Texture = facingUp && _backTexture != null ? _backTexture : _frontTexture;
+        _appearance.FlipH = false;
     }
 
     private PlayerAction ExecuteAction(PlayerAction action, float delta)

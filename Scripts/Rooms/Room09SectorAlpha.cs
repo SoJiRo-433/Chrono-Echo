@@ -298,6 +298,7 @@ public partial class Room09SectorAlpha : Room
 
 	private partial class GearToggle : Node2D, IInteractable
 	{
+		private Sprite2D _indicator;
 		public Vector2 Size { get; set; } = new(24, 20);
 		public string Caption { get; set; } = "";
 		public bool DrawBox { get; set; }
@@ -309,24 +310,53 @@ public partial class Room09SectorAlpha : Room
 
 		public override void _Ready()
 		{
-			Texture2D indicatorTexture = UiSkin.DisInspect;
-			if (indicatorTexture != null)
+			if (GameStateManager.Instance?.GetFlag(FlagToSet) != true)
 			{
-				AddChild(new Sprite2D
+				Texture2D indicatorTexture = UiSkin.DisInspect;
+				if (indicatorTexture != null)
 				{
-					Texture = indicatorTexture,
-					Centered = true,
-					TextureFilter = CanvasItem.TextureFilterEnum.Nearest,
-					ZIndex = 20,
-					Position = new Vector2(Size.X * 0.5f, Mathf.Min(Size.Y * 0.4f, 16f))
-				});
+					_indicator = new Sprite2D
+					{
+						Texture = indicatorTexture,
+						Centered = true,
+						Scale = new Vector2(0.45f, 0.45f),
+						TextureFilter = CanvasItem.TextureFilterEnum.Nearest,
+						ZIndex = 20,
+						Position = new Vector2(Size.X * 0.5f, Mathf.Min(Size.Y * 0.4f, 16f))
+					};
+					AddChild(_indicator);
+				}
 			}
+			if (GameStateManager.Instance != null)
+				GameStateManager.Instance.FlagsReset += SyncFromFlags;
+		}
+
+		public override void _ExitTree()
+		{
+			if (GameStateManager.Instance != null)
+				GameStateManager.Instance.FlagsReset -= SyncFromFlags;
+		}
+
+		private void SyncFromFlags()
+		{
+			if (GameStateManager.Instance?.GetFlag(FlagToSet) == true)
+				RemoveIndicator();
+		}
+
+		private void RemoveIndicator()
+		{
+			if (_indicator == null) return;
+			_indicator.Visible = false;
+			if (_indicator.GetParent() == this) RemoveChild(_indicator);
+			_indicator.QueueFree();
+			_indicator = null;
 		}
 
 		public void Interact(Entity interactor)
 		{
 			if (GameStateManager.Instance?.GetFlag(RequiredFlag) != true) return;
 			if (GameStateManager.Instance?.GetFlag(FlagToSet) == true) return;
+			RemoveIndicator();
 			GameStateManager.Instance?.SetFlag(FlagToSet, true);
 			string rewoundFlag = FlagToSet.Replace("_wound", "_rewound");
 			GameStateManager.Instance?.SetFlag(rewoundFlag, true);
