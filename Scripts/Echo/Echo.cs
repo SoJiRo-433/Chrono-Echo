@@ -7,7 +7,7 @@ public partial class Echo : Entity
 	private const string FrontSpritePath = "res://Assets/Characters/echo_front.png";
 	private const string BackSpritePath = "res://Assets/Characters/echo_back.png";
 	private const string WalkSpritePath = "res://Assets/Characters/echo_walk.png";
-	private const int WalkFrameCount = 6;
+	private const int WalkFrameCount = 1;
 
 	private Sprite2D _appearance;
 	private Texture2D _frontTexture;
@@ -71,14 +71,11 @@ public partial class Echo : Entity
 			return;
 		}
 
-		if (walkSheet.GetWidth() % WalkFrameCount != 0)
-		{
-			GD.PushError("Echo: the walk strip width must divide evenly into six frames.");
-			_frontTexture = null;
-			return;
-		}
-
-		int frameWidth = walkSheet.GetWidth() / WalkFrameCount;
+		int frameWidth;
+		if (WalkFrameCount > 1 && walkSheet.GetWidth() % WalkFrameCount == 0)
+			frameWidth = walkSheet.GetWidth() / WalkFrameCount;
+		else
+			frameWidth = walkSheet.GetWidth();   // single-frame strip or indivisible: use the full width
 		_walkAtlas = new AtlasTexture
 		{
 			Atlas = walkSheet,

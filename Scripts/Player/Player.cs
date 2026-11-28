@@ -16,7 +16,7 @@ public partial class Player : Entity
     private const string FrontSpritePath = "res://Assets/Characters/player_front.png";
     private const string BackSpritePath = "res://Assets/Characters/player_back.png";
     private const string LeftWalkSpritePath = "res://Assets/Characters/player_walk_left.png";
-    private const int WalkFrameCount = 6;
+    private const int WalkFrameCount = 1;
 
     private Sprite2D _appearance;
     private Texture2D _frontTexture;
@@ -94,7 +94,6 @@ public partial class Player : Entity
 
         if (_isGameOver)
         {
-            if (_input.IsRecordEchoPressed()) RestartRun();   // after game over, R starts a new run
             return;
         }
         if (!IsAlive || CurrentRoom == null) return;
@@ -141,14 +140,11 @@ public partial class Player : Entity
             return;
         }
 
-        if (walkSheet.GetWidth() % WalkFrameCount != 0)
-        {
-            GD.PushError("Player: the walk strip width must divide evenly into six frames.");
-            _frontTexture = null;
-            return;
-        }
-
-        int frameWidth = walkSheet.GetWidth() / WalkFrameCount;
+        int frameWidth;
+        if (WalkFrameCount > 1 && walkSheet.GetWidth() % WalkFrameCount == 0)
+            frameWidth = walkSheet.GetWidth() / WalkFrameCount;
+        else
+            frameWidth = walkSheet.GetWidth();   // single-frame strip or indivisible: use the full width
         _walkAtlas = new AtlasTexture
         {
             Atlas = walkSheet,

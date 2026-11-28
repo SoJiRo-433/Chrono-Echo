@@ -150,7 +150,8 @@ public partial class RoomBusiness : Room
             if (ExitBounds.Intersects(Player.Bounds) && !_returnDialogueStarted)
             { _returnDialogueStarted = true; Dialogue?.StartDialogue("level6_back_to_atrium"); }
         }
-        if (GameStateManager.Instance?.GetFlag("F6_ledger") == true)
+        if (GameStateManager.Instance?.GetFlag("F6_ledger") == true
+            && GameStateManager.Instance?.GetFlag("level6_ledger_read") != true)
         {
             GameStateManager.Instance.SetFlag("level6_ledger_read", true);
             _hesiod?.Show();

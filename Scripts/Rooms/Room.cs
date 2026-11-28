@@ -53,6 +53,7 @@ public partial class Room : Node2D
 	private float _cameraPanSecondsLeft;
 	private Pendant _pendant;
 	private Label _bannerLabel;          // always on: GAME OVER / ROOM CLEAR
+	private GameOverScreen _gameOverScreen; // shown when the player runs out of lives
 	private Control _hearts;             // always on: one heart per point of health left
 	private TextureRect[] _heartIcons;
 	private Label _objectiveLabel;       // always on once an Objective has been read
@@ -481,6 +482,7 @@ public partial class Room : Node2D
 		if (Player != null)
 		{
 			Player.HealthChanged += RefreshHearts;
+			Player.GameOver += OnPlayerGameOver;
 			RefreshHearts(Player.Health, Player.MaxHealth);
 		}
 
@@ -552,12 +554,26 @@ public partial class Room : Node2D
 		if (_bannerLabel == null) return;
 
 		string text = "";
-		if (Player != null && Player.IsGameOver) text = "GAME OVER - press R to restart";
+		if (Player != null && Player.IsGameOver) text = "";   // the GameOverScreen handles this now
 		else if (_isComplete) text = IsFinalLevel && _levelNumber >= 6 ? $"LEVEL {_levelNumber} CLEAR - to be continued" : IsFinalLevel ? "ALL LEVELS CLEAR" : "ROOM CLEAR";
 		else if (_exitLocked && _exitLockedHint != "") text = _exitLockedHint;
 
 		_bannerLabel.Text = text;
 		_bannerLabel.Visible = text != "";
+	}
+
+	private void OnPlayerGameOver()
+	{
+		if (_gameOverScreen != null) return;   // already showing
+
+		_gameOverScreen = new GameOverScreen();
+		_gameOverScreen.Setup(Player, this);
+		_gameOverScreen.TreeExited += () => _gameOverScreen = null;
+
+		// Add to the HUD layer so it draws over the game
+		CanvasLayer hudLayer = GetNodeOrNull<CanvasLayer>("HudLayer");
+		if (hudLayer != null) hudLayer.AddChild(_gameOverScreen);
+		else AddChild(_gameOverScreen);
 	}
 
 	/// <summary>Hearts spent are tinted, not swapped: the sheet draws one heart and a lost point
