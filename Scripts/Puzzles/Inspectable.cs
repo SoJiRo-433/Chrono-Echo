@@ -15,6 +15,7 @@ public partial class Inspectable : Node2D, IInteractable
     private bool _solid;
     private bool _drawBox = true;
     private bool _examined;
+    private Sprite2D _indicator;
     #endregion
 
     #region Public properties
@@ -60,25 +61,72 @@ public partial class Inspectable : Node2D, IInteractable
             character.Position = new Vector2(_size.X * 0.5f, _size.Y);
         }
 
-        if (_caption != "")
+        if (_flagToSet != "" && GameStateManager.Instance?.GetFlag(_flagToSet) == true)
+            _examined = true;
+
+        if (_caption != "" && !_examined)
         {
             Texture2D indicatorTexture = UiSkin.DisInspect;
             if (indicatorTexture != null)
             {
-                var indicator = new Sprite2D
+                _indicator = new Sprite2D
                 {
                     Texture = indicatorTexture,
                     Centered = true,
+                    Scale = new Vector2(0.45f, 0.45f),
                     TextureFilter = CanvasItem.TextureFilterEnum.Nearest,
                     ZIndex = 20,
                     Position = character != null
                         ? new Vector2(_size.X * 0.5f, _size.Y - 46f)
                         : new Vector2(_size.X * 0.5f, Mathf.Min(_size.Y * 0.4f, 20f))
                 };
-                AddChild(indicator);
+                AddChild(_indicator);
             }
         }
+
+        if (GameStateManager.Instance != null)
+        {
+            GameStateManager.Instance.FlagsReset += SyncExaminedFromFlags;
+            GameStateManager.Instance.FlagChanged += OnFlagChanged;
+        }
+
         QueueRedraw();
+    }
+
+    public override void _ExitTree()
+    {
+        if (GameStateManager.Instance != null)
+        {
+            GameStateManager.Instance.FlagsReset -= SyncExaminedFromFlags;
+            GameStateManager.Instance.FlagChanged -= OnFlagChanged;
+        }
+    }
+
+    private void OnFlagChanged(string flagName, bool value)
+    {
+        if (value && _flagToSet != "" && flagName == _flagToSet)
+        {
+            _examined = true;
+            RemoveIndicator();
+        }
+    }
+
+    private void SyncExaminedFromFlags()
+    {
+        if (_flagToSet != "" && GameStateManager.Instance?.GetFlag(_flagToSet) == true)
+        {
+            _examined = true;
+            RemoveIndicator();
+        }
+    }
+
+    private void RemoveIndicator()
+    {
+        if (_indicator == null) return;
+        _indicator.Visible = false;
+        if (_indicator.GetParent() == this) RemoveChild(_indicator);
+        _indicator.QueueFree();
+        _indicator = null;
     }
     #endregion
 
@@ -88,6 +136,7 @@ public partial class Inspectable : Node2D, IInteractable
         if (_requiredFlag != "" && GameStateManager.Instance?.GetFlag(_requiredFlag) != true) return;
         bool firstTime = !_examined;
         _examined = true;
+        RemoveIndicator();
 
         if (firstTime && _flagToSet != "") GameStateManager.Instance?.SetFlag(_flagToSet, true);
 

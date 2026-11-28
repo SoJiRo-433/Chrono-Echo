@@ -69,7 +69,28 @@ public partial class Door : Node2D, IInteractable
     #endregion
 
     #region Lifecycle
-    public override void _Ready() { _room = GetParent() as Room; }
+    public override void _Ready()
+    {
+        _room = GetParent() as Room;
+        SyncOpenedFromFlags();
+        if (GameStateManager.Instance != null)
+            GameStateManager.Instance.FlagsReset += SyncOpenedFromFlags;
+    }
+
+    public override void _ExitTree()
+    {
+        if (GameStateManager.Instance != null)
+            GameStateManager.Instance.FlagsReset -= SyncOpenedFromFlags;
+    }
+
+    private void SyncOpenedFromFlags()
+    {
+        if (!string.IsNullOrEmpty(_openedFlag) && GameStateManager.Instance?.GetFlag(_openedFlag) == true)
+        {
+            Open();
+            if (_latchOpen) _latched = true;
+        }
+    }
 
     public override void _PhysicsProcess(double delta)
     {

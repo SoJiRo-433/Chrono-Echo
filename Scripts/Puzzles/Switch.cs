@@ -84,7 +84,21 @@ public partial class Switch : Node2D, IInteractable, IHeldInteractable, IUpdatab
         if (!LinkedDoorPath.IsEmpty) LinkDoor(GetNodeOrNull<Door>(LinkedDoorPath));
         if (PersistActivation && !string.IsNullOrEmpty(_flagToSet)
             && GameStateManager.Instance?.GetFlag(_flagToSet) == true) SetActivated(true);
+        if (GameStateManager.Instance != null)
+            GameStateManager.Instance.FlagsReset += SyncActivationFromFlags;
         QueueRedraw();
+    }
+
+    public override void _ExitTree()
+    {
+        if (GameStateManager.Instance != null)
+            GameStateManager.Instance.FlagsReset -= SyncActivationFromFlags;
+    }
+
+    private void SyncActivationFromFlags()
+    {
+        if (PersistActivation && !string.IsNullOrEmpty(_flagToSet))
+            SetActivated(GameStateManager.Instance?.GetFlag(_flagToSet) == true);
     }
 
     public override void _PhysicsProcess(double delta)

@@ -33,6 +33,7 @@ public sealed class SaveSlotInfo
 	public Vector2 RoomSize { get; init; } = new(1280f, 720f);
 	public bool HasPlayerPosition { get; init; }
 	public Vector2 PlayerPosition { get; init; }
+	public int CompletedPuzzleCount { get; init; }
 
 	public string DisplayLevel => LevelNumber > 0 ? $"Level {LevelNumber} - {LevelName}" : LevelName;
 }
@@ -69,6 +70,7 @@ public static class SaveManager
 	public static event Action<GDict> GameLoaded;
 
 	public static int CurrentSlot { get; private set; } = -1;
+	public static bool IsLoadingSave { get; private set; }
 
 	// ---- "Current game" = the most recently used slot ----
 	private static int _lastSlot = -2;
@@ -137,6 +139,7 @@ public static class SaveManager
 
 		bool hasPos = false;
 		Vector2 playerPos = Vector2.Zero;
+		int completedPuzzles = 0;
 		if (data.ContainsKey("state") && data["state"].VariantType == Variant.Type.Dictionary)
 		{
 			GDict state = data["state"].AsGodotDictionary();
@@ -148,6 +151,14 @@ public static class SaveManager
 					hasPos = true;
 					playerPos = new Vector2((float)pos["x"].AsDouble(), (float)pos["y"].AsDouble());
 				}
+			}
+			if (state.ContainsKey("completed_puzzles") && state["completed_puzzles"].VariantType == Variant.Type.Array)
+			{
+				completedPuzzles = state["completed_puzzles"].AsGodotArray().Count;
+			}
+			else if (state.ContainsKey("flags") && state["flags"].VariantType == Variant.Type.Dictionary)
+			{
+				completedPuzzles = GameStateManager.CountCompletedPuzzles(state["flags"].AsGodotDictionary());
 			}
 		}
 
@@ -162,7 +173,8 @@ public static class SaveManager
 			PicturePath = location.PicturePath,
 			RoomSize = location.RoomSize,
 			HasPlayerPosition = hasPos,
-			PlayerPosition = playerPos
+			PlayerPosition = playerPos,
+			CompletedPuzzleCount = completedPuzzles
 		};
 	}
 
@@ -259,10 +271,12 @@ public static class SaveManager
 
 		var state = data.ContainsKey("state") ? data["state"].AsGodotDictionary() : new GDict();
 
+		IsLoadingSave = true;
 		tree.Paused = false;
 		tree.ChangeSceneToFile(scene);
 
 		await WaitForSceneToLoad(tree);
+		IsLoadingSave = false;
 		GameLoaded?.Invoke(state);
 	}
 

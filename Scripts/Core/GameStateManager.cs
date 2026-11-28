@@ -237,12 +237,82 @@ public partial class GameStateManager : Node
         completion.Save(CompletionRecordPath);
     }
 
-    /// <summary>The slice of the singleton a save file holds: the narrative flags and the
-    /// affection counters. Which scene the save is in is stored by SaveManager itself.</summary>
+    private static readonly string[] KnownPuzzleFlags =
+    {
+        "touched_pendant",
+        "room01_complete",
+        "library_shelves_opened",
+        "library_doors_opened",
+        "library_complete",
+        "atrium_gate_opened",
+        "atrium_stairway_opened",
+        "atrium_exit_opened",
+        "atrium_complete",
+        "medical_keypad_open",
+        "medical_shutter_open",
+        "medical_generator_active",
+        "medical_case_taken",
+        "F4_scan",
+        "medical_complete",
+        "level5_console_pressed",
+        "observation_lock_open",
+        "steam_1_shut",
+        "steam_2_shut",
+        "steam_3_shut",
+        "observation_complete",
+        "F6_ledger",
+        "business_complete",
+        "level7_shutter_held",
+        "F7_camera_roll",
+        "level7_hatch_open",
+        "level7_complete",
+        "level8_keypad_open",
+        "level8_complete",
+        "F9_resonance",
+        "level9_complete",
+        "F10_divergence",
+        "level10_complete"
+    };
+
+    public static bool IsPuzzleFlag(string flagName)
+    {
+        if (string.IsNullOrEmpty(flagName)) return false;
+        foreach (string known in KnownPuzzleFlags)
+            if (flagName == known) return true;
+        return flagName.EndsWith("_complete", System.StringComparison.Ordinal)
+            || flagName.EndsWith("_opened", System.StringComparison.Ordinal)
+            || flagName.EndsWith("_open", System.StringComparison.Ordinal)
+            || flagName.StartsWith("F4_", System.StringComparison.Ordinal)
+            || flagName.StartsWith("F6_", System.StringComparison.Ordinal)
+            || flagName.StartsWith("F7_", System.StringComparison.Ordinal)
+            || flagName.StartsWith("F8_", System.StringComparison.Ordinal)
+            || flagName.StartsWith("F9_", System.StringComparison.Ordinal)
+            || flagName.StartsWith("F10_", System.StringComparison.Ordinal);
+    }
+
+    public static int CountCompletedPuzzles(Godot.Collections.Dictionary flags)
+    {
+        if (flags == null) return 0;
+        int count = 0;
+        foreach (Variant key in flags.Keys)
+            if (flags[key].AsBool() && IsPuzzleFlag(key.AsString()))
+                count++;
+        return count;
+    }
+
+    /// <summary>The slice of the singleton a save file holds: the narrative flags, completed
+    /// puzzles, player position, objective, and affection counters. Which scene the save is in
+    /// is stored by SaveManager itself.</summary>
     private Godot.Collections.Dictionary BuildSaveState()
     {
         var flags = new Godot.Collections.Dictionary();
-        foreach (KeyValuePair<string, bool> pair in _flags) flags[pair.Key] = pair.Value;
+        var completedPuzzles = new Godot.Collections.Array();
+        foreach (KeyValuePair<string, bool> pair in _flags)
+        {
+            flags[pair.Key] = pair.Value;
+            if (pair.Value && IsPuzzleFlag(pair.Key))
+                completedPuzzles.Add(pair.Key);
+        }
 
         var affection = new Godot.Collections.Dictionary();
         foreach (KeyValuePair<string, int> pair in _affection) affection[pair.Key] = pair.Value;
@@ -257,9 +327,11 @@ public partial class GameStateManager : Node
         return new Godot.Collections.Dictionary
         {
             { "flags", flags },
+            { "completed_puzzles", completedPuzzles },
             { "affection", affection },
             { "affection_scale", 10 },
-            { "player_position", playerPosition }
+            { "player_position", playerPosition },
+            { "objective", CurrentRoom?.Dialogue?.CurrentObjective ?? "" }
         };
     }
 
@@ -273,6 +345,15 @@ public partial class GameStateManager : Node
         {
             Godot.Collections.Dictionary saved = state["flags"].AsGodotDictionary();
             foreach (Variant key in saved.Keys) _flags[key.AsString()] = saved[key].AsBool();
+        }
+
+        if (state != null && state.ContainsKey("completed_puzzles") && state["completed_puzzles"].VariantType == Variant.Type.Array)
+        {
+            foreach (Variant entry in state["completed_puzzles"].AsGodotArray())
+            {
+                string puzzleFlag = entry.AsString();
+                if (!string.IsNullOrEmpty(puzzleFlag)) _flags[puzzleFlag] = true;
+            }
         }
 
         if (state != null && state.ContainsKey("affection"))
@@ -301,7 +382,15 @@ public partial class GameStateManager : Node
                 Player.WorldPosition = new Vector2(
                     (float)savedPosition["x"].AsDouble(),
                     (float)savedPosition["y"].AsDouble());
+                CurrentRoom?.SnapCameraToPlayer();
             }
+        }
+
+        if (state != null && state.ContainsKey("objective"))
+        {
+            string objective = state["objective"].AsString();
+            if (!string.IsNullOrEmpty(objective))
+                CurrentRoom?.Dialogue?.SetObjective(objective);
         }
     }
 
