@@ -15,6 +15,7 @@ public partial class MainMenu : Control
         // Lets the Esc/pause menu know it should stay closed here
         AddToGroup("main_menu");
         GetTree().Paused = false;
+        AudioManager.Instance?.PlayMusic("res://Assets/Audio/Music/mainmenubgMusic.mp3");
 
         // Background video
         _video = GetNode<VideoStreamPlayer>("menuAnimation");
@@ -29,6 +30,9 @@ public partial class MainMenu : Control
         _btnCGs      = GetNode<Button>("grpMenu/CGs");
         _btnSettings = GetNode<Button>("grpMenu/btnSettings");
         _btnQuit     = GetNode<Button>("grpMenu/Quit");
+
+        foreach (Button button in new[] { _btnLoadGame, _btnNewGame, _btnCGs, _btnSettings, _btnQuit })
+            button.Pressed += () => AudioManager.Instance?.PlayEffect("res://Assets/Audio/SFX/UI/buttonClickui.wav");
 
         _btnStart.Pressed    += OnStartPressed;
         _btnLoadGame.Pressed += OnLoadGamePressed;
@@ -45,6 +49,7 @@ public partial class MainMenu : Control
 
     private void OnStartPressed()
     {
+        AudioManager.Instance?.PlayEffect("res://Assets/Audio/SFX/UI/strtgamebuttonClickui.mp3");
         if (SaveManager.HasGame)
             SaveManager.LoadSlot(GetTree(), SaveManager.LastSlot); // Continue
         else

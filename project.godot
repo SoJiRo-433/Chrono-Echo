@@ -24,6 +24,7 @@ config/features=PackedStringArray("4.7", "C#", "Forward Plus")
 
 GameStateManager="*res://Scripts/Core/GameStateManager.cs"
 SettingsManager="*res://Scripts/Core/SettingsManager.cs"
+AudioManager="*res://Scripts/Core/AudioManager.cs"
 DisplayManager="*res://Scripts/Core/DisplayManager.cs"
 PauseMenu="*res://Scripts/Menu/PauseMenu.cs"
 

@@ -150,6 +150,7 @@ public abstract partial class Entity : Node2D, IDamageable, IUpdatable
     public virtual void Jump()
     {
         _jumpTimer = _jumpAirtimeSeconds;
+        if (this is Player) AudioManager.Instance?.PlayEffect("res://Assets/Audio/SFX/Character/charjumpLand.mp3");
     }
 
     public virtual void Attack()

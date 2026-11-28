@@ -91,6 +91,7 @@ public partial class Player : Entity
 
         if (_isGameOver)
         {
+            AudioManager.Instance?.StopWalking();
             if (_input.IsRecordEchoPressed()) RestartRun();   // after game over, R starts a new run
             return;
         }
@@ -119,6 +120,7 @@ public partial class Player : Entity
 
         // Do the action first so we know whether a move was blocked by a wall.
         PlayerAction effective = ExecuteAction(intended, delta);
+        AudioManager.Instance?.SetWalking(effective is PlayerAction.MoveUp or PlayerAction.MoveDown or PlayerAction.MoveLeft or PlayerAction.MoveRight);
         UpdateAppearance(effective);
 
         // Record AFTER executing, but with the position from BEFORE the move, so that the
@@ -226,6 +228,8 @@ public partial class Player : Entity
 
     public override void Die()
     {
+        AudioManager.Instance?.StopWalking();
+        AudioManager.Instance?.PlayEffect("res://Assets/Audio/SFX/deathSoundsfx.wav");
         base.Die();   // IsAlive = false, Died signal
         EmitSignal(SignalName.PlayerDied);
         GameStateManager.Instance?.NotifyPlayerDied();
@@ -268,6 +272,7 @@ public partial class Player : Entity
 
         ProjectEcho();                              // the failed attempt leaves an Echo behind
         if (CurrentRoom != null) ReturnToStart(CurrentRoom);   // full health + back to the start
+        AudioManager.Instance?.PlayEffect("res://Assets/Audio/SFX/respawnSoundsfx.wav");
     }
 
     public void RestartRun()
@@ -303,6 +308,7 @@ public partial class Player : Entity
 
     public void StartCapture()
     {
+        AudioManager.Instance?.PlayEffect("res://Assets/Audio/SFX/Character/charpressEcho.mp3");
         _recorder.StartRecording();   // pressing the key again starts a new window
         _captureStartClock = CurrentRoom != null ? CurrentRoom.LoopClock : 0f;
     }
@@ -334,6 +340,7 @@ public partial class Player : Entity
         if (room == null) return;
 
         IReadOnlyList<ActionFrame> frames = _recorder.StopRecording(room.LoopClock, WorldPosition);
+        if (frames.Count > 0) AudioManager.Instance?.PlayEffect("res://Assets/Audio/SFX/Character/charrecallEcho.wav");
         _recorder.Clear();                        // the window is consumed once it is projected
         EmitSignal(SignalName.LoopEnded, frames.Count);
 

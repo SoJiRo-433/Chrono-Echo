@@ -113,6 +113,7 @@ public partial class Door : Node2D, IInteractable
         _closeTimer = -1f;   // weight is back on: call off the slam
         if (_isOpen) return;
         _isOpen = true;
+        AudioManager.Instance?.PlayEffect("res://Assets/Audio/SFX/Environment/dooropenEnv.mp3");
         QueueRedraw();
         EmitSignal(SignalName.DoorStateChanged, true);
         if (_openedFlag != "") GameStateManager.Instance?.SetFlag(_openedFlag, true);

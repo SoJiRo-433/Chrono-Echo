@@ -146,6 +146,7 @@ public partial class Room : Node2D
 	#region Lifecycle
 	public override void _Ready()
 	{
+		AudioManager.Instance?.PlayMusic("res://Assets/Audio/Music/safebgMusic.wav");
 		// Start at -1 tick so the first physics step brings the clock to exactly 0.
 		_loopClock = -StepSeconds;
 

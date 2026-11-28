@@ -114,6 +114,7 @@ public partial class RoomAtrium : Room
         CompletionFlag = "atrium_complete";
 
         base._Ready();
+        AudioManager.Instance?.PlayMusic("res://Assets/Audio/Music/dangerbgMusic.wav");
 
         // The Atrium's leap has a little more airtime than the base movement tutorial value so
         // the recorded jump has room for a frame of input latency at the broken stair.
@@ -650,6 +651,7 @@ public partial class RoomAtrium : Room
 
     private void Fall(Player player, Vector2 respawn)
     {
+        AudioManager.Instance?.PlayEffect("res://Assets/Audio/SFX/Environment/waterdropEnv.mp3");
         player.TakeScratch();
         player.WorldPosition = _checkpointReached
             ? _checkpointMarker.Position + _checkpointMarker.Size * 0.5f
@@ -661,6 +663,7 @@ public partial class RoomAtrium : Room
         if (_checkpointReached || Player == null || _checkpointMarker == null) return;
         if (!_checkpointMarker.Bounds.Intersects(Player.Bounds)) return;
         _checkpointReached = true;
+        AudioManager.Instance?.PlayEffect("res://Assets/Audio/SFX/checkpointSoundsfx.wav");
         GameStateManager.Instance?.SetFlag("atrium_checkpoint", true);
     }
 
