@@ -690,8 +690,8 @@ public partial class DialogueManager : Node
 		_controlsBar.AnchorBottom = 0f;
 		_controlsBar.OffsetRight = -24f;
 		_controlsBar.OffsetLeft = -204f;
-		_controlsBar.OffsetTop = 14f;
-		_controlsBar.OffsetBottom = 50f;
+		_controlsBar.OffsetTop = 8f;
+		_controlsBar.OffsetBottom = 44f;
 		_controlsBar.AddThemeConstantOverride("separation", 12);
 
 		_logsButton = CreateIconButton(UiSkin.Crop(UiSkin.BtnDiaLogsSheet, UiSkin.BtnDiaLogsRegion), "Dialogue Logs", OnDialogueLogsPressed);
@@ -1014,11 +1014,11 @@ public partial class DialogueManager : Node
 		if (_nextIndicator == null) return;
 
 		bool skipping = IsSkippingActiveAndAllowed();
-		bool show = _isActive && _currentNode != null && !_awaitingChoice && (!_isRevealing || skipping);
+		bool autoOn = SettingsManager.Instance?.AutoText == true;
+		bool show = _isActive && _currentNode != null && !_awaitingChoice;
 		_nextIndicator.Visible = show;
 		if (!show) return;
 
-		bool autoOn = SettingsManager.Instance?.AutoText == true;
 		float alpha;
 		if (skipping)
 		{
